@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Rename resource &apos;BodyComputer&apos; to &apos;BodyComputer_WZOR_PINOW&apos;" description="Rename resource &apos;BodyComputer&apos;" flags="7" id="org.eclipse.ltk.core.refactoring.rename.resource" input="/BodyComputer" name="BodyComputer_WZOR_PINOW" stamp="1587905619847" updateReferences="true"/>
+</session>

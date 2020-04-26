@@ -1,0 +1,28 @@
+11:02:50 **** Incremental Build of configuration Debug for project LCD ****
+make -j8 all 
+arm-none-eabi-gcc "../Src/main.c" -mcpu=cortex-m3 -std=gnu11 -g3 -DSTM32F103xE -DUSE_HAL_DRIVER -DDEBUG -c -I../Inc -I../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I../Drivers/CMSIS/Include -I../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I../Drivers/STM32F1xx_HAL_Driver/Inc -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -MMD -MP -MF"Src/main.d" -MT"Src/main.o" --specs=nano.specs -mfloat-abi=soft -mthumb -o "Src/main.o"
+../Src/main.c: In function 'main':
+../Src/main.c:107:29: warning: passing argument 2 of 'HAL_ADC_Start_DMA' from incompatible pointer type [-Wincompatible-pointer-types]
+   HAL_ADC_Start_DMA(&hadc1, &odczyt, 1);
+                             ^
+In file included from ../Inc/stm32f1xx_hal_conf.h:274:0,
+                 from ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h:30,
+                 from ../Inc/main.h:31,
+                 from ../Src/main.c:22:
+../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_adc.h:929:25: note: expected 'uint32_t * {aka long unsigned int *}' but argument is of type 'uint16_t * {aka short unsigned int *}'
+ HAL_StatusTypeDef       HAL_ADC_Start_DMA(ADC_HandleTypeDef* hadc, uint32_t* pData, uint32_t Length);
+                         ^~~~~~~~~~~~~~~~~
+arm-none-eabi-gcc -o "LCD.elf" @"objects.list"   -mcpu=cortex-m3 -T"C:\Users\bystr\Documents\STM32CubeIDE\Dla_Andrzeja\LCD\STM32F103VCTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="LCD.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: LCD.elf
+ 
+arm-none-eabi-objdump -h -S  LCD.elf  > "LCD.list"
+arm-none-eabi-size   LCD.elf 
+   text	   data	    bss	    dec	    hex	filename
+  12388	     20	   1756	  14164	   3754	LCD.elf
+Finished building: default.size.stdout
+ 
+Finished building: LCD.list
+ 
+
+11:02:59 Build Finished. 0 errors, 1 warnings. (took 9s.807ms)
+

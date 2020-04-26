@@ -1,0 +1,10 @@
+09:57:50 **** Incremental Build of configuration Debug for project function_generator ****
+make -j8 all 
+arm-none-eabi-size   function_generator.elf 
+   text	   data	    bss	    dec	    hex	filename
+  17852	    128	   3064	  21044	   5234	function_generator.elf
+Finished building: default.size.stdout
+ 
+
+09:57:52 Build Finished. 0 errors, 0 warnings. (took 2s.135ms)
+

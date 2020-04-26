@@ -1,0 +1,13 @@
+19:37:32 **** Build of configuration Debug for project Tempomat ****
+make -j8 all 
+arm-none-eabi-size   Tempomat.elf 
+arm-none-eabi-objcopy  -O binary  Tempomat.elf  "Tempomat.bin"
+   text	   data	    bss	    dec	    hex	filename
+  15584	     24	   1976	  17584	   44b0	Tempomat.elf
+Finished building: default.size.stdout
+ 
+Finished building: Tempomat.bin
+ 
+
+19:37:34 Build Finished. 0 errors, 0 warnings. (took 2s.207ms)
+

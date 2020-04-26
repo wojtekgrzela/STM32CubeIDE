@@ -1,0 +1,11 @@
+LaunchTargetManager/org.eclipse.launchbar.core.launchTargetType.local,Local/arch=x86_64
+LaunchTargetManager/org.eclipse.launchbar.core.launchTargetType.local,Local/name=Local
+LaunchTargetManager/org.eclipse.launchbar.core.launchTargetType.local,Local/os=win32
+configDescList=org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:LCD.elf,org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:Sig_Gen_BLACK.elf
+eclipse.preferences.version=1
+org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:LCD.elf/activeLaunchMode=run
+org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:LCD.elf/activeLaunchTarget=null\:---
+org.eclipse.launchbar.core.descriptorType.default\:LCD.elf/activeLaunchMode=debug
+org.eclipse.launchbar.core.descriptorType.default\:LCD.elf/activeLaunchTarget=org.eclipse.launchbar.core.launchTargetType.local\:Local
+org.eclipse.launchbar.core.descriptorType.default\:Sig_Gen_BLACK.elf/activeLaunchMode=debug
+org.eclipse.launchbar.core.descriptorType.default\:Sig_Gen_BLACK.elf/activeLaunchTarget=org.eclipse.launchbar.core.launchTargetType.local\:Local

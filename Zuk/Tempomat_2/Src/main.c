@@ -1,0 +1,656 @@
+/* USER CODE BEGIN Header */
+/**
+  ******************************************************************************
+  * @file           : main.c
+  * @brief          : Main program body
+  ******************************************************************************
+  * @attention
+  *
+  * <h2><center>&copy; Copyright (c) 2020 STMicroelectronics.
+  * All rights reserved.</center></h2>
+  *
+  * This software component is licensed by ST under BSD 3-Clause license,
+  * the "License"; You may not use this file except in compliance with the
+  * License. You may obtain a copy of the License at:
+  *                        opensource.org/licenses/BSD-3-Clause
+  *
+  ******************************************************************************
+  */
+/* USER CODE END Header */
+
+/* Includes ------------------------------------------------------------------*/
+#include "main.h"
+#include "adc.h"
+#include "dma.h"
+#include "tim.h"
+#include "gpio.h"
+
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
+
+#include <stdlib.h>
+
+/* USER CODE END Includes */
+
+/* Private typedef -----------------------------------------------------------*/
+/* USER CODE BEGIN PTD */
+
+typedef enum {
+	NO_ERROR =						(0u),
+
+	CPU_TOO_HOT =					(1u),
+	EXT_INTERRUPT_NOT_RECOGNIZED =	(2u)
+}ERROR_CODE;
+
+typedef enum {
+	NOTHING = 						(0),
+	DECREASE = 						(-1),
+	INCREASE = 						(1)
+}DIRECTION;
+
+typedef enum{
+	NO_SOUND =						(0u),
+
+	OVERHEAT =						(1u),
+	BUTTON_CLICK =					(2u)
+}BUZZER_SOUNDS;
+
+/* USER CODE END PTD */
+
+/* Private define ------------------------------------------------------------*/
+/* USER CODE BEGIN PD */
+
+#define DEBUG_THINGS						(TRUE)		//TRUE / FALSE
+
+#define K_REGULATOR_GAIN					(2)
+#define MAX_ALLOWED_RPM_DIFFERENCE			(10)
+#define RPM_COEFF							(1)
+#define NUMBER_OF_COUNTINGS_IN_ONE_SECOND	(4)		//timer 4
+#define ENCODER_RPM_SETTING_STEP			(10)
+#define BUTTON_CLICK_BUZZER_LENGTH			(300)
+#define OVERHEAT_BUZZER_LENGTH				(3000)
+
+#define DO_DELAY_BETWEEN_ITERATIONS
+#ifdef DO_DELAY_BETWEEN_ITERATIONS
+	#define NUMBER_OF_DELAYS				(4u)
+#endif
+
+
+
+
+#define DELAY_TIME_AFTER_OVERHEAT_IN_MS		(2000)		//2s
+
+#define ADC1_NUMBER_OF_READINGS				(uint32_t)(1u)
+
+#define MAX_ALLOWED_CPU_TEMP				(int16_t)(90)
+
+#define TEMP_SENSOR_COEFF1					((int32_t)(58558))
+#define TEMP_SENSOR_COEFF2					((int32_t)(176))
+
+#define MAX_ALLOWED_RPM						(3500u)
+#define MIN_ALLOWED_RPM						(1200u)
+#define SHUTDOWN_RPM						(3700u)
+#define RPM_STEP							(50u)
+
+#define PWM_TIMER							(TIM3)
+#define PWM_RESOLUTION						(PWM_TIMER->ARR)
+#define PWM_PULSE							(PWM_TIMER->CCR3)
+
+
+#define DECREASE_ENG_TERMINAL_PORT			(IN2_ENG_GPIO_Port)
+#define DECREASE_ENG_TERMINAL_PIN			(IN2_ENG_Pin)
+#define INCREASE_ENG_TERMINAL_PORT			(IN1_ENG_GPIO_Port)
+#define INCREASE_ENG_TERMINAL_PIN			(IN1_ENG_Pin)
+
+#define BUILT_IN_LED_PORT					(LED_GPIO_Port)
+#define BUILT_IN_LED_PIN					(LED_Pin)
+
+#define TRUE								(1u)
+#define FALSE								(0u)
+#define ON									(1u)
+#define OFF									(0u)
+
+/* USER CODE END PD */
+
+/* Private macro -------------------------------------------------------------*/
+/* USER CODE BEGIN PM */
+
+/* USER CODE END PM */
+
+/* Private variables ---------------------------------------------------------*/
+
+/* USER CODE BEGIN PV */
+
+uint32_t ADC1_results[ADC1_NUMBER_OF_READINGS] = {0};
+static volatile int16_t Temperature = 0;
+static volatile ERROR_CODE ErrorCode = NO_ERROR;
+static volatile BUZZER_SOUNDS BuzzerSounds = NO_SOUND;
+static volatile uint32_t RPM_counter = 0;
+static volatile uint32_t my_TIM1_programm_timer = 0;	// +1 every 100us
+static uint32_t Set_RPM = 2000;
+
+static volatile uint8_t STATE = OFF;
+
+/* USER CODE END PV */
+
+/* Private function prototypes -----------------------------------------------*/
+void SystemClock_Config(void);
+/* USER CODE BEGIN PFP */
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
+void HAL_SYSTICK_Callback(void);
+
+
+void CPU_Temp_Handling(void);
+void Error_Handling(void);
+void Encoder_Button_Function(void);
+void Set_Direction(DIRECTION direction);
+
+void Set_Electromagnes_On(void);
+void Set_Electromagnes_Off(void);
+void Complete_Shutdown(void);
+
+void Update_Encoder_Settings(void);
+void Make_Soud(void);
+
+/* USER CODE END PFP */
+
+/* Private user code ---------------------------------------------------------*/
+/* USER CODE BEGIN 0 */
+
+/* USER CODE END 0 */
+
+/**
+  * @brief  The application entry point.
+  * @retval int
+  */
+int main(void)
+{
+  /* USER CODE BEGIN 1 */
+
+
+
+  /* USER CODE END 1 */
+  
+
+  /* MCU Configuration--------------------------------------------------------*/
+
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
+
+  /* USER CODE BEGIN Init */
+
+  /* USER CODE END Init */
+
+  /* Configure the system clock */
+  SystemClock_Config();
+
+  /* USER CODE BEGIN SysInit */
+
+  /* USER CODE END SysInit */
+
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_DMA_Init();
+  MX_ADC1_Init();
+  MX_TIM1_Init();
+  MX_TIM2_Init();
+  MX_TIM3_Init();
+  MX_TIM4_Init();
+  /* USER CODE BEGIN 2 */
+
+  HAL_GPIO_WritePin(LED_READY_GPIO_Port, LED_READY_Pin, SET);
+  HAL_GPIO_WritePin(LED_WORKING_GPIO_Port, LED_WORKING_Pin, SET);
+  HAL_GPIO_WritePin(LED_ERROR_GPIO_Port, LED_ERROR_Pin, SET);
+
+  while(HAL_OK != HAL_ADCEx_Calibration_Start(&hadc1));
+
+
+  HAL_ADC_Start_DMA(&hadc1, ADC1_results, ADC1_NUMBER_OF_READINGS);
+  HAL_TIM_Base_Start_IT(&htim4);
+  HAL_TIM_Base_Start_IT(&htim1);
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
+  HAL_TIM_Base_Start(&htim2);
+
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+
+  HAL_Delay(1000);
+
+  HAL_GPIO_WritePin(LED_READY_GPIO_Port, LED_READY_Pin, SET);
+  HAL_GPIO_WritePin(LED_WORKING_GPIO_Port, LED_WORKING_Pin, RESET);
+  HAL_GPIO_WritePin(LED_ERROR_GPIO_Port, LED_ERROR_Pin, RESET);
+
+  while (1)
+  {
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
+
+	  if(NO_ERROR != ErrorCode)
+	  {
+		  Error_Handling();
+	  }
+	  else
+	  {
+		  Update_Encoder_Settings();
+		  CPU_Temp_Handling();
+	  }
+
+
+	  if(OFF == STATE)
+	  {
+		  HAL_GPIO_WritePin(LED_WORKING_GPIO_Port, LED_WORKING_Pin, RESET);
+	  }
+	  else
+	  {
+		  HAL_GPIO_WritePin(LED_WORKING_GPIO_Port, LED_WORKING_Pin, SET);
+	  }
+  }
+  /* USER CODE END 3 */
+}
+
+/**
+  * @brief System Clock Configuration
+  * @retval None
+  */
+void SystemClock_Config(void)
+{
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
+
+  /** Initializes the CPU, AHB and APB busses clocks 
+  */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL16;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Initializes the CPU, AHB and APB busses clocks 
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC;
+  PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV8;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+/* USER CODE BEGIN 4 */
+
+/*********** HERE BEGIN INTERRUPTS FUNCTIONS ***********/
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	static int32_t RPM_difference_previous = 0;
+	static int32_t RPM_difference_this = 0;
+	int32_t difference_in_difference = 0;
+	int32_t tmp_variable = 0;
+	uint32_t adjusted_RPM = 0;
+
+#ifdef DO_DELAY_BETWEEN_ITERATIONS
+	static uint16_t iteration = 0;
+#endif
+
+	if(&htim1 == htim)
+	{
+		++my_TIM1_programm_timer;
+		  Make_Soud();
+	}
+
+	if(&htim4 == htim)
+	{
+		adjusted_RPM = RPM_counter * RPM_COEFF * NUMBER_OF_COUNTINGS_IN_ONE_SECOND;
+		RPM_difference_this = Set_RPM - (adjusted_RPM);
+
+		if (OFF == STATE)
+		{
+			Set_RPM = adjusted_RPM;
+		}
+
+		RPM_counter = 0;
+		PWM_PULSE = 0;
+
+		difference_in_difference = RPM_difference_this - RPM_difference_previous;
+		difference_in_difference *= K_REGULATOR_GAIN;
+
+#if DEBUG_THINGS == TRUE
+		HAL_GPIO_TogglePin(BUILT_IN_LED_PORT, BUILT_IN_LED_PIN);
+#endif
+
+		if(OFF == STATE)
+		{
+			Set_Electromagnes_Off();
+		}
+
+		tmp_variable = abs(difference_in_difference);
+
+		if((ON == STATE) && (MAX_ALLOWED_RPM_DIFFERENCE <= tmp_variable))
+		{
+#ifdef DO_DELAY_BETWEEN_ITERATIONS
+			++iteration;
+#endif
+
+			HAL_GPIO_WritePin(LED_WORKING_GPIO_Port, LED_WORKING_Pin, SET);
+			Set_Electromagnes_On();
+
+			if(difference_in_difference < 0)
+			{
+				Set_Direction(DECREASE);
+				if(difference_in_difference < ((-1) * PWM_RESOLUTION))
+				{
+					PWM_PULSE = PWM_RESOLUTION;
+				}
+				else
+				{
+					PWM_PULSE = ((-1) * difference_in_difference);
+				}
+			}
+			else
+			{
+				if(difference_in_difference > 0)
+				{
+					Set_Direction(INCREASE);
+					if(difference_in_difference > PWM_RESOLUTION)
+					{
+						PWM_PULSE = PWM_RESOLUTION;
+					}
+					else
+					{
+						PWM_PULSE = difference_in_difference;
+					}
+				}
+				else
+				{
+					PWM_PULSE = 0;
+				}
+			}
+
+#ifdef DO_DELAY_BETWEEN_ITERATIONS
+			if (iteration < NUMBER_OF_DELAYS)
+			{
+				PWM_PULSE = 0;
+			}
+			else
+			{
+				if (NUMBER_OF_DELAYS == iteration)
+				{
+					iteration = 0;
+				}
+			}
+#endif
+		}//if((ON == STATE) && (MAX_ALLOWED_RPM_DIFFERENCE <= tmp_variable))
+		else	//OFF == STATE
+		{
+			PWM_PULSE = 0;
+		}
+	}
+}
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	if(RPM_Pin == GPIO_Pin)
+	{
+		++RPM_counter;
+	}
+	else
+	{
+		if((BRAKE_Pin == GPIO_Pin) || (CLUTCH_Pin == GPIO_Pin))
+		{
+			STATE = OFF;
+			Set_Electromagnes_Off();
+			Set_Direction(NOTHING);
+		}
+		else
+		{
+			if(ENCODER_BUTTON_Pin == GPIO_Pin)
+			{
+				Encoder_Button_Function();
+			}
+			else
+			{
+				ErrorCode = EXT_INTERRUPT_NOT_RECOGNIZED;
+			}
+		}
+	}
+}
+
+//void HAL_SYSTICK_Callback(void)
+//{
+//	++RPM_counter;
+//}
+
+/*********** HERE END INTERRUPTS FUNCTIONS AND MY FUNCTIONS BEGIN ***********/
+
+void CPU_Temp_Handling(void)
+{
+	Temperature = (int16_t)(((TEMP_SENSOR_COEFF1 - 33 * (int32_t)ADC1_results[0]))/TEMP_SENSOR_COEFF2) + 25;
+
+	if(MAX_ALLOWED_CPU_TEMP <= Temperature)
+	{
+		ErrorCode = CPU_TOO_HOT;
+	}
+}
+
+void Error_Handling(void)
+{
+	HAL_GPIO_WritePin(LED_ERROR_GPIO_Port, LED_ERROR_Pin, SET);
+
+	switch (ErrorCode)
+	{
+		case CPU_TOO_HOT:
+		{
+			Complete_Shutdown();
+			BuzzerSounds = OVERHEAT;
+			HAL_Delay(DELAY_TIME_AFTER_OVERHEAT_IN_MS);
+			BuzzerSounds = NO_SOUND;
+			ErrorCode = 0;
+			break;
+		}
+		case EXT_INTERRUPT_NOT_RECOGNIZED:
+		{
+			ErrorCode = 0;
+			break;
+		}
+		default:
+		{
+			NVIC_SystemReset();
+			break;
+		}
+	}
+}
+
+void Encoder_Button_Function(void)
+{
+	if(NO_SOUND == BuzzerSounds)
+	{
+		BuzzerSounds = BUTTON_CLICK;
+	}
+
+	if(ON == STATE)
+	{
+		STATE = OFF;
+		Set_Electromagnes_Off();
+	}
+	else
+	{
+		STATE = ON;
+		Set_Electromagnes_On();
+	}
+}
+
+void Set_Direction(DIRECTION direction)
+{
+	switch (direction)
+	{
+		case DECREASE:
+		{
+			HAL_GPIO_WritePin(INCREASE_ENG_TERMINAL_PORT, INCREASE_ENG_TERMINAL_PIN, RESET);
+			HAL_GPIO_WritePin(DECREASE_ENG_TERMINAL_PORT, DECREASE_ENG_TERMINAL_PIN, SET);
+			break;
+		}
+		case INCREASE:
+		{
+			HAL_GPIO_WritePin(INCREASE_ENG_TERMINAL_PORT, INCREASE_ENG_TERMINAL_PIN, SET);
+			HAL_GPIO_WritePin(DECREASE_ENG_TERMINAL_PORT, DECREASE_ENG_TERMINAL_PIN, RESET);
+			break;
+		}
+		case NOTHING:
+		{
+			HAL_GPIO_WritePin(INCREASE_ENG_TERMINAL_PORT, INCREASE_ENG_TERMINAL_PIN, RESET);
+			HAL_GPIO_WritePin(DECREASE_ENG_TERMINAL_PORT, DECREASE_ENG_TERMINAL_PIN, RESET);
+			break;
+		}
+		default:
+		{
+			HAL_GPIO_WritePin(INCREASE_ENG_TERMINAL_PORT, INCREASE_ENG_TERMINAL_PIN, RESET);
+			HAL_GPIO_WritePin(DECREASE_ENG_TERMINAL_PORT, DECREASE_ENG_TERMINAL_PIN, RESET);
+			break;
+		}
+	}
+}
+
+void Set_Electromagnes_On(void)
+{
+	HAL_GPIO_WritePin(EN_EMAG_GPIO_Port, EN_EMAG_Pin, SET);
+}
+
+void Set_Electromagnes_Off(void)
+{
+	HAL_GPIO_WritePin(EN_EMAG_GPIO_Port, EN_EMAG_Pin, RESET);
+}
+
+void Complete_Shutdown(void)
+{
+	STATE = OFF;
+	Set_Electromagnes_Off();
+	Set_Direction(NOTHING);
+}
+
+void Update_Encoder_Settings(void)
+{
+	static uint32_t lastEncValue = 0;
+	uint32_t encCounterValue = (TIM2->CNT);
+	int32_t encDiff = encCounterValue - lastEncValue;
+	uint32_t TEMP_Set_RPM = Set_RPM;
+
+	if ((encDiff >= 4u) || (encDiff <= -4))
+	{
+		encDiff /= 4u;
+		TEMP_Set_RPM += (uint32_t)(((int8_t)(encDiff)) * ENCODER_RPM_SETTING_STEP);
+
+		if (TEMP_Set_RPM > MAX_ALLOWED_RPM)
+		{
+			Set_RPM = MAX_ALLOWED_RPM;
+		}
+		else
+		{
+			if (TEMP_Set_RPM < MIN_ALLOWED_RPM)
+			{
+				Set_RPM = MIN_ALLOWED_RPM;
+			}
+			else
+			{
+				Set_RPM = TEMP_Set_RPM;
+			}
+		}//else
+
+		lastEncValue = encCounterValue;
+	}//if
+
+}//void Update_Encoder_Settings(void)
+
+
+void Make_Soud(void)
+{
+	static uint32_t iterator = 0;
+
+	switch(BuzzerSounds)
+	{
+		case NO_SOUND:
+		{
+			HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, RESET);
+			break;
+		}
+		case OVERHEAT:
+		{
+			++iterator;
+			if (iterator > OVERHEAT_BUZZER_LENGTH)
+			{
+				HAL_GPIO_TogglePin(BUZZER_GPIO_Port, BUZZER_Pin);
+				iterator = 0;
+			}
+			break;
+		}
+		case BUTTON_CLICK:
+		{
+			HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, SET);
+			++iterator;
+			if (iterator > BUTTON_CLICK_BUZZER_LENGTH)
+			{
+				BuzzerSounds = NO_SOUND;
+				iterator = 0;
+			}
+			break;
+		}
+		default:
+		{
+			HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, RESET);
+			break;
+		}
+	}
+}
+
+
+/* USER CODE END 4 */
+
+/**
+  * @brief  This function is executed in case of error occurrence.
+  * @retval None
+  */
+void Error_Handler(void)
+{
+  /* USER CODE BEGIN Error_Handler_Debug */
+  /* User can add his own implementation to report the HAL error return state */
+
+  /* USER CODE END Error_Handler_Debug */
+}
+
+#ifdef  USE_FULL_ASSERT
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
+  * @retval None
+  */
+void assert_failed(uint8_t *file, uint32_t line)
+{ 
+  /* USER CODE BEGIN 6 */
+  /* User can add his own implementation to report the file name and line number,
+     tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+  /* USER CODE END 6 */
+}
+#endif /* USE_FULL_ASSERT */
+
+/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
