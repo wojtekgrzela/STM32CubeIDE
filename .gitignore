@@ -59,6 +59,13 @@ dkms.conf
 #Foldery z plikami projektu
 **/.metadata
 **/Debug
+**/FreeRTOS_TAD_logs
+**/RemoteSystemsTempFiles
 
 #Logi
 *.log
+
+#zipy i inne
+*.zip
+*.rar
+*.xxx

@@ -1,4 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<session version="1.0">
-<refactoring comment="Delete resource &apos;Power_Steering_Sig_Gen_BLACK&apos;" deleteContents="true" description="Delete resource &apos;Power_Steering_Sig_Gen_BLACK&apos;" element1="/Power_Steering_Sig_Gen_BLACK" flags="7" id="org.eclipse.ltk.core.refactoring.delete.resources" resources="1" stamp="1576530229676"/>
-</session>
