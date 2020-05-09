@@ -55,3 +55,7 @@ dkms.conf
 /FreeRTOS
 /Nowy_workspace
 /workspace_1.0.2
+/Dla_Andrzeja/.metadata/
+/Testing/.metadata/
+/Zuk/.metadata/
+*Debug
