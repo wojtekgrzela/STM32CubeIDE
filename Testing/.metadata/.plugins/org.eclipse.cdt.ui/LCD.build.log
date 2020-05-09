@@ -1,4 +1,4 @@
-14:45:06 **** Build of configuration Debug for project LCD ****
+17:09:17 **** Build of configuration Debug for project LCD ****
 make -j8 all 
 arm-none-eabi-size   LCD.elf 
    text	   data	    bss	    dec	    hex	filename
@@ -6,5 +6,5 @@ arm-none-eabi-size   LCD.elf
 Finished building: default.size.stdout
  
 
-14:45:10 Build Finished. 0 errors, 0 warnings. (took 3s.449ms)
+17:09:21 Build Finished. 0 errors, 0 warnings. (took 3s.386ms)
 

@@ -1,28 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <section name="Workbench">
 	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
-		<item key="selection" value="switch"/>
+		<item key="selection" value="ADC3Measures"/>
 		<item key="wrap" value="true"/>
 		<item key="casesensitive" value="false"/>
 		<item key="wholeword" value="false"/>
 		<item key="incremental" value="false"/>
 		<item key="isRegEx" value="true"/>
 		<list key="findhistory">
-			<item value="switch"/>
-			<item value="HAL_GPIO_WritePin(LED_WORKING_GPIO_Port, LED_WORKING_Pin, SET)"/>
-			<item value="HAL_GPIO_WritePin(LED_WORKING_GPIO_Port, LED_WORKING_Pin, SET);"/>
-			<item value="NUMBER_OF_COUNTINGS_IN_ONE_SECOND"/>
-			<item value="Set_Electromagnes_Off"/>
-			<item value="Set_RPM"/>
-			<item value="HAL_TIM_PeriodElapsedCallback"/>
-			<item value="*Capture*Compare*"/>
-			<item value="Capture*Compare"/>
-			<item value="CaptureCompare"/>
-			<item value="Compare"/>
-			<item value="TIM"/>
-			<item value="TIM1"/>
-			<item value="DEBUG_THINGS"/>
-			<item value="MAX_ALLOWED_CPU_TEMP"/>
+			<item value="ADC3Measures"/>
+			<item value="Tim7_Counter_100us"/>
+			<item value="Tim7_Debug_Counter"/>
+			<item value="LCD_BIT_CURSOR_SHIFT_MODE"/>
+			<item value="EEPROM_data_struct"/>
+			<item value="MemAddress"/>
+			<item value="HAL_GPIO_WRITE_ODR"/>
+			<item value="pinState"/>
 		</list>
 		<list key="replacehistory">
 		</list>
@@ -30,8 +23,8 @@
 	<section name="org.eclipse.ui.texteditor.FindReplaceDialog_dialogBounds">
 		<item key="DIALOG_X_ORIGIN" value="1414"/>
 		<item key="DIALOG_Y_ORIGIN" value="472"/>
-		<item key="DIALOG_WIDTH" value="336"/>
-		<item key="DIALOG_HEIGHT" value="454"/>
-		<item key="DIALOG_FONT_NAME" value="1|Segoe UI|9.0|0|WINDOWS|1|-15|0|0|0|400|0|0|0|1|0|0|0|0|Segoe UI"/>
+		<item key="DIALOG_WIDTH" value="284"/>
+		<item key="DIALOG_HEIGHT" value="391"/>
+		<item key="DIALOG_FONT_NAME" value="1|Segoe UI|9.0|0|WINDOWS|1|-12|0|0|0|400|0|0|0|1|0|0|0|0|Segoe UI"/>
 	</section>
 </section>
