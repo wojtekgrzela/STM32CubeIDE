@@ -47,12 +47,45 @@ extern "C" {
 /* USER CODE BEGIN ET */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/* */
+/* Diagnostic codes */
+typedef enum
+{
+	DIAGNOSTICS_OK								= 0,
+
+	WATER_TEMP_HIGH_WARNING						= 10,
+	WATER_TEMP_HIGH_ALARM						= 11,
+
+	OIL_TEMP_HIGH_WARNING						= 20,
+	OIL_TEMP_HIGH_ALARM							= 21,
+
+	LOW_VOLTAGE_MAIN_BATTERY_ALARM				= 30,
+	HIGH_VOLTAGE_MAIN_BATTERY_ALARM				= 31,
+
+	LOW_VOLTAGE_AUXILIARY_BATTERY_ALARM			= 40,
+	HIGH_VOLTAGE_AUXILIARY_BATTERY_ALARM		= 41,
+
+	UNKNOWN_ISSUE								= 0xF0F0F0F0
+}Diagnostic_Code;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Diagnostic Snapshot */
 typedef struct
 {
-	uint8_t RawTime[6/*Size of raw time from GPS*/];
-	uint16_t snapshotIdentificator;
+	Diagnostic_Code snapshotIdentificator;				//4 bytes total
+	uint8_t RawTime[6/*Size of raw time from GPS*/];	//12 bytes total (2 unused)
+	uint16_t value;										//12 bytes total
 }Diagnostic_Snapshot_struct;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Internal Error Snapshot */
+typedef struct
+{
+	Error_Code ErrorIdentificator;						//4 bytes total
+	uint8_t RawTime[6/*Size of raw time from GPS*/];	//12 bytes total (2 unused)
+
+}Error_Snapshot_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -159,11 +192,12 @@ void Error_Handler(void);
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* TASKS & TIMERS FREQUENCIES */
-#define MY_LCD_TASK_TIME_PERIOD		(TickType_t)(200)	/* MINIMUM: 100, for the 4x20 LCD it is needed approximately 80-85ms to send all data */
-#define MY_GPS_TASK_TIME_PERIOD		(TickType_t)(1000)
-#define MY_EEPROM_TASK_TIME_PERIOD	(TickType_t)(1000)	/* Would be good to decrease this number significantly, as it only executes when it has data from a Queue */
+#define MY_LCD_TASK_TIME_PERIOD				(TickType_t)(200)	/* MINIMUM: 100, for the 4x20 LCD it is needed approximately 80-85ms to send all data */
+#define MY_GPS_TASK_TIME_PERIOD				(TickType_t)(1000)
+#define MY_EEPROM_TASK_TIME_PERIOD			(TickType_t)(1000)	/* Would be good to decrease this number significantly, as it only executes when it has data from a Queue */
+#define MY_DUMP_TO_EEPROM_TASK_TIME_PERIOD 	(TickType_t)(1000)
 
-#define ENC_BUTTON_LONG_PRESS_TIME	((uint32_t)(3000))	/* Value in milliseconds */
+#define ENC_BUTTON_LONG_PRESS_TIME			((uint32_t)(3000))	/* Value in milliseconds */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -214,8 +248,8 @@ void Error_Handler(void);
 #define TRIP_MILEAGE_START_ADDRESS					((uint16_t)(140))
 #define TOTAL_MILEAGE_TABLE_SIZE					((uint8_t)(10))
 #define TRIP_MILEAGE_TABLE_SIZE						((uint8_t)(10))
-#define TOTAL_SNAPCHOTS_NUMBER_ADDRESS				((uint16_t)(9999))
-#define DIAGNOSTIC_SNAPSHOTS_START_ADDRESS			((uint16_t)(10000))
+#define TOTAL_SNAPCHOTS_NUMBER_ADDRESS				((uint16_t)(999))
+#define DIAGNOSTIC_SNAPSHOTS_START_ADDRESS			((uint16_t)(1000))
 
 #define WATER_HIGH_TEMP_WARNING_THRESHOLD_ADDRESS	((uint16_t)(200))
 #define WATER_HIGH_TEMP_ALARM_THRESHOLD_ADDRESS		((uint16_t)(201))

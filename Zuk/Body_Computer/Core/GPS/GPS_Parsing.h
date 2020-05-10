@@ -28,8 +28,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 typedef struct
 {
-	uint8_t receivedByte;
-	uint8_t GPS_buffer[GPS_BUFFER_SIZE];
+	volatile uint8_t receivedByte;
+	volatile uint8_t GPS_buffer[GPS_BUFFER_SIZE];
 	uint8_t TImeZoneAdjPoland;			/* 1 in Winter and 2 in Summer (it will be added to the clock to get proper time */
 
 	struct message_buffers

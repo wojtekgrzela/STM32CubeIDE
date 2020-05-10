@@ -238,7 +238,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 			}//if(TRUE == dataStarted)
 		}//if(FALSE == GPS.DataReady)
 
-		HAL_UART_Receive_IT(&huart1, &GPS.receivedByte, 1u);
+		HAL_UART_Receive_IT(&huart1, (uint8_t *)(&GPS.receivedByte), 1u);
 	}//if(&huart1 == *huart)
 #endif
 }

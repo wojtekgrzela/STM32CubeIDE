@@ -37,7 +37,7 @@ Error_Code parse_GPS_data(GPS_data_struct* const GPS)
 		GPS_message[i] = GPS->GPS_buffer[i];
 	}
 
-	memset(GPS->GPS_buffer, 0, GPS_BUFFER_SIZE);
+	memset((uint8_t *)(GPS->GPS_buffer), 0, GPS_BUFFER_SIZE);
 	GPS->DataReady = RESET;
 
 	nIndex = find_nearest_symbol('\n', (const char* const)GPS_message, 0);

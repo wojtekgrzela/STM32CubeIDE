@@ -38,7 +38,7 @@ typedef enum
 	GPS__INVALID_DATA_START,
 
 	/*** UNKNOWN / UNDEFINED ERROR ***/
-	UNKNOWN_ERROR									= -1
+	UNKNOWN_ERROR									= 0xF0F0F0F0
 }Error_Code;
 
 

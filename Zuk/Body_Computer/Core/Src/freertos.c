@@ -60,8 +60,10 @@ extern TIM_HandleTypeDef htim7;
 #endif
 
 #ifdef RUNTIME_STATS_QUEUES
-#define QUEUE_EEPROM_WRITE_NAME	"EEPROM_WRITE"
-#define QUEUE_EEPROM_READ_NAME	"EEPROM_READ"
+#define QUEUE_EEPROM_WRITE_NAME		"EEPROM_WRITE"
+#define QUEUE_EEPROM_READ_NAME		"EEPROM_READ"
+#define QUEUE_DIAGNOSTIC_DUMP_NAME	"DIAGNOSTIC_DUMP"
+#define QUEUE_ERROR_DUMP_NAME		"ERROR_DUMP"
 #endif
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -69,10 +71,10 @@ extern TIM_HandleTypeDef htim7;
 volatile uint32_t Tim7_Counter_100us;
 
 /* For Signaling ENC button */
-ENCButton_struct ENC_button = {};
+volatile ENCButton_struct ENC_button = {};
 
 /* For measurements from ADC3 */
-uint16_t ADC3Measures[NO_OF_ADC3_MEASURES] = { 0 };
+volatile uint16_t ADC3Measures[NO_OF_ADC3_MEASURES] = { 0 };
 
 /* For GPS data, buffering, messages for LCD */
 GPS_data_struct GPS = { .TImeZoneAdjPoland = 2 };
@@ -254,8 +256,11 @@ osThreadId My_500ms_TaskHandle;
 osThreadId My_LCD_TaskHandle;
 osThreadId My_GPS_TaskHandle;
 osThreadId My_EEPROM_TaskHandle;
+osThreadId My_DumpToEEPROMHandle;
 osMessageQId Queue_EEPROM_readHandle;
 osMessageQId Queue_EEPROM_writeHandle;
+osMessageQId Queue_error_snapshot_dumpHandle;
+osMessageQId Queue_diagnostic_snapshot_dumpHandle;
 osTimerId My_Timer_ENC_ButtonHandle;
 
 /* Private function prototypes -----------------------------------------------*/
@@ -268,6 +273,7 @@ void StartTask500ms(void const * argument);
 void StartTaskLCD(void const * argument);
 void StartTaskGPS(void const * argument);
 void StartTaskEEPROM(void const * argument);
+void StartTaskDumpToEEPROM(void const * argument);
 void ENC_Button_LongPress_Callback(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -281,6 +287,8 @@ void vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer, Stack
 /* Hook prototypes */
 void configureTimerForRunTimeStats(void);
 unsigned long getRunTimeCounterValue(void);
+void vApplicationStackOverflowHook(TaskHandle_t xTask, signed char *pcTaskName);
+void vApplicationMallocFailedHook(void);
 
 /* USER CODE BEGIN 1 */
 /* Functions needed when configGENERATE_RUN_TIME_STATS is on */
@@ -298,6 +306,47 @@ __weak unsigned long getRunTimeCounterValue(void)
 #endif
 }
 /* USER CODE END 1 */
+
+/* USER CODE BEGIN 4 */
+__weak void vApplicationStackOverflowHook(TaskHandle_t xTask, signed char *pcTaskName)
+{
+   /* Run time stack overflow checking is performed if
+   configCHECK_FOR_STACK_OVERFLOW is defined to 1 or 2. This hook function is
+   called if a stack overflow is detected. */
+	while(1)
+	{
+		HAL_GPIO_TogglePin(LED_3_GPIO_Port, LED_3_Pin);
+		HAL_GPIO_TogglePin(LED_4_GPIO_Port, LED_4_Pin);
+		HAL_GPIO_TogglePin(LED_5_GPIO_Port, LED_5_Pin);
+		HAL_GPIO_TogglePin(LED_6_GPIO_Port, LED_6_Pin);
+		HAL_Delay(500);
+	}
+}
+/* USER CODE END 4 */
+
+/* USER CODE BEGIN 5 */
+__weak void vApplicationMallocFailedHook(void)
+{
+   /* vApplicationMallocFailedHook() will only be called if
+   configUSE_MALLOC_FAILED_HOOK is set to 1 in FreeRTOSConfig.h. It is a hook
+   function that will get called if a call to pvPortMalloc() fails.
+   pvPortMalloc() is called internally by the kernel whenever a task, queue,
+   timer or semaphore is created. It is also called by various parts of the
+   demo application. If heap_1.c or heap_2.c are used, then the size of the
+   heap available to pvPortMalloc() is defined by configTOTAL_HEAP_SIZE in
+   FreeRTOSConfig.h, and the xPortGetFreeHeapSize() API function can be used
+   to query the size of free heap space that remains (although it does not
+   provide information on how the remaining heap might be fragmented). */
+	while(1)
+	{
+		HAL_GPIO_TogglePin(LED_3_GPIO_Port, LED_3_Pin);
+		HAL_GPIO_TogglePin(LED_4_GPIO_Port, LED_4_Pin);
+		HAL_GPIO_TogglePin(LED_5_GPIO_Port, LED_5_Pin);
+		HAL_GPIO_TogglePin(LED_6_GPIO_Port, LED_6_Pin);
+		HAL_Delay(500);
+	}
+}
+/* USER CODE END 5 */
 
 /* USER CODE BEGIN GET_IDLE_TASK_MEMORY */
 static StaticTask_t xIdleTaskTCBBuffer;
@@ -362,6 +411,14 @@ void MX_FREERTOS_Init(void) {
   osMessageQDef(Queue_EEPROM_write, 10, EEPROM_data_struct);
   Queue_EEPROM_writeHandle = osMessageCreate(osMessageQ(Queue_EEPROM_write), NULL);
 
+  /* definition and creation of Queue_error_snapshot_dump */
+  osMessageQDef(Queue_error_snapshot_dump, 2, Error_Snapshot_struct);
+  Queue_error_snapshot_dumpHandle = osMessageCreate(osMessageQ(Queue_error_snapshot_dump), NULL);
+
+  /* definition and creation of Queue_diagnostic_snapshot_dump */
+  osMessageQDef(Queue_diagnostic_snapshot_dump, 2, Diagnostic_Snapshot_struct);
+  Queue_diagnostic_snapshot_dumpHandle = osMessageCreate(osMessageQ(Queue_diagnostic_snapshot_dump), NULL);
+
   /* USER CODE BEGIN RTOS_QUEUES */
 	/* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -386,6 +443,10 @@ void MX_FREERTOS_Init(void) {
   /* definition and creation of My_EEPROM_Task */
   osThreadDef(My_EEPROM_Task, StartTaskEEPROM, osPriorityNormal, 0, 128);
   My_EEPROM_TaskHandle = osThreadCreate(osThread(My_EEPROM_Task), NULL);
+
+  /* definition and creation of My_DumpToEEPROM */
+  osThreadDef(My_DumpToEEPROM, StartTaskDumpToEEPROM, osPriorityBelowNormal, 0, 128);
+  My_DumpToEEPROMHandle = osThreadCreate(osThread(My_DumpToEEPROM), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
 	/* add threads, ... */
@@ -431,7 +492,7 @@ void StartTask1000ms(void const * argument)
 #endif
 
 #ifdef GPS_RECEIVING
-	HAL_UART_Receive_IT(&huart1, &GPS.receivedByte, 1u);
+	HAL_UART_Receive_IT(&huart1, (uint8_t *)&(GPS.receivedByte), 1u);
 #endif
 
 	xLastWakeTime = xTaskGetTickCount();
@@ -730,8 +791,7 @@ void StartTaskEEPROM(void const * argument)
 	const TickType_t xFrequency = MY_EEPROM_TASK_TIME_PERIOD;
 	Error_Code error = NO_ERROR;
 
-	EEPROM_data_struct EEPROMDataVar = {};
-	EEPROM_data_struct *EEPROMDataHandle = &EEPROMDataVar;
+	EEPROM_data_struct EEPROMData;
 
 #ifdef RUNTIME_STATS_QUEUES
 	vQueueAddToRegistry(Queue_EEPROM_writeHandle, QUEUE_EEPROM_WRITE_NAME);
@@ -743,35 +803,120 @@ void StartTaskEEPROM(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-	  if(pdTRUE == xQueueReceive(Queue_EEPROM_readHandle, EEPROMDataHandle, (TickType_t)0))
+	  if(pdTRUE == xQueueReceive(Queue_EEPROM_readHandle, &EEPROMData, (TickType_t)0))
 	  {
-		  error = ReadEEPROM_DMA(EEPROMDataHandle->EEPROMParameters, EEPROMDataHandle);
+		  error = ReadEEPROM_DMA(EEPROMData.EEPROMParameters, &EEPROMData);
 		  if(NO_ERROR == error)
 		  {
-			  EEPROMDataHandle->isReady = True;
+			  EEPROMData.isReady = True;//TODO: mem error dump
 		  }
 
 	  }
-	  if(pdTRUE == xQueueReceive(Queue_EEPROM_writeHandle, EEPROMDataHandle, (TickType_t)0))
+	  else
 	  {
-		  error = WriteEEPROM_DMA(EEPROMDataHandle->EEPROMParameters, EEPROMDataHandle);
-		  if(NO_ERROR == error)
+		  if(pdTRUE == xQueueReceive(Queue_EEPROM_writeHandle, &EEPROMData, (TickType_t)0))
 		  {
-			  EEPROMDataHandle->isReady = True;
+			  error = WriteEEPROM_DMA(EEPROMData.EEPROMParameters, &EEPROMData);
+			  if(NO_ERROR == error)
+			  {
+				  EEPROMData.isReady = True;//TODO: mem error dump
+			  }
+			  vTaskDelay(5);
 		  }
-		  vTaskDelay(5);
 	  }
 
 	  vTaskDelayUntil(&xLastWakeTime, xFrequency);
   }
   /* USER CODE END StartTaskEEPROM */
 }
-uint8_t licznikTimera = 0;
+
+/* USER CODE BEGIN Header_StartTaskDumpToEEPROM */
+/**
+* @brief Function implementing the My_DumpToEEPROM thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartTaskDumpToEEPROM */
+void StartTaskDumpToEEPROM(void const * argument)
+{
+  /* USER CODE BEGIN StartTaskDumpToEEPROM */
+
+	TickType_t xLastWakeTime;
+	const TickType_t xFrequency = MY_DUMP_TO_EEPROM_TASK_TIME_PERIOD;
+	Error_Code error = NO_ERROR;
+
+//	Diagnostic_Snapshot_struct Diag_handler = {};
+//	Error_Snapshot_struct Error_handler = {};
+	int rozmiar = sizeof(Diagnostic_Snapshot_struct);
+
+	struct DiagnosticDataToSend_struct
+	{
+		union
+		{
+			uint8_t data[12];
+			Diagnostic_Snapshot_struct diag_mess_from_queue;
+		};
+		EEPROM_data_struct DiagnosticData;
+	} DiagnosticDataToSend = {.DiagnosticData.EEPROMParameters = &EEPROM_car,
+								.DiagnosticData.data = DiagnosticDataToSend.data,
+								.diag_mess_from_queue = {}};
+
+	struct ErrorDataToSend_struct
+	{
+		union
+		{
+			uint8_t data[12];
+			Error_Snapshot_struct error_mess_from_queue;
+		};
+		EEPROM_data_struct ErrorData;
+	} ErrorDataToSend = {.ErrorData.EEPROMParameters = &EEPROM_board,
+							.error_mess_from_queue = {}};
+
+//	UNUSED(EEPROMData);
+
+#ifdef RUNTIME_STATS_QUEUES
+	vQueueAddToRegistry(Queue_diagnostic_snapshot_dumpHandle, QUEUE_DIAGNOSTIC_DUMP_NAME);
+	vQueueAddToRegistry(Queue_error_snapshot_dumpHandle, QUEUE_ERROR_DUMP_NAME);
+#endif
+
+	xLastWakeTime = xTaskGetTickCount();
+
+  /* Infinite loop */
+  for(;;)
+  {
+	  if(pdTRUE == xQueueReceive(Queue_diagnostic_snapshot_dumpHandle, &(DiagnosticDataToSend.diag_mess_from_queue), (TickType_t)0))
+	  {
+
+
+		  if(NO_ERROR == error)
+		  {
+  //			  EEPROMDataHandle->isReady = True;
+		  }
+
+	  }
+	  else
+	  {
+		  if(pdTRUE == xQueueReceive(Queue_error_snapshot_dumpHandle, &(ErrorDataToSend.error_mess_from_queue), (TickType_t)0))
+		  {
+			  error = WriteEEPROM_DMA(ErrorDataToSend.ErrorData.EEPROMParameters, &(ErrorDataToSend.ErrorData));
+			  if(NO_ERROR == error)
+			  {
+	//			  EEPROMDataHandle->isReady = True;
+			  }
+			  vTaskDelay(5);
+		  }
+	  }
+
+	  	  vTaskDelayUntil(&xLastWakeTime, xFrequency);
+  }
+  /* USER CODE END StartTaskDumpToEEPROM */
+}
+
 /* ENC_Button_LongPress_Callback function */
 void ENC_Button_LongPress_Callback(void const * argument)
 {
   /* USER CODE BEGIN ENC_Button_LongPress_Callback */
-  ++licznikTimera;
+//  ++licznikTimera;
   ENC_button.allFlags |= 0b00000110; /* Set first and second bit to q to
    	   	   	   	   	   	   	   	   	   	   indicate the long press on both
    	   	   	   	   	   	   	   	   	   	   bits */
