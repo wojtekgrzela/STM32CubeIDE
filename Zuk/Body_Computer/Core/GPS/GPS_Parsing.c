@@ -219,13 +219,13 @@ Error_Code parse_GPS_data(GPS_data_struct* const GPS)
 				indexDiff = index2 - index1;
 				if(indexDiff >1)
 				{
-					error = copy_buffer_to_str((char*) GPS_message,(char*) GPS->rawData.status, index1 + 1, indexDiff - 1);
-					if (('1' == GPS->rawData.status[0])
-							|| ('2' == GPS->rawData.status[0])
-							|| ('3' == GPS->rawData.status[0])
-							|| ('4' == GPS->rawData.status[0])
-							|| ('5' == GPS->rawData.status[0])
-							|| ('6' == GPS->rawData.status[0]))
+					error = copy_buffer_to_str((char*) GPS_message,(char*) GPS->rawData.Status, index1 + 1, indexDiff - 1);
+					if (('1' == GPS->rawData.Status[0])
+							|| ('2' == GPS->rawData.Status[0])
+							|| ('3' == GPS->rawData.Status[0])
+							|| ('4' == GPS->rawData.Status[0])
+							|| ('5' == GPS->rawData.Status[0])
+							|| ('6' == GPS->rawData.Status[0]))
 					{
 						GPS->Fix = 1;
 					}

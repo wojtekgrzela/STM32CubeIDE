@@ -30,12 +30,49 @@
 #include "../VariousFunctions/Functions.h"
 #include "../GPS/GPS_Parsing.h"
 #include "../EEPROM/EEPROM.h"
+#include "Init_Functions.h"
 
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*** A structure with all the info for diagnostic snapshot ***/
+typedef struct
+{
+	union
+	{
+		uint8_t data[40];
+		struct
+		{
+			Diagnostic_Snapshot_struct diag_mess_from_queue;	//8 bytes total
+			uint8_t rawTime[6/*Size of raw time from GPS*/];	//16 bytes total (2 unused)
+			uint8_t latitude[10];								//24 bytes total
+			uint8_t latitudeIndicator;							//28 bytes total (3 unused)
+			uint8_t longitude[11];								//36 bytes total
+			uint8_t longitudeIndicator;							//40 bytes total (3 unused) = 37 bytes of data
+		};
+	};
+	EEPROM_data_struct DiagnosticDataForEEPROM;
+}DiagnosticDataToSend_struct;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*** A structure with all the info for error snapshot ***/
+typedef struct
+{
+	union
+	{
+		uint8_t data[10];
+		struct
+		{
+			Error_Code error_mess_from_queue;					//4 bytes total
+			uint8_t rawTime[6/*Size of raw time from GPS*/];	//12 bytes total (2 unused) = 10 bytes of data
+		};
+	};
+	EEPROM_data_struct ErrorData;
+}ErrorDataToSend_struct;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -82,7 +119,7 @@ GPS_data_struct GPS = { .TImeZoneAdjPoland = 2 };
 /* For LCD parameters and settings */
 LCD_parameters_struct LCD =
 { .addressLCD = 0x27, .noOfRowsLCD = 4, .noOfColumnsLCD = 20, .Row1 = 0, .Row2 =
-		1, .Row3 = 2, .Row4 = 3 };
+		1, .Row3 = 2, .Row4 = 3, .layer = 1 };
 
 /* For measuring Board temperatures with usage of NTC parameters */
 NTC_parameters_struct NTC =
@@ -109,146 +146,24 @@ LCD_message Voltage_5V_LCD = {.messageHandler = NULL, .size = 0};
 
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Counters for EEPROM */
+CAR_EEPROM_counters_struct CAR_EEPROM_counters = {};
+
 /* CAR SETTINGS */
-uint32_t CAR_totalMileage = 0;
-uint32_t CAR_tripMileage = 0;
+CAR_mileage_struct CAR_mileage = {};
 
-struct waterTemp_struct
-{
-	uint8_t waterHighTempWarningThreshold;
-	uint8_t waterHighTempAlarmThreshold;
-	uint8_t waterHighTempFanOnThreshold;
-	uint8_t waterHighTempFanOffThreshold;
+waterTempSettings_struct CAR_waterTemp = {};
 
-	uint16_t waterHighTempWarningThreshold_address;
-	uint16_t waterHighTempAlarmThreshold_address;
-	uint16_t waterHighTempFanOnThreshold_address;
-	uint16_t waterHighTempFanOffThreshold_address;
-	uint16_t allSettings_address;
+oilTempSettings_struct CAR_oilTemp = {};
 
-	union
-	{
-		uint8_t allSettings;
-		struct
-		{
-			uint8_t waterTempWarningOn			:1;
-			uint8_t waterTempAlarmOn			:1;
-			uint8_t waterFanControlOn			:1;
-			uint8_t waterTempAlarmBuzzerOn		:1;
-			uint8_t waterTempWarningSnapshotOn 	:1;
-			uint8_t waterTempAlarmSnapshotOn	:1;
-			/* 2 more free bits here */
-		};
-	};
-}CAR_waterTemp = {.waterHighTempWarningThreshold_address = WATER_HIGH_TEMP_WARNING_THRESHOLD_ADDRESS,
-					.waterHighTempAlarmThreshold_address = WATER_HIGH_TEMP_ALARM_THRESHOLD_ADDRESS,
-					.waterHighTempFanOnThreshold_address = WATER_HIGH_TEMP_FAN_ON_THRESHOLD_ADDRESS,
-					.waterHighTempFanOffThreshold_address = WATER_HIGH_TEMP_FAN_OFF_THRESHOLD_ADDRESS,
-					.allSettings_address = WATER_TEMP_ALL_SETTINGS_ADDRESS};
+batterySettings_struct CAR_mainBattery = {};
 
-struct oilTemp_struct
-{
-	uint8_t oilHighTempWarningThreshold;
-	uint8_t oilHighTempAlarmThreshold;
+batterySettings_struct CAR_auxiliaryBattery = {};
 
-	uint16_t oilHighTempWarningThreshold_address;
-	uint16_t oilHighTempAlarmThreshold_address;
-	uint16_t allSettings_address;
+fuelSettings_struct CAR_fuel = {};
 
-	union
-	{
-		uint8_t allSettings;
-		struct
-		{
-			uint8_t oilTempWarningOn			:1;
-			uint8_t oilTempAlarmOn				:1;
-			uint8_t oilTempAlarmBuzzerOn		:1;
-			uint8_t oilTempWarningSnapshotOn	:1;
-			uint8_t oilTempAlarmSnapshotOn		:1;
-			/* 3 more free bits here */
-		};
-	};
-}CAR_oilTemp = {.oilHighTempWarningThreshold_address = OIL_HIGH_TEMP_WARNING_THRESHOLD_ADDRESS,
-				.oilHighTempAlarmThreshold_address = OIL_HIGH_TEMP_ALARM_THRESHOLD_ADDRESS,
-				.allSettings_address = OIL_TEMP_ALL_SETTINGS_ADDRESS};
-
-struct battery_struct
-{
-	uint16_t batteryLowVoltageAlarmThreshold;
-	uint16_t batteryHighVoltageAlarmThreshold;
-
-	uint16_t batteryLowVoltageAlarmThreshold_address;
-	uint16_t batteryHighVoltageAlarmThreshold_address;
-	uint16_t allSettings_address;
-
-	union
-	{
-		uint8_t allSettings;
-		struct
-		{
-			uint8_t lowVoltageAlarmOn				:1;
-			uint8_t highVoltageAlarmOn				:1;
-			uint8_t lowVoltageAlarmBuzzerOn			:1;
-			uint8_t highVoltageAlarmBuzzerOn		:1;
-			uint8_t lowVoltageAlarmSnapshotOn		:1;
-			uint8_t highVoltageAlarmSnapshotOn		:1;
-			/* 2 more free bits here */
-		};
-	};
-}CAR_mainBattery = {.batteryLowVoltageAlarmThreshold_address = MAIN_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS,
-					.batteryHighVoltageAlarmThreshold_address = MAIN_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS,
-					.allSettings_address = MAIN_BATTERY_ALL_SETTINGS_ADDRESS},
-CAR_auxiliaryBattery = {.batteryLowVoltageAlarmThreshold_address = AUXILIARY_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS,
-					.batteryHighVoltageAlarmThreshold_address = AUXILIARY_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS,
-					.allSettings_address = AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS};
-
-struct fuel_struct
-{
-	uint8_t fuelLowLevelWarningThreshold;
-
-	uint16_t fuelLowLevelWarningThreshold_address;
-	uint16_t allSettings_address;
-
-	union
-	{
-		uint8_t allSettings;
-		struct
-		{
-			uint8_t lowFuelLevelWarningOn			:1;
-			uint8_t lowFuelLevelWarningBuzzerOn		:1;
-		};
-	};
-}CAR_fuel = {.fuelLowLevelWarningThreshold_address = FUEL_LOW_LEVEL_WARNING_THRESHOLD_ADDRESS,
-				.allSettings_address = FUEL_ALL_SETTINGS_ADDRESS};
-
-struct oilPressure_struct
-{
-	uint8_t oilHighPressureAlarmThreshold;
-	uint8_t oilLowPressureAlarmThreshold;
-
-	uint16_t oilHighPressureAlarmThreshold_address;
-	uint16_t oilLowPressureAlarmThreshold_address;
-	uint16_t allSettings_address;
-
-	union
-	{
-		uint8_t allSettings;
-		struct
-		{
-			uint8_t oilPressureAnalogMeasurement	:1;
-			uint8_t oilHighPressureAlarmOn			:1;
-			uint8_t oilLowPressureAlarmOn			:1;
-			uint8_t oilPressureAlarmBuzzerOn		:1;
-			uint8_t oilPressureAlarmSnapshotOn		:1;
-			/* 3 more free bits here */
-		};
-	};
-}CAR_oilPressure = {.oilHighPressureAlarmThreshold_address = OIL_HIGH_PRESSURE_ALARM_THRESHOLD_ADDRESS,
-					.oilLowPressureAlarmThreshold_address = OIL_LOW_PRESSURE_ALARM_THRESHOLD_ADDRESS,
-					.allSettings_address = OIL_PRESSURE_ALL_SETTINGS_ADDRESS};
-
+oilPressureSettings_struct CAR_oilPressure = {};
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
 
 /* USER CODE END Variables */
 osThreadId My_1000ms_TaskHandle;
@@ -404,19 +319,19 @@ void MX_FREERTOS_Init(void) {
 
   /* Create the queue(s) */
   /* definition and creation of Queue_EEPROM_read */
-  osMessageQDef(Queue_EEPROM_read, 10, EEPROM_data_struct);
+  osMessageQDef(Queue_EEPROM_read, 5, EEPROM_data_struct);
   Queue_EEPROM_readHandle = osMessageCreate(osMessageQ(Queue_EEPROM_read), NULL);
 
   /* definition and creation of Queue_EEPROM_write */
-  osMessageQDef(Queue_EEPROM_write, 10, EEPROM_data_struct);
+  osMessageQDef(Queue_EEPROM_write, 5, EEPROM_data_struct);
   Queue_EEPROM_writeHandle = osMessageCreate(osMessageQ(Queue_EEPROM_write), NULL);
 
   /* definition and creation of Queue_error_snapshot_dump */
-  osMessageQDef(Queue_error_snapshot_dump, 2, Error_Snapshot_struct);
+  osMessageQDef(Queue_error_snapshot_dump, 5, Error_Code);
   Queue_error_snapshot_dumpHandle = osMessageCreate(osMessageQ(Queue_error_snapshot_dump), NULL);
 
   /* definition and creation of Queue_diagnostic_snapshot_dump */
-  osMessageQDef(Queue_diagnostic_snapshot_dump, 2, Diagnostic_Snapshot_struct);
+  osMessageQDef(Queue_diagnostic_snapshot_dump, 5, Diagnostic_Snapshot_struct);
   Queue_diagnostic_snapshot_dumpHandle = osMessageCreate(osMessageQ(Queue_diagnostic_snapshot_dump), NULL);
 
   /* USER CODE BEGIN RTOS_QUEUES */
@@ -441,7 +356,7 @@ void MX_FREERTOS_Init(void) {
   My_GPS_TaskHandle = osThreadCreate(osThread(My_GPS_Task), NULL);
 
   /* definition and creation of My_EEPROM_Task */
-  osThreadDef(My_EEPROM_Task, StartTaskEEPROM, osPriorityNormal, 0, 128);
+  osThreadDef(My_EEPROM_Task, StartTaskEEPROM, osPriorityHigh, 0, 128);
   My_EEPROM_TaskHandle = osThreadCreate(osThread(My_EEPROM_Task), NULL);
 
   /* definition and creation of My_DumpToEEPROM */
@@ -612,13 +527,7 @@ void StartTaskLCD(void const * argument)
 	uint8_t LCD_buffer[LCD.noOfRowsLCD][LCD.noOfColumnsLCD];
 	memset(LCD_buffer, SPACE_IN_ASCII, (LCD.noOfRowsLCD * LCD.noOfColumnsLCD));
 
-	uint8_t message[12] = "";
-	static uint32_t count = 0;
-
-	/************/
-//	vTaskDelay(1000);
-	/************/
-
+	/** LCD Init (setting number of rows, columns, address, I2C handler **/
 	lcdInit(&hi2c2, LCD.addressLCD, LCD.noOfRowsLCD, LCD.noOfColumnsLCD);
 
 	// Print text at home position 0,0
@@ -634,45 +543,111 @@ void StartTaskLCD(void const * argument)
 	vTaskDelay(3000);
 	/************/
 
+	LCD.layer = 3;
+
 	xLastWakeTime = xTaskGetTickCount();
 
 	/* Infinite loop */
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 	for (;;)
 	{
+		/** Cleaning the buffer by writing only spaces into it **/
 		memset(LCD_buffer, SPACE_IN_ASCII, (LCD.noOfRowsLCD * LCD.noOfColumnsLCD));
 
-		snprintf((char*)message, 11, "TIM: %" PRIu32, count);
+#if 1
+		switch (LCD.layer)
+		{
+			case Desktop_1: /** Main desktop - car info, speed, mileage, temperatures... **/
+			{
+				/** First Row **/
+				error = copy_str_to_buffer((char*)GPS.forLCD.speed.messageHandler, (char*)LCD_buffer[LCD.Row1], 0, GPS.forLCD.speed.size);
+				error = copy_str_to_buffer("km/h", (char*)LCD_buffer[LCD.Row1], (GPS.forLCD.speed.size+1), 4);
+				error = copy_str_to_buffer((char*)GPS.forLCD.clock.messageHandler, (char*)LCD_buffer[LCD.Row1], 12, GPS.forLCD.clock.size);
 
-		error = copy_str_to_buffer((char*) message, (char*) LCD_buffer[LCD.Row3], 2,
-				strlen((char*) message));
+				/** Second Row **/
+				error = copy_str_to_buffer("Speed, mileage etc.", (char*)LCD_buffer[LCD.Row2], 0, 19);
 
-		error = copy_str_to_buffer((char*)DCDC_3V3_temperature_LCD.messageHandler, (char*)LCD_buffer[LCD.Row1], 5, DCDC_3V3_temperature_LCD.size);
-		error = copy_str_to_buffer((char*)Stabilizer_5V_temperature_LCD.messageHandler, (char*)LCD_buffer[LCD.Row1], 15, Stabilizer_5V_temperature_LCD.size);
+				/** Third Row **/
+				error = copy_str_to_buffer("TODO", (char*)LCD_buffer[LCD.Row3], 0, 4);
 
-		error = copy_str_to_buffer((char*)"3V3: ", (char*)LCD_buffer[LCD.Row1], 0, 5);
-		error = copy_str_to_buffer((char*)"5V: ", (char*)LCD_buffer[LCD.Row1], 11, 4);
+				/** Fourth Row **/
+				error = copy_str_to_buffer((char*)GPS.forLCD.clock.messageHandler, (char*)LCD_buffer[LCD.Row4], 12, GPS.forLCD.clock.size);
 
-		error = copy_str_to_buffer((char*)"In: ", (char*)LCD_buffer[LCD.Row2], 0, 4);
-		error = copy_str_to_buffer((char*)Voltage_Vin_LCD.messageHandler, (char*)LCD_buffer[LCD.Row2], 4, Voltage_Vin_LCD.size);
-		error = copy_str_to_buffer((char*)"5V: ", (char*)LCD_buffer[LCD.Row2], (4+Voltage_Vin_LCD.size+1), 4);
-		error = copy_str_to_buffer((char*)Voltage_5V_LCD.messageHandler, (char*)LCD_buffer[LCD.Row2], (4+Voltage_Vin_LCD.size+1+4), Voltage_5V_LCD.size);
+				break;
+			}
+			case Desktop_2: /** GPS info - position, altitude, fix... **/
+			{
+				/** First Row **/
+				error = copy_str_to_buffer((char*)GPS.forLCD.status.messageHandler, (char*)LCD_buffer[LCD.Row1], 0, GPS.forLCD.status.size);
+				error = copy_str_to_buffer((char*)GPS.forLCD.clock.messageHandler, (char*)LCD_buffer[LCD.Row1], 12, GPS.forLCD.clock.size);
 
-		error = copy_str_to_buffer((char*)GPS.forLCD.clock.messageHandler, (char*)LCD_buffer[LCD.Row4], 0, GPS.forLCD.clock.size);
+				/** Second Row **/
+				error = copy_str_to_buffer("Lat.: ", (char*)LCD_buffer[LCD.Row2], 0, 6);
+				error = copy_str_to_buffer((char*)GPS.forLCD.latitude.messageHandler, (char*)LCD_buffer[LCD.Row2], 6, GPS.forLCD.latitude.size);
+				error = copy_str_to_buffer((char*)GPS.forLCD.latitudeIndicator.messageHandler, (char*)LCD_buffer[LCD.Row2], (6+GPS.forLCD.latitude.size+1), GPS.forLCD.latitudeIndicator.size);
 
+				/** Third Row **/
+				error = copy_str_to_buffer("Lon.: ", (char*)LCD_buffer[LCD.Row3], 0, 6);
+				error = copy_str_to_buffer((char*)GPS.forLCD.longitude.messageHandler, (char*)LCD_buffer[LCD.Row3], 6, GPS.forLCD.longitude.size);
+				error = copy_str_to_buffer((char*)GPS.forLCD.longitudeIndicator.messageHandler, (char*)LCD_buffer[LCD.Row3], (6+GPS.forLCD.longitude.size+1), GPS.forLCD.longitudeIndicator.size);
+
+				/** Fourth Row **/
+				error = copy_str_to_buffer("Alt.: ", (char*)LCD_buffer[LCD.Row4], 0, 6);
+				error = copy_str_to_buffer((char*)GPS.forLCD.altitude.messageHandler, (char*)LCD_buffer[LCD.Row4], 6, GPS.forLCD.altitude.size);
+				error = copy_str_to_buffer("m npm", (char*)LCD_buffer[LCD.Row4], (6+GPS.forLCD.altitude.size+1), 5);
+
+				break;
+			}
+			case Desktop_3: /** Information about board internals (voltages, temperatures ...) **/
+			{
+				/** First Row **/
+				error = copy_str_to_buffer((char*)"3V3: ", (char*)LCD_buffer[LCD.Row1], 0, 5);
+				error = copy_str_to_buffer((char*)DCDC_3V3_temperature_LCD.messageHandler, (char*)LCD_buffer[LCD.Row1], 5, DCDC_3V3_temperature_LCD.size);
+				error = copy_str_to_buffer((char*)GPS.forLCD.clock.messageHandler, (char*)LCD_buffer[LCD.Row1], 12, GPS.forLCD.clock.size);
+
+				/** Second Row **/
+				error = copy_str_to_buffer((char*)"5V: ", (char*)LCD_buffer[LCD.Row2], 0, 4);
+				error = copy_str_to_buffer((char*)Stabilizer_5V_temperature_LCD.messageHandler, (char*)LCD_buffer[LCD.Row2], 4, Stabilizer_5V_temperature_LCD.size);
+				error = copy_str_to_buffer((char*)Voltage_5V_LCD.messageHandler, (char*)LCD_buffer[LCD.Row2], (4+Stabilizer_5V_temperature_LCD.size+1), Voltage_5V_LCD.size);
+
+				/** Third Row **/
+				error = copy_str_to_buffer((char*)"In: ", (char*)LCD_buffer[LCD.Row3], 0, 4);
+				error = copy_str_to_buffer((char*)Voltage_Vin_LCD.messageHandler, (char*)LCD_buffer[LCD.Row3], 4, Voltage_Vin_LCD.size);
+
+				/** Fourth Row **/
+
+				break;
+			}
+			case Menu:
+			{
+
+				break;
+			}
+			case Alarm:
+			{
+
+				break;
+			}
+			default:
+			{
+				while(1) {};
+				break;
+			}
+		}
+#endif
+
+		/** Send buffers to the LCD **/
 		lcdSetCursorPosition(0, LCD.Row1);
 		lcdPrintStr(LCD_buffer[LCD.Row1], LCD.noOfColumnsLCD);
-		vTaskDelay(2);
+		vTaskDelay(1);
 		lcdSetCursorPosition(0, LCD.Row2);
 		lcdPrintStr(LCD_buffer[LCD.Row2], LCD.noOfColumnsLCD);
-		vTaskDelay(2);
+		vTaskDelay(1);
 		lcdSetCursorPosition(0, LCD.Row3);
 		lcdPrintStr(LCD_buffer[LCD.Row3], LCD.noOfColumnsLCD);
-		vTaskDelay(2);
+		vTaskDelay(1);
 		lcdSetCursorPosition(0, LCD.Row4);
 		lcdPrintStr(LCD_buffer[LCD.Row4], LCD.noOfColumnsLCD);
-
-		++count;
 
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
@@ -698,16 +673,29 @@ void StartTaskGPS(void const * argument)
 
 #ifdef GPS_LCD_PRINT
 	uint8_t tempHour = '\0';
-	uint8_t tempbuffer[3] = {'a'};
+	uint8_t tempbuffer[3u] = {'a'};
 
-	GPS.forLCD.hours.messageHandler = GPS.message_buffers.hours;
-	GPS.forLCD.minutes.messageHandler = GPS.message_buffers.minutes;
-	GPS.forLCD.seconds.messageHandler = GPS.message_buffers.seconds;
-	GPS.forLCD.clock.messageHandler = GPS.message_buffers.clock;
+	GPS.forLCD.hours.messageHandler 				= GPS.message_buffers.hours;
+	GPS.forLCD.minutes.messageHandler 				= GPS.message_buffers.minutes;
+	GPS.forLCD.seconds.messageHandler 				= GPS.message_buffers.seconds;
+	GPS.forLCD.clock.messageHandler 				= GPS.message_buffers.clock;
+	GPS.forLCD.latitude.messageHandler 				= GPS.message_buffers.latitude;
+	GPS.forLCD.latitudeIndicator.messageHandler 	= GPS.message_buffers.latitudeIndicator;
+	GPS.forLCD.longitude.messageHandler 			= GPS.message_buffers.longitude;
+	GPS.forLCD.longitudeIndicator.messageHandler 	= GPS.message_buffers.longitudeIndicator;
+	GPS.forLCD.status.messageHandler				= GPS.message_buffers.fixMessage;
+	GPS.forLCD.satellitesUsed.messageHandler		= GPS.message_buffers.satellitesUsed;
+	GPS.forLCD.altitude.messageHandler				= GPS.message_buffers.altitude;
+	GPS.forLCD.speed.messageHandler					= GPS.message_buffers.speed;
 
-	GPS.forLCD.hours.size = 2;
-	GPS.forLCD.minutes.size = 2;
-	GPS.forLCD.seconds.size = 2;
+	GPS.forLCD.hours.size 				= 2u;
+	GPS.forLCD.minutes.size 			= 2u;
+	GPS.forLCD.seconds.size 			= 2u;
+	GPS.forLCD.clock.size 				= 8u;
+	GPS.forLCD.latitude.size			= 10u;
+	GPS.forLCD.latitudeIndicator.size	= 1u;
+	GPS.forLCD.longitude.size			= 11u;
+	GPS.forLCD.longitudeIndicator.size	= 1u;
 #endif
 
 	xLastWakeTime = xTaskGetTickCount();
@@ -725,7 +713,6 @@ void StartTaskGPS(void const * argument)
 #endif
 
 #ifdef GPS_LCD_PRINT
-
 		if(TRUE == GPS.TimeReady)
 		{
 			error = copy_buffer_to_str((char*)GPS.rawData.UTC, (char*)tempbuffer, 0, 2);
@@ -733,7 +720,9 @@ void StartTaskGPS(void const * argument)
 			tempHour += GPS.TImeZoneAdjPoland;
 
 			if(24 <= tempHour)
+			{
 				tempHour -= 24;
+			}
 
 			if(10 <= tempHour)
 			{
@@ -744,30 +733,80 @@ void StartTaskGPS(void const * argument)
 				tempbuffer[0] = '0';
 				itoa(tempHour, (char*)&tempbuffer[1], 10);
 			}
-			copy_buffer_to_str((char*)tempbuffer, (char*)GPS.message_buffers.hours, 0, 2);
 
-			copy_buffer_to_str((char*)GPS.rawData.UTC, (char*)GPS.message_buffers.minutes, 2, 2);
+			error = copy_buffer_to_str((char*)tempbuffer, (char*)GPS.message_buffers.hours, 0u, GPS.forLCD.hours.size);
 
-			copy_buffer_to_str((char*)GPS.rawData.UTC, (char*)GPS.message_buffers.seconds, 4, 2);
+			error = copy_buffer_to_str((char*)GPS.rawData.UTC, (char*)GPS.message_buffers.minutes, 2u, GPS.forLCD.minutes.size);
 
-			GPS.message_buffers.clock[2] = ':';
-			GPS.message_buffers.clock[5] = ':';
-			copy_str_to_buffer((char*)GPS.message_buffers.hours, (char*)GPS.message_buffers.clock, 0, 2);
-			copy_str_to_buffer((char*)GPS.message_buffers.minutes, (char*)GPS.message_buffers.clock, 3, 2);
-			copy_str_to_buffer((char*)GPS.message_buffers.seconds, (char*)GPS.message_buffers.clock, 6, 2);
-			GPS.forLCD.clock.size = strlen((char*)GPS.forLCD.clock.messageHandler);
+			error = copy_buffer_to_str((char*)GPS.rawData.UTC, (char*)GPS.message_buffers.seconds, 4u, GPS.forLCD.seconds.size);
 		}
 		else
 		{
-
+			for(uint i=0; i<2; ++i)
+			{
+				GPS.message_buffers.hours[i] = 'x';
+				GPS.message_buffers.minutes[i] = 'x';
+				GPS.message_buffers.seconds[i] = 'x';
+			}
 		}
-//		snprintf((char*)Voltage_5V_LCD.messageHandler, 6, "%" PRIu16 ".%02" PRIu16 "V", voltage5V/100, voltage5V%100);
-//		Voltage_Vin_LCD.size = strlen((char*)Voltage_Vin_LCD.messageHandler);
 
+		GPS.message_buffers.clock[2] = ':';
+		GPS.message_buffers.clock[5] = ':';
+		error = copy_str_to_buffer((char*)GPS.message_buffers.hours, (char*)GPS.message_buffers.clock, 0u, GPS.forLCD.hours.size);
+		error = copy_str_to_buffer((char*)GPS.message_buffers.minutes, (char*)GPS.message_buffers.clock, 3u, GPS.forLCD.minutes.size);
+		error = copy_str_to_buffer((char*)GPS.message_buffers.seconds, (char*)GPS.message_buffers.clock, 6u, GPS.forLCD.seconds.size);
+
+		if(NO_ERROR != error)
+		{
+			// TODO
+		}
+
+		if(TRUE == GPS.Fix)
+		{
+			error = copy_str_to_buffer((char*)GPS.rawData.Latitude, (char*)GPS.message_buffers.latitude, 0u, GPS.forLCD.latitude.size);
+			error = copy_str_to_buffer((char*)GPS.rawData.LatitudeIndicator, (char*)GPS.message_buffers.latitudeIndicator, 0u, GPS.forLCD.latitudeIndicator.size);
+
+			error = copy_str_to_buffer((char*)GPS.rawData.Longitude, (char*)GPS.message_buffers.longitude, 0u, GPS.forLCD.longitude.size);
+			error = copy_str_to_buffer((char*)GPS.rawData.LongitudeIndicator, (char*)GPS.message_buffers.longitudeIndicator, 0u, GPS.forLCD.longitudeIndicator.size);
+
+
+			GPS.forLCD.status.size = 5u;
+			error = copy_str_to_buffer("Fixed", (char*)GPS.message_buffers.fixMessage, 0u, GPS.forLCD.status.size);
+
+			error = copy_str_to_buffer((char*)GPS.rawData.SatellitesUsed, (char*)GPS.message_buffers.satellitesUsed, 0u, GPS.forLCD.satellitesUsed.size);
+
+			GPS.forLCD.altitude.size = strlen((char*)GPS.rawData.Altitude);
+			error = copy_str_to_buffer((char*)GPS.rawData.Altitude, (char*)GPS.message_buffers.altitude, 0u, GPS.forLCD.altitude.size);
+
+			GPS.forLCD.speed.size = find_nearest_symbol('.', GPS.rawData.Speed, 0u);
+			error = copy_str_to_buffer((char*)GPS.rawData.Speed, (char*)GPS.message_buffers.speed, 0u, GPS.forLCD.speed.size);
+		}
+		else
+		{
+			error = copy_str_to_buffer("xxxx.xxxxx", (char*)GPS.message_buffers.latitude, 0u, GPS.forLCD.latitude.size);
+			error = copy_str_to_buffer("X", (char*)GPS.message_buffers.latitudeIndicator, 0u, GPS.forLCD.latitudeIndicator.size);
+
+			error = copy_str_to_buffer("xxxxx.xxxxx", (char*)GPS.message_buffers.longitude, 0u, GPS.forLCD.longitude.size);
+			error = copy_str_to_buffer("X", (char*)GPS.message_buffers.longitudeIndicator, 0u, GPS.forLCD.longitudeIndicator.size);
+
+
+			GPS.forLCD.status.size = 5u;
+			error = copy_str_to_buffer("NoFix", (char*)GPS.message_buffers.fixMessage, 0u, GPS.forLCD.status.size);
+
+			error = copy_str_to_buffer((char*)GPS.rawData.SatellitesUsed, (char*)GPS.message_buffers.satellitesUsed, 0u, GPS.forLCD.satellitesUsed.size);
+
+			GPS.forLCD.altitude.size = 5u;
+			error = copy_str_to_buffer("xxx.x", (char*)GPS.message_buffers.altitude, 0u, GPS.forLCD.altitude.size);
+
+			GPS.forLCD.speed.size = 3u;
+			error = copy_str_to_buffer("xxx", (char*)GPS.message_buffers.speed, 0u, GPS.forLCD.speed.size);
+		}
+
+		if(NO_ERROR != error)
+		{
+			// TODO
+		}
 #endif
-
-
-
 
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
@@ -791,12 +830,19 @@ void StartTaskEEPROM(void const * argument)
 	const TickType_t xFrequency = MY_EEPROM_TASK_TIME_PERIOD;
 	Error_Code error = NO_ERROR;
 
-	EEPROM_data_struct EEPROMData;
+	EEPROM_data_struct EEPROMData = {};
+	uint8_t localBuffer[64] = {0};
 
 #ifdef RUNTIME_STATS_QUEUES
 	vQueueAddToRegistry(Queue_EEPROM_writeHandle, QUEUE_EEPROM_WRITE_NAME);
 	vQueueAddToRegistry(Queue_EEPROM_readHandle, QUEUE_EEPROM_READ_NAME);
 #endif
+
+	/*** EEPROM INIT SEQUENCE ***/
+	error = InitVariablesFromEEPROMCar();
+
+	if(NO_ERROR != error)
+		while(1) {};
 
 	xLastWakeTime = xTaskGetTickCount();
 
@@ -805,18 +851,23 @@ void StartTaskEEPROM(void const * argument)
   {
 	  if(pdTRUE == xQueueReceive(Queue_EEPROM_readHandle, &EEPROMData, (TickType_t)0))
 	  {
-		  error = ReadEEPROM_DMA(EEPROMData.EEPROMParameters, &EEPROMData);
+		  error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
 		  if(NO_ERROR == error)
 		  {
 			  EEPROMData.isReady = True;//TODO: mem error dump
 		  }
-
 	  }
 	  else
 	  {
 		  if(pdTRUE == xQueueReceive(Queue_EEPROM_writeHandle, &EEPROMData, (TickType_t)0))
 		  {
-			  error = WriteEEPROM_DMA(EEPROMData.EEPROMParameters, &EEPROMData);
+			  for(uint8_t i=0; i < EEPROMData.size; ++i)
+			  {
+				  localBuffer[i] = EEPROMData.data[i];
+			  }
+			  EEPROMData.data = localBuffer;
+
+			  error = WriteEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
 			  if(NO_ERROR == error)
 			  {
 				  EEPROMData.isReady = True;//TODO: mem error dump
@@ -845,34 +896,16 @@ void StartTaskDumpToEEPROM(void const * argument)
 	const TickType_t xFrequency = MY_DUMP_TO_EEPROM_TASK_TIME_PERIOD;
 	Error_Code error = NO_ERROR;
 
-//	Diagnostic_Snapshot_struct Diag_handler = {};
-//	Error_Snapshot_struct Error_handler = {};
-	int rozmiar = sizeof(Diagnostic_Snapshot_struct);
+	DiagnosticDataToSend_struct DiagnosticDataToSend =
+	{ .DiagnosticDataForEEPROM =
+	{ .EEPROMParameters = &EEPROM_car, .data = DiagnosticDataToSend.data,
+			.size = 35, .memAddress = 0, .memAddressSize = 2 },
+			.diag_mess_from_queue =
+			{ .snapshotIdentificator = DIAGNOSTICS_OK, .value = 0 } };
 
-	struct DiagnosticDataToSend_struct
-	{
-		union
-		{
-			uint8_t data[12];
-			Diagnostic_Snapshot_struct diag_mess_from_queue;
-		};
-		EEPROM_data_struct DiagnosticData;
-	} DiagnosticDataToSend = {.DiagnosticData.EEPROMParameters = &EEPROM_car,
-								.DiagnosticData.data = DiagnosticDataToSend.data,
-								.diag_mess_from_queue = {}};
-
-	struct ErrorDataToSend_struct
-	{
-		union
-		{
-			uint8_t data[12];
-			Error_Snapshot_struct error_mess_from_queue;
-		};
-		EEPROM_data_struct ErrorData;
-	} ErrorDataToSend = {.ErrorData.EEPROMParameters = &EEPROM_board,
-							.error_mess_from_queue = {}};
-
-//	UNUSED(EEPROMData);
+	ErrorDataToSend_struct ErrorDataToSend =
+	{ .ErrorData.EEPROMParameters = &EEPROM_board, .error_mess_from_queue =
+			NO_ERROR };
 
 #ifdef RUNTIME_STATS_QUEUES
 	vQueueAddToRegistry(Queue_diagnostic_snapshot_dumpHandle, QUEUE_DIAGNOSTIC_DUMP_NAME);
@@ -886,11 +919,29 @@ void StartTaskDumpToEEPROM(void const * argument)
   {
 	  if(pdTRUE == xQueueReceive(Queue_diagnostic_snapshot_dumpHandle, &(DiagnosticDataToSend.diag_mess_from_queue), (TickType_t)0))
 	  {
+		  DiagnosticDataToSend.longitudeIndicator = (TRUE == GPS.Fix) ? GPS.rawData.LongitudeIndicator[0] : 'X';
+		  DiagnosticDataToSend.latitudeIndicator = (TRUE == GPS.Fix) ? GPS.rawData.LatitudeIndicator[0] : 'X';
 
+		  for(uint8_t i = 0; i<11; ++i)
+		  {
+			  if(6>i)
+			  {
+			  DiagnosticDataToSend.rawTime[i] = (TRUE == GPS.TimeReady) ? GPS.rawData.UTC[i] : 'x';
+			  }
+
+			  if(10>i)
+			  {
+			  DiagnosticDataToSend.latitude[i] = (TRUE == GPS.Fix) ? GPS.rawData.Latitude[i] : 'y';
+			  }
+
+			  DiagnosticDataToSend.longitude[i] = (TRUE == GPS.Fix) ? GPS.rawData.Longitude[i] : 'z';
+		  }
+
+		  error = WriteEEPROM(DiagnosticDataToSend.DiagnosticDataForEEPROM.EEPROMParameters, &(DiagnosticDataToSend.DiagnosticDataForEEPROM));
 
 		  if(NO_ERROR == error)
 		  {
-  //			  EEPROMDataHandle->isReady = True;
+  //			  EEPROMDataHandle->isReady = True; TODO
 		  }
 
 	  }
@@ -898,16 +949,16 @@ void StartTaskDumpToEEPROM(void const * argument)
 	  {
 		  if(pdTRUE == xQueueReceive(Queue_error_snapshot_dumpHandle, &(ErrorDataToSend.error_mess_from_queue), (TickType_t)0))
 		  {
-			  error = WriteEEPROM_DMA(ErrorDataToSend.ErrorData.EEPROMParameters, &(ErrorDataToSend.ErrorData));
+			  error = WriteEEPROM(ErrorDataToSend.ErrorData.EEPROMParameters, &(ErrorDataToSend.ErrorData));
 			  if(NO_ERROR == error)
 			  {
-	//			  EEPROMDataHandle->isReady = True;
+	//			  EEPROMDataHandle->isReady = True; TODO
 			  }
 			  vTaskDelay(5);
 		  }
 	  }
 
-	  	  vTaskDelayUntil(&xLastWakeTime, xFrequency);
+	  vTaskDelayUntil(&xLastWakeTime, xFrequency);
   }
   /* USER CODE END StartTaskDumpToEEPROM */
 }
@@ -916,10 +967,13 @@ void StartTaskDumpToEEPROM(void const * argument)
 void ENC_Button_LongPress_Callback(void const * argument)
 {
   /* USER CODE BEGIN ENC_Button_LongPress_Callback */
-//  ++licznikTimera;
-  ENC_button.allFlags |= 0b00000110; /* Set first and second bit to q to
-   	   	   	   	   	   	   	   	   	   	   indicate the long press on both
-   	   	   	   	   	   	   	   	   	   	   bits */
+
+	ENC_button.allFlags |= 0b00000110; /* Set first and second bit to q to
+	 	 	 	 	 	 	 	 	indicate the long press on both bits */
+
+	++LCD.layer;
+	if(LCD.layer >3)
+		LCD.layer = 1;
   /* USER CODE END ENC_Button_LongPress_Callback */
 }
 

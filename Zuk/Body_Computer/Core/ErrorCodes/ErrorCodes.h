@@ -24,16 +24,19 @@ typedef enum
 	OS__STARTING_TIMER_FAILED,
 	OS__STOPPING_TIMER_FAILED,
 
-	/*** EEPROM ERRORS ***/
+	/*** FreeRTOS errors ***/
+	FREERTOS__QUEUE_SEND_ERROR,
+
+	/*** EEPROM errors ***/
 	EEPROM__TRIED_TO_WRITE_WHILE_LOCKED,
 
-	/*** ADCs ERRORS ***/
+	/*** ADCs errors ***/
 	ADC__VALUE_INCORRECT,
 
-	/*** STRING ERRORS ***/
+	/*** String errors ***/
 	STRING__EMPTY,
 
-	/*** GPS ERRORS ***/
+	/*** GPS errors ***/
 	GPS__NO_SYMBOL_FOUND,
 	GPS__INVALID_DATA_START,
 

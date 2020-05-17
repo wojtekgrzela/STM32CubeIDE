@@ -41,6 +41,7 @@ typedef struct
 		uint8_t latitude[10];
 		uint8_t latitudeIndicator[1];
 		uint8_t longitude[11];
+		uint8_t longitudeIndicator[1];
 		uint8_t fixMessage[5];			/* Because original status is a number, and we want noFix or Fixed */
 		uint8_t satellitesUsed[2];
 		uint8_t altitude[6];
@@ -54,7 +55,7 @@ typedef struct
 		uint8_t LatitudeIndicator[2];	/* N-North, S-South */
 		uint8_t Longitude[12];
 		uint8_t LongitudeIndicator[2];	/* E-East, W-West */
-		uint8_t status[2];				/* 0-No Fix, 1-2D/3D, 2-DGNSS, 4-Fixed RTK, 5-Float RTK, 6-Dead Reckoning */
+		uint8_t Status[2];				/* 0-No Fix, 1-2D/3D, 2-DGNSS, 4-Fixed RTK, 5-Float RTK, 6-Dead Reckoning */
 		uint8_t SatellitesUsed[3];		/* Number of satellites used for navigation */
 		uint8_t Altitude[7];			/* Meters above sea level */
 
@@ -70,7 +71,7 @@ typedef struct
 		LCD_message clock;
 		LCD_message latitude;
 		LCD_message latitudeIndicator;
-		LCD_message Longitude;
+		LCD_message longitude;
 		LCD_message longitudeIndicator;
 		LCD_message status;
 		LCD_message satellitesUsed;

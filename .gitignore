@@ -56,12 +56,16 @@ dkms.conf
 /Nowy_workspace
 /workspace_1.0.2
 /Dla_Andrzeja
+/
 
 #Foldery z plikami projektu
 **/.metadata
 **/Debug
+**/Release
 **/FreeRTOS_TAD_logs
 **/RemoteSystemsTempFiles
+
+/Zuk/BodyComputer_WZOR_PINOW
 
 #Logi
 *.log
@@ -70,3 +74,6 @@ dkms.conf
 *.zip
 *.rar
 *.xxx
+
+# subdir makefile
+subdir.mk

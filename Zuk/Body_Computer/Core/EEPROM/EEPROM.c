@@ -63,10 +63,11 @@ Error_Code UnlockEEPROM(EEPROM_parameters_struct *const EEPROM)
  * 			(look in EEPROM.h)
  * @retval Error_Code: gives a value of error if one occurs
  */
-Error_Code ReadEEPROM_DMA(const EEPROM_parameters_struct *const EEPROM, EEPROM_data_struct *const data)
+Error_Code ReadEEPROM(const EEPROM_parameters_struct *const EEPROM, EEPROM_data_struct *const data)
 {
 	Error_Code error = NO_ERROR;
-	error = HAL_I2C_Mem_Read_DMA(EEPROM->EEPROM_hi2c, EEPROM->address,
+	error = HAL_I2C_Mem_Read_IT(EEPROM->EEPROM_hi2c, ((EEPROM->address)|(0x0001))
+			/*"OR" to set the last bit to 1 (in order to read)*/,
 			data->memAddress, data->memAddressSize, data->data, data->size);
 
 	return error;
@@ -86,13 +87,14 @@ Error_Code ReadEEPROM_DMA(const EEPROM_parameters_struct *const EEPROM, EEPROM_d
  * @param NTC: a pointer to the NTC structure with NTC parameters
  * @retval Error_Code: gives a value of error if one occurs
  */
-Error_Code WriteEEPROM_DMA(const EEPROM_parameters_struct *const EEPROM, EEPROM_data_struct *const data)
+Error_Code WriteEEPROM(const EEPROM_parameters_struct *const EEPROM, EEPROM_data_struct *const data)
 {
 	Error_Code error = NO_ERROR;
 
 	if(FALSE == EEPROM->isLocked)
 	{
-		error = HAL_I2C_Mem_Write_DMA(EEPROM->EEPROM_hi2c, EEPROM->address,
+		error = HAL_I2C_Mem_Write_IT(EEPROM->EEPROM_hi2c, ((EEPROM->address)&(0xFFFE))
+				/*"AND" to set the last bit to 0 (in order to write)*/,
 				data->memAddress, data->memAddressSize, data->data, data->size);
 	}
 	else

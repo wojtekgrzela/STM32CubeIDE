@@ -69,23 +69,13 @@ typedef enum
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/* Diagnostic Snapshot */
+/* Diagnostic_Code Snapshot */
 typedef struct
 {
 	Diagnostic_Code snapshotIdentificator;				//4 bytes total
-	uint8_t RawTime[6/*Size of raw time from GPS*/];	//12 bytes total (2 unused)
-	uint16_t value;										//12 bytes total
+	uint16_t value;										//8 bytes total (2 unused)
+
 }Diagnostic_Snapshot_struct;
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/* Internal Error Snapshot */
-typedef struct
-{
-	Error_Code ErrorIdentificator;						//4 bytes total
-	uint8_t RawTime[6/*Size of raw time from GPS*/];	//12 bytes total (2 unused)
-
-}Error_Snapshot_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -106,6 +96,136 @@ typedef union
 }ENCButton_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef struct
+{
+	uint8_t waterHighTempWarningThreshold;
+	uint8_t waterHighTempAlarmThreshold;
+	uint8_t waterHighTempFanOnThreshold;
+	uint8_t waterHighTempFanOffThreshold;
+
+	union
+	{
+		uint8_t allSettings;
+		struct
+		{
+			uint8_t waterTempWarningOn			:1;
+			uint8_t waterTempAlarmOn			:1;
+			uint8_t waterFanControlOn			:1;
+			uint8_t waterTempAlarmBuzzerOn		:1;
+			uint8_t waterTempWarningSnapshotOn 	:1;
+			uint8_t waterTempAlarmSnapshotOn	:1;
+			/* 2 more free bits here */
+		};
+	};
+}waterTempSettings_struct;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef struct
+{
+	uint8_t oilHighTempWarningThreshold;
+	uint8_t oilHighTempAlarmThreshold;
+
+	union
+	{
+		uint8_t allSettings;
+		struct
+		{
+			uint8_t oilTempWarningOn			:1;
+			uint8_t oilTempAlarmOn				:1;
+			uint8_t oilTempAlarmBuzzerOn		:1;
+			uint8_t oilTempWarningSnapshotOn	:1;
+			uint8_t oilTempAlarmSnapshotOn		:1;
+			/* 3 more free bits here */
+		};
+	};
+}oilTempSettings_struct;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef struct
+{
+	uint16_t batteryLowVoltageAlarmThreshold;
+	uint16_t batteryHighVoltageAlarmThreshold;
+
+	union
+	{
+		uint8_t allSettings;
+		struct
+		{
+			uint8_t lowVoltageAlarmOn				:1;
+			uint8_t highVoltageAlarmOn				:1;
+			uint8_t lowVoltageAlarmBuzzerOn			:1;
+			uint8_t highVoltageAlarmBuzzerOn		:1;
+			uint8_t lowVoltageAlarmSnapshotOn		:1;
+			uint8_t highVoltageAlarmSnapshotOn		:1;
+			/* 2 more free bits here */
+		};
+	};
+}batterySettings_struct;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef struct
+{
+	uint8_t fuelLowLevelWarningThreshold;
+
+	union
+	{
+		uint8_t allSettings;
+		struct
+		{
+			uint8_t lowFuelLevelWarningOn			:1;
+			uint8_t lowFuelLevelWarningBuzzerOn		:1;
+		};
+	};
+}fuelSettings_struct;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef struct
+{
+	uint8_t oilHighPressureAlarmThreshold;
+	uint8_t oilLowPressureAlarmThreshold;
+
+	union
+	{
+		uint8_t allSettings;
+		struct
+		{
+			uint8_t oilPressureAnalogMeasurement	:1;
+			uint8_t oilHighPressureAlarmOn			:1;
+			uint8_t oilLowPressureAlarmOn			:1;
+			uint8_t oilPressureAlarmBuzzerOn		:1;
+			uint8_t oilPressureAlarmSnapshotOn		:1;
+			/* 3 more free bits here */
+		};
+	};
+}oilPressureSettings_struct;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef union
+{
+	uint8_t data[8];
+	struct
+	{
+		uint32_t totalMileage;
+		uint32_t tripMileage;
+	};
+}CAR_mileage_struct;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef struct
+{
+	uint8_t diagnosticSnapshotEEPROMIndex;
+	uint8_t didTheNumberOfDiagnosticSnapshotsOverflowed;
+	uint8_t mileageEEPROMIndex;
+}CAR_EEPROM_counters_struct;
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* USER CODE END ET */
 
@@ -197,7 +317,7 @@ void Error_Handler(void);
 #define MY_EEPROM_TASK_TIME_PERIOD			(TickType_t)(1000)	/* Would be good to decrease this number significantly, as it only executes when it has data from a Queue */
 #define MY_DUMP_TO_EEPROM_TASK_TIME_PERIOD 	(TickType_t)(1000)
 
-#define ENC_BUTTON_LONG_PRESS_TIME			((uint32_t)(3000))	/* Value in milliseconds */
+#define ENC_BUTTON_LONG_PRESS_TIME			((uint32_t)(1000))	/* Value in milliseconds */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -243,38 +363,40 @@ void Error_Handler(void);
 #define EEPROM_CAR_BLOCK_PIN						(EEPROM_WP_1_Pin)
 #define EEPROM_BOARD_BLOCK_PIN						(EEPROM_WP_2_Pin)
 
+#define EEPROM_PAGE_SIZE							((uint16_t)(64))
+
 /* EEPROM CAR ADDRESSES AND SETTINGS */
-#define TOTAL_MILEAGE_START_ADDRESS					((uint16_t)(100))
-#define TRIP_MILEAGE_START_ADDRESS					((uint16_t)(140))
-#define TOTAL_MILEAGE_TABLE_SIZE					((uint8_t)(10))
-#define TRIP_MILEAGE_TABLE_SIZE						((uint8_t)(10))
-#define TOTAL_SNAPCHOTS_NUMBER_ADDRESS				((uint16_t)(999))
-#define DIAGNOSTIC_SNAPSHOTS_START_ADDRESS			((uint16_t)(1000))
+#define TOTAL_MILEAGE_START_ADDRESS					((uint16_t)(128))
+#define TRIP_MILEAGE_START_ADDRESS					((uint16_t)(132))
+#define CAR_MILEAGE_TABLE_SIZE						((uint8_t)(10))
+#define TOTAL_SNAPCHOTS_NUMBER_ADDRESS				((uint16_t)(64))
+#define NUMBER_OF_DIAGNOSTIC_SNAPSHOTS_OVERFLOWED_ADDRESS		((uint16_t)(65))
+#define DIAGNOSTIC_SNAPSHOTS_START_ADDRESS			((uint16_t)(1024))
 
-#define WATER_HIGH_TEMP_WARNING_THRESHOLD_ADDRESS	((uint16_t)(200))
-#define WATER_HIGH_TEMP_ALARM_THRESHOLD_ADDRESS		((uint16_t)(201))
-#define WATER_HIGH_TEMP_FAN_ON_THRESHOLD_ADDRESS	((uint16_t)(202))
-#define WATER_HIGH_TEMP_FAN_OFF_THRESHOLD_ADDRESS	((uint16_t)(203))
-#define WATER_TEMP_ALL_SETTINGS_ADDRESS				((uint16_t)(204))
+#define WATER_HIGH_TEMP_WARNING_THRESHOLD_ADDRESS	((uint16_t)(768))
+#define WATER_HIGH_TEMP_ALARM_THRESHOLD_ADDRESS		((uint16_t)(769))
+#define WATER_HIGH_TEMP_FAN_ON_THRESHOLD_ADDRESS	((uint16_t)(770))
+#define WATER_HIGH_TEMP_FAN_OFF_THRESHOLD_ADDRESS	((uint16_t)(771))
+#define WATER_TEMP_ALL_SETTINGS_ADDRESS				((uint16_t)(772))
 
-#define OIL_HIGH_TEMP_WARNING_THRESHOLD_ADDRESS		((uint16_t)(210))
-#define OIL_HIGH_TEMP_ALARM_THRESHOLD_ADDRESS		((uint16_t)(211))
-#define OIL_TEMP_ALL_SETTINGS_ADDRESS				((uint16_t)(212))
+#define OIL_HIGH_TEMP_WARNING_THRESHOLD_ADDRESS		((uint16_t)(778))
+#define OIL_HIGH_TEMP_ALARM_THRESHOLD_ADDRESS		((uint16_t)(779))
+#define OIL_TEMP_ALL_SETTINGS_ADDRESS				((uint16_t)(780))
 
-#define MAIN_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS		((uint16_t)(220))	/* 2 bytes value! */
-#define MAIN_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS		((uint16_t)(222))	/* 2 bytes value! */
-#define MAIN_BATTERY_ALL_SETTINGS_ADDRESS						((uint16_t)(224))
+#define MAIN_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS		((uint16_t)(788))	/* 2 bytes value! */
+#define MAIN_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS		((uint16_t)(790))	/* 2 bytes value! */
+#define MAIN_BATTERY_ALL_SETTINGS_ADDRESS						((uint16_t)(792))
 
-#define AUXILIARY_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS	((uint16_t)(230))	/* 2 bytes value */
-#define AUXILIARY_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS	((uint16_t)(232))	/* 2 bytes value */
-#define AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS					((uint16_t)(234))
+#define AUXILIARY_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS	((uint16_t)(798))	/* 2 bytes value */
+#define AUXILIARY_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS	((uint16_t)(800))	/* 2 bytes value */
+#define AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS					((uint16_t)(802))
 
-#define FUEL_LOW_LEVEL_WARNING_THRESHOLD_ADDRESS				((uint16_t)(240))
-#define FUEL_ALL_SETTINGS_ADDRESS								((uint16_t)(241))
+#define FUEL_LOW_LEVEL_WARNING_THRESHOLD_ADDRESS				((uint16_t)(808))
+#define FUEL_ALL_SETTINGS_ADDRESS								((uint16_t)(810))
 
-#define OIL_HIGH_PRESSURE_ALARM_THRESHOLD_ADDRESS				((uint16_t)(250))
-#define OIL_LOW_PRESSURE_ALARM_THRESHOLD_ADDRESS				((uint16_t)(251))
-#define OIL_PRESSURE_ALL_SETTINGS_ADDRESS						((uint16_t)(252))
+#define OIL_HIGH_PRESSURE_ALARM_THRESHOLD_ADDRESS				((uint16_t)(818))
+#define OIL_LOW_PRESSURE_ALARM_THRESHOLD_ADDRESS				((uint16_t)(819))
+#define OIL_PRESSURE_ALL_SETTINGS_ADDRESS						((uint16_t)(820))
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 

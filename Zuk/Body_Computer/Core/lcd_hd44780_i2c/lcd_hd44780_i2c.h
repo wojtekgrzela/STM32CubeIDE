@@ -48,20 +48,20 @@ typedef struct
 
 	uint8_t addressLCD;			/* Address on I2C line */
 
-	uint8_t Row1;				/* Row1 = 0 */
-	uint8_t Row2;				/* Row2 = 1 */
-	uint8_t Row3;				/* Row3 = 2 */
-	uint8_t Row4;				/* Row4 = 3 */
+	const uint8_t Row1;				/* Row1 = 0 */
+	const uint8_t Row2;				/* Row2 = 1 */
+	const uint8_t Row3;				/* Row3 = 2 */
+	const uint8_t Row4;				/* Row4 = 3 */
 
-	enum Layer
+	enum Layer_enum
 	{
-		View1	=	0x01,
-		View2	=	0x02,
-		View3	=	0x03,
+		Desktop_1	=	0x01,
+		Desktop_2	=	0x02,
+		Desktop_3	=	0x03,
 
-		Menu	=	0xF0,
-		Alarm	=	0xFF
-	} Layer;
+		Menu		=	0xF0,
+		Alarm		=	0xFF
+	} layer;
 } LCD_parameters_struct;
 
 

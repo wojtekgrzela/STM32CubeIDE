@@ -41,8 +41,8 @@ typedef struct
 Error_Code LockEEPROM(EEPROM_parameters_struct *const EEPROM);
 Error_Code UnlockEEPROM(EEPROM_parameters_struct *const EEPROM);
 
-Error_Code ReadEEPROM_DMA(const EEPROM_parameters_struct *const EEPROM, EEPROM_data_struct *const data);
-Error_Code WriteEEPROM_DMA(const EEPROM_parameters_struct *const EEPROM, EEPROM_data_struct *const data);
+Error_Code ReadEEPROM(const EEPROM_parameters_struct *const EEPROM, EEPROM_data_struct *const data);
+Error_Code WriteEEPROM(const EEPROM_parameters_struct *const EEPROM, EEPROM_data_struct *const data);
 
 
 #endif /* INC_EEPROM_H_ */

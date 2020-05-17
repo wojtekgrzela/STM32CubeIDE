@@ -32,6 +32,8 @@
 /* USER CODE BEGIN Includes */
 
 #include "../GPS/GPS_Parsing.h"
+#include "../I2C_Workaround/I2C_Workaround.h"
+#include "Init_Functions.h"
 
 /* USER CODE END Includes */
 
@@ -85,7 +87,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+	Error_Code error = NO_ERROR;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -115,10 +117,27 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
-  HAL_TIM_Encoder_Start(&htim8, TIM_CHANNEL_ALL);
+  error = HAL_TIM_Encoder_Start(&htim8, TIM_CHANNEL_ALL);
+  if(NO_ERROR != error)
+	  while(1) {}
+
   HAL_ADC_Start_DMA(&hadc3, (uint32_t*)ADC3Measures, NO_OF_ADC3_MEASURES);
 
   HAL_Delay(300);
+
+  /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+  /** !!!!TURNING THIS ON WILL ERASE WHOLE EEPROMS!!!! **/
+#if 0
+  error = EraseWholeEEPROM(&EEPROM_car);
+  if(NO_ERROR != error)
+	  while(1) {}
+#endif
+
+#if 0
+  error = EraseWholeEEPROM(&EEPROM_board);
+  if(NO_ERROR != error)
+	  while(1) {}
+#endif
 
   /* USER CODE END 2 */
 
