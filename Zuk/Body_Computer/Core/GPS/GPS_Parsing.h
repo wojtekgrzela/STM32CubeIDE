@@ -32,6 +32,9 @@ typedef struct
 	volatile uint8_t GPS_buffer[GPS_BUFFER_SIZE];
 	uint8_t TImeZoneAdjPoland;			/* 1 in Winter and 2 in Summer (it will be added to the clock to get proper time */
 
+	float homeLatitude;
+	float homeLongitude;
+
 	struct message_buffers
 	{
 		uint8_t hours[2];
@@ -88,6 +91,15 @@ typedef struct
 
 
 Error_Code parse_GPS_data(GPS_data_struct* const GPS);
+Error_Code track_GPS_movement(const GPS_data_struct* const GPS);
 
+static float calculate_Course(float latitudeStart, float longitudeStart, float latitudeEnd, float longitudeEnd);
+static float calculate_Distance(float latitudeStart, float longitudeStart, float latitudeEnd, float longitudeEnd);
+static inline float to_Radians(const float decimalDegree);
+static inline float to_Degrees(const float radians);
+static inline float pow2(float var);
+
+
+__weak Error_Code save_GPS_point(const GPS_data_struct* const GPS);
 
 #endif /* INC_GPS_PARSING_H_ */

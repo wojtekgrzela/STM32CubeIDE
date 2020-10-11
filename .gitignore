@@ -66,6 +66,7 @@ dkms.conf
 **/RemoteSystemsTempFiles
 
 /Zuk/BodyComputer_WZOR_PINOW
+/Testing
 
 #Logi
 *.log

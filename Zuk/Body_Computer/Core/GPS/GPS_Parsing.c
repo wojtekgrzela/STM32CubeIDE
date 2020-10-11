@@ -9,7 +9,15 @@
 #include "GPS_Parsing.h"
 #include "../VariousFunctions/Functions.h"
 
+#include <math.h>
 
+
+#define RADIUS_OF_THE_EARTH				((float)(6372795.0))
+
+#define MINIMUM_SPEED_TO_RECORD			((float)(4.0))
+#define MINIMUM_ANGLE_TO_RECORD			((float)(4.0))
+#define MAX_SPEED_IN_TRAFFIC_JAM		((float)(2.0))
+#define MAX_DISTANCE_IN_TRAFFIC_JAM		((int32_t)(50))
 
 /**
  * A function that copies the data from GPS buffer from UART and
@@ -360,4 +368,225 @@ Error_Code parse_GPS_data(GPS_data_struct* const GPS)
 }
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+
+
+/**
+ * A function that checks if the vehicle is moving and if the
+ * movement is within given parameters it gives a point to
+ * save (for example on a SD card etc.).
+ *
+ * @param GPS: a pointer to a structure with multiple parameters,
+ * buffers and pointers (look in GPS_parsing.h)
+ * @retval Error_Code: gives a value of error if one occurs
+ */
+Error_Code track_GPS_movement(const GPS_data_struct* const GPS)
+{
+	Error_Code error = NO_ERROR;
+
+	uint8_t Write_FLAG = 0;
+
+	int32_t distance = 0;
+	float angle = 0;
+	float course = 0.0;
+	float speed = 0.0;
+
+	static float courseOld = 0.0;
+	static float latitudeOld = 0.0;
+	static float longitudeOld = 0.0;
+
+	float latitude = atoff((char*)(GPS->rawData.Latitude));
+	float longitude = atoff((char*)(GPS->rawData.Longitude));
+
+
+	course = calculate_Course(latitudeOld, longitudeOld, latitude, longitude);
+	speed = atoff((char*)(GPS->rawData.Speed));
+
+	if(course > courseOld)
+	{
+		angle = course - courseOld;
+	}
+	else
+	{
+		angle = 360 - course + courseOld;
+	}
+
+	if((MINIMUM_SPEED_TO_RECORD < speed) && (MINIMUM_ANGLE_TO_RECORD < angle))
+	{
+		Write_FLAG = TRUE;
+	}
+
+	if(MAX_SPEED_IN_TRAFFIC_JAM > speed)
+	{
+		distance = (int32_t)calculate_Distance(latitude, longitude, latitudeOld, longitudeOld);
+
+		if(MAX_DISTANCE_IN_TRAFFIC_JAM < distance)
+		{
+			Write_FLAG = TRUE;
+		}
+	}
+
+	if(TRUE == Write_FLAG)
+	{
+		error = save_GPS_point(GPS);
+
+		courseOld = course;
+		latitudeOld = latitude;
+		longitudeOld = longitude;
+
+		Write_FLAG = FALSE;
+	}
+
+
+	return error;
+}
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+
+
+/**
+ * A STATIC function that calculates the course in degrees, where
+ * North=0, West=270 from lat and lon position 1 to 2, where
+ * both lat and lon are decimal degrees
+ *
+ * Based on: TinyGPSPlus
+ * https://github.com/mikalhart/TinyGPSPlus
+ *
+ * @param latitudeStart: starting latitude
+ * @param longitudeStart: starting longitude
+ * @param latitudeEnd: ending latitude
+ * @param longitudeEnd: ending longitude
+ * @retval float: returns course angle
+ */
+static float calculate_Course(float latitudeStart, float longitudeStart, float latitudeEnd, float longitudeEnd)
+{
+	float diffLongitude = to_Radians(longitudeEnd - longitudeStart);
+
+	latitudeStart = to_Radians(latitudeStart);
+	latitudeEnd = to_Radians(latitudeEnd);
+
+	float angle1 = sin(diffLongitude) * cos(latitudeEnd);
+	float angle2 = sin(latitudeStart) * cos(latitudeEnd) * cos(diffLongitude);
+
+	angle2 = cos(latitudeStart) * sin(latitudeEnd) - latitudeEnd;
+	angle2 = atan2(angle1, angle2);
+
+	if( 0.0 > angle2)
+	{
+		angle2 += M_TWOPI;
+	}
+
+	return to_Degrees(angle2);
+}
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+
+
+/**
+ * A STATIC function that calculates the distance in meters between
+ * two position, both as signed decimal degrees lat and lon.
+ * According to the TinyGPSPlus lib - it uses great-circle
+ * distance computation for hypothetical sphere of radius of
+ * 6372795 meters. Rounding might be up to 0.5% wrong due to
+ * the Earth not being an exact sphere.
+ *
+ * Based on: TinyGPSPlus
+ * https://github.com/mikalhart/TinyGPSPlus
+ *
+ * @param latitudeStart: starting latitude
+ * @param longitudeStart: starting longitude
+ * @param latitudeEnd: ending latitude
+ * @param longitudeEnd: ending longitude
+ * @retval float: returns distance in meters
+ */
+static float calculate_Distance(float latitudeStart, float longitudeStart, float latitudeEnd, float longitudeEnd)
+{
+	float delta = to_Radians(longitudeStart - longitudeEnd);
+	float sindiffLongitude = sin(delta);
+	float cosDiffLongitude = cos(delta);
+
+	latitudeStart = to_Radians(latitudeStart);
+	latitudeEnd = to_Radians(latitudeEnd);
+
+	float sinLatitudeStart = sin(latitudeStart);
+	float cosLatitudeStart = cos(latitudeStart);
+	float sinLatitudeEnd = sin(latitudeEnd);
+	float cosLatitudeEnd = cos(latitudeEnd);
+
+	delta = (cosLatitudeStart * cosLatitudeEnd) - (sinLatitudeStart * cosLatitudeEnd * cosDiffLongitude);
+	delta = pow2(delta);
+	delta += pow2(cosLatitudeEnd * sindiffLongitude);
+	delta = sqrtf(delta);
+
+	float denom = (sinLatitudeStart * sinLatitudeEnd) + (cosLatitudeStart * cosLatitudeEnd * cosDiffLongitude);
+
+	delta = atan2f(delta, denom);
+
+	return (delta * RADIUS_OF_THE_EARTH);
+}
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+
+
+/**
+ * A STATIC function: converts decimal degrees
+ * into radians.
+ *
+ * Based on: TinyGPSPlus
+ * https://github.com/mikalhart/TinyGPSPlus
+ *
+ * @param decimalDegree: degrees in decimal
+ * @retval float: returns radians
+ */
+static inline float to_Radians(const float decimalDegree)
+{
+	return (decimalDegree * M_PI / 180.0);
+}
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+
+
+/**
+ *  A STATIC function: converts radians
+ *  into decimal degrees
+ *
+ * Based on: TinyGPSPlus
+ * https://github.com/mikalhart/TinyGPSPlus
+ *
+ * @param radians: angle in radians
+ * @retval float: returns decimal degrees
+ */
+static inline float to_Degrees(const float radians)
+{
+	return (radians * 180.0 / M_PI);
+}
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+
+
+/**
+ *  A STATIC function: returns variable squared
+ *
+ * Based on: TinyGPSPlus
+ * https://github.com/mikalhart/TinyGPSPlus
+ *
+ * @param var: any value
+ * @retval float: returns var to the power of 2
+ */
+static inline float pow2(float var)
+{
+	return (var*var);
+}
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+
+
+__weak Error_Code save_GPS_point(const GPS_data_struct* const GPS)
+{
+	Error_Code error = NO_ERROR;
+
+
+
+	return error;
+}
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 

@@ -2,7 +2,7 @@
  * Copyright Nikita Bulaev 2017
  * Modified by: Wojciech Grzelinski
  *
- * STM32 HAL libriary for LCD display based on HITACHI HD44780U chip.
+ * STM32 HAL library for LCD display based on HITACHI HD44780U chip.
  *
  * ===========================================================================
  * WARNING!
@@ -47,11 +47,6 @@ typedef struct
 	uint8_t noOfColumnsLCD;		/* 8 or 16 or 20 for standard LCDs */
 
 	uint8_t addressLCD;			/* Address on I2C line */
-
-	const uint8_t Row1;				/* Row1 = 0 */
-	const uint8_t Row2;				/* Row2 = 1 */
-	const uint8_t Row3;				/* Row3 = 2 */
-	const uint8_t Row4;				/* Row4 = 3 */
 
 	enum Layer_enum
 	{

@@ -112,10 +112,11 @@ typedef struct
 			uint8_t waterTempWarningOn			:1;
 			uint8_t waterTempAlarmOn			:1;
 			uint8_t waterFanControlOn			:1;
+			uint8_t waterTempWarningBuzzerOn	:1;
 			uint8_t waterTempAlarmBuzzerOn		:1;
 			uint8_t waterTempWarningSnapshotOn 	:1;
 			uint8_t waterTempAlarmSnapshotOn	:1;
-			/* 2 more free bits here */
+			/* 1 more free bits here */
 		};
 	};
 }waterTempSettings_struct;
@@ -134,10 +135,11 @@ typedef struct
 		{
 			uint8_t oilTempWarningOn			:1;
 			uint8_t oilTempAlarmOn				:1;
+			uint8_t oilTempWarningBuzzerOn		:1;
 			uint8_t oilTempAlarmBuzzerOn		:1;
 			uint8_t oilTempWarningSnapshotOn	:1;
 			uint8_t oilTempAlarmSnapshotOn		:1;
-			/* 3 more free bits here */
+			/* 2 more free bits here */
 		};
 	};
 }oilTempSettings_struct;
@@ -146,8 +148,8 @@ typedef struct
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 typedef struct
 {
-	uint16_t batteryLowVoltageAlarmThreshold;
-	uint16_t batteryHighVoltageAlarmThreshold;
+	float batteryLowVoltageAlarmThreshold;
+	float batteryHighVoltageAlarmThreshold;
 
 	union
 	{
@@ -224,6 +226,101 @@ typedef struct
 	uint8_t didTheNumberOfDiagnosticSnapshotsOverflowed;
 	uint8_t mileageEEPROMIndex;
 }CAR_EEPROM_counters_struct;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef enum
+{
+	MainMenu_Layer			=	0x00,
+	Desktop_Layer			=	0x01,
+	GPS_Layer				=	0x02,
+	CarInfo_Layer			=	0x03,
+	JarvisInfo_Layer		=	0x04,
+	Last3Diag_Layer			=	0x05,
+	Last3Err_Layer			=	0x06,
+	CarSettings_Layer		=	0x07,
+	BoardSettings_Layer		=	0x08,
+
+	ClearDiagnosticSnapshots	=	0x71,
+	ClearTripMileage			=	0x72,
+	WaterSettings_Layer			=	0x73,
+	OilTempSettings_Layer		=	0x74,
+	OilPressureSettings_Layer	=	0x75,
+	FuelSettings_Layer			=	0x76,
+	MainBatterySettings_Layer	=	0x77,
+	AuxBatterySettings_Layer	=	0x78,
+
+	ClearErrorsSnapshots		=	0x81,
+	AdjTimePoland				=	0x82,
+	AdjTimeZone					=	0x83,
+	InterVoltSettings_Layer		=	0x84,
+	InterTempSettings_Layer		=	0x85,
+	BuzzerSettings_Layer		=	0x86,
+	LCDSettings_Layer			=	0x87,
+
+	YesNo_Layer				=	0xF0,
+	Ctrl_Layer				=	0xF1,
+
+	Alarm_Layer				=	0xFF
+}Enum_Layer;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef enum
+{
+	None_EnterAction			=	0x00,
+	NotApplicable_EnterAction	=	0x00,
+	No_EnterAction				=	0x00,
+
+	GoInto_EnterAction			=	0x01,
+	OnOff_EnterAction			=	0x02,
+	YesNo_EnterAction			=	0x03,
+	Ctrl_EnterAction			=	0x04,
+
+	WinterSummer_EnterAction	=	0x10,
+
+	Alarm_EnterAction			=	0xFF
+}Enum_ActionForEnter;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef enum
+{
+	None_ScreenType				=	0x00,
+	NotApplicable_ScreenType	=	0x00,
+	No_ScreenType				=	0x00,
+
+	OneScreen_ScreenType		=	0x01,
+	ScrollList_ScreenType		=	0x02,
+	YesNo_ScreenType			=	0x03,
+	Ctrl_ScreenType				=	0x04,
+
+	Alarm_ScreenType			=	0xFF
+}Enum_ScreenType;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef enum
+{
+	Row1	=	0x00,
+	Row2	=	0x01,
+	Row3	=	0x02,
+	Row4	=	0x03,
+}Enum_LCDRow;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef struct
+{
+	char name[21];		/* 20 for string, 21 for '\0', to be able to fill whole line in LCD */
+	uint8_t nameActualSize;	/* Actual length of the name */
+
+	Enum_Layer layer;	/* Layer number as enum for cleaner code */
+	Enum_ActionForEnter actionForEnter;	/* specifies type of action for short button click */
+	Enum_ScreenType screenType;	/* Type of the screen (one board, list to scroll etc.) */
+
+	Enum_Layer layerPrevious;	/* to know where to get back when long press is detected */
+}LCDBoard;
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -270,6 +367,12 @@ void Error_Handler(void);
 #define ENC_BUTTON_Pin GPIO_PIN_12
 #define ENC_BUTTON_GPIO_Port GPIOB
 #define ENC_BUTTON_EXTI_IRQn EXTI15_10_IRQn
+#define SPI2_SCK_SD_Pin GPIO_PIN_13
+#define SPI2_SCK_SD_GPIO_Port GPIOB
+#define SPI2_MISO_SD_Pin GPIO_PIN_14
+#define SPI2_MISO_SD_GPIO_Port GPIOB
+#define SPI2_MOSI_SD_Pin GPIO_PIN_15
+#define SPI2_MOSI_SD_GPIO_Port GPIOB
 #define ENC_A_Pin GPIO_PIN_6
 #define ENC_A_GPIO_Port GPIOC
 #define ENC_B_Pin GPIO_PIN_7
@@ -316,6 +419,11 @@ void Error_Handler(void);
 #define MY_GPS_TASK_TIME_PERIOD				(TickType_t)(1000)
 #define MY_EEPROM_TASK_TIME_PERIOD			(TickType_t)(1000)	/* Would be good to decrease this number significantly, as it only executes when it has data from a Queue */
 #define MY_DUMP_TO_EEPROM_TASK_TIME_PERIOD 	(TickType_t)(1000)
+#define MY_DUMP_TO_SDCARD_TASK_TIME_PERIOD	(TickType_t)(1000)
+#define MY_TASK_50_MS_TIME_PERIOD			(TickType_t)(50)
+#define MY_TASK_250_MS_TIME_PERIOD			(TickType_t)(250)
+#define MY_TASK_500_MS_TIME_PERIOD			(TickType_t)(500)
+#define MY_TASK_1000_MS_TIME_PERIOD			(TickType_t)(1000)
 
 #define ENC_BUTTON_LONG_PRESS_TIME			((uint32_t)(1000))	/* Value in milliseconds */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -338,9 +446,24 @@ void Error_Handler(void);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* ADCs */
 #define MAX_ADC_VALUE							((uint32_t)(4095))
+#define REFERENCE_VOLTAGE						((float)(3.3))
+#define NO_OF_ADC1_MEASURES						((uint32_t)(1))
 #define NO_OF_ADC3_MEASURES						((uint32_t)(4))
-#define MEASURE_VIN_VOLTAGE_DIVIDER_x10000		((uint32_t)(1601))	/* R1/(R1+R2) = 1k/(1k+4.7k) ~ 0.17543859649 BUT after measuring: 0.16016260*/
-#define MEASURE_5V_VOLTAGE_DIVIDER_x10000		((uint32_t)(4443))	/* R1/(R1+R2) = 1.6k/(1.6k+1.6k) = 0.5  BUT after measuring: 0.444342629*/
+#define MEASURE_VIN_VOLTAGE_DIVIDER				((float)(0.16016260))	/* R1/(R1+R2) = 1k/(1k+4.7k) ~ 0.17543859649 BUT after measuring: 0.16016260 */
+#define MEASURE_5V_VOLTAGE_DIVIDER				((float)(0.444342629))	/* R1/(R1+R2) = 1.6k/(1.6k+1.6k) = 0.5000000 BUT after measuring: 0.444342629*/
+
+#define ADC_RESOLUTION_X_REF_VOLTAGE_uint		(uint32_t)(1241)	/* 4095 / 3.3 ~ 1241 */
+#define ADC_RESOLUTION_X_REF_VOLTAGE_float		(float)(1240.9091)	/* 4095 / 3.3 ~ 1240.9091 */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* ADC's measurements */
+#define NO_OF_ENGINE_WATER_TEMP_MEASUREMENTS_ADDED			((uint8_t)(4))
+#define NO_OF_ENGINE_OIL_TEMP_MEASUREMENTS_ADDED			((uint8_t)(4))
+#define NO_OF_ENGINE_OIL_PRESSURE_MEASUREMENTS_ADDED		((uint8_t)(4))
+#define NO_OF_MAIN_BATTERY_VOLTAGE_MEASUREMENTS_ADDED		((uint8_t)(4))
+#define NO_OF_AUXILIARY_BATTERY_VOLTAGE_MEASUREMENTS_ADDED	((uint8_t)(4))
+#define NO_OF_FUEL_LEVEL_MEASUREMENTS_ADDED					((uint8_t)(20))
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -366,12 +489,14 @@ void Error_Handler(void);
 #define EEPROM_PAGE_SIZE							((uint16_t)(64))
 
 /* EEPROM CAR ADDRESSES AND SETTINGS */
+#define TOTAL_SNAPSHOTS_NUMBER_ADDRESS							((uint16_t)(64))	/* 8 bit counter - 0-255 snapshots */
+#define NUMBER_OF_DIAGNOSTIC_SNAPSHOTS_OVERFLOWED_ADDRESS		((uint16_t)(65))	/* indicates if the counter overflowed */
+
 #define TOTAL_MILEAGE_START_ADDRESS					((uint16_t)(128))
 #define TRIP_MILEAGE_START_ADDRESS					((uint16_t)(132))
 #define CAR_MILEAGE_TABLE_SIZE						((uint8_t)(10))
-#define TOTAL_SNAPCHOTS_NUMBER_ADDRESS				((uint16_t)(64))
-#define NUMBER_OF_DIAGNOSTIC_SNAPSHOTS_OVERFLOWED_ADDRESS		((uint16_t)(65))
-#define DIAGNOSTIC_SNAPSHOTS_START_ADDRESS			((uint16_t)(1024))
+
+#define DIAGNOSTIC_SNAPSHOTS_START_ADDRESS			((uint16_t)(1024))	/* Max 255 diagnostic snapshots due to 8bit counter (add: 1024 - 17280) */
 
 #define WATER_HIGH_TEMP_WARNING_THRESHOLD_ADDRESS	((uint16_t)(768))
 #define WATER_HIGH_TEMP_ALARM_THRESHOLD_ADDRESS		((uint16_t)(769))
@@ -383,13 +508,13 @@ void Error_Handler(void);
 #define OIL_HIGH_TEMP_ALARM_THRESHOLD_ADDRESS		((uint16_t)(779))
 #define OIL_TEMP_ALL_SETTINGS_ADDRESS				((uint16_t)(780))
 
-#define MAIN_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS		((uint16_t)(788))	/* 2 bytes value! */
-#define MAIN_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS		((uint16_t)(790))	/* 2 bytes value! */
-#define MAIN_BATTERY_ALL_SETTINGS_ADDRESS						((uint16_t)(792))
+#define MAIN_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS		((uint16_t)(788))	/* 4 bytes value! (float) */
+#define MAIN_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS		((uint16_t)(792))	/* 4 bytes value! (float) */
+#define MAIN_BATTERY_ALL_SETTINGS_ADDRESS						((uint16_t)(796))
 
-#define AUXILIARY_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS	((uint16_t)(798))	/* 2 bytes value */
-#define AUXILIARY_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS	((uint16_t)(800))	/* 2 bytes value */
-#define AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS					((uint16_t)(802))
+#define AUXILIARY_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS	((uint16_t)(798))	/* 4 bytes value! (float) */
+#define AUXILIARY_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS	((uint16_t)(802))	/* 4 bytes value! (float) */
+#define AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS					((uint16_t)(806))
 
 #define FUEL_LOW_LEVEL_WARNING_THRESHOLD_ADDRESS				((uint16_t)(808))
 #define FUEL_ALL_SETTINGS_ADDRESS								((uint16_t)(810))
@@ -397,9 +522,23 @@ void Error_Handler(void);
 #define OIL_HIGH_PRESSURE_ALARM_THRESHOLD_ADDRESS				((uint16_t)(818))
 #define OIL_LOW_PRESSURE_ALARM_THRESHOLD_ADDRESS				((uint16_t)(819))
 #define OIL_PRESSURE_ALL_SETTINGS_ADDRESS						((uint16_t)(820))
+
+/* EEPROM BOARD ADDRESSES AND SETTINGS */
+#define NUMBER_OF_ERROR_SNAPSHOTS							((uint16_t)(64))	/* 8 bit counter - 0-255 snapshots */
+#define NUMBER_OF_ERROR_SNAPSHOTS_OVERFLOWED_ADDRESS		((uint16_t)(64))	/* indicates if the counter overflowed */
+
+#define HOME_LATITUDE								((uint16_t)(128))	/* (float) Home GPS coordinates as a float (8 bytes for potential "double" usage) */
+#define HOME_LONGITUDE								((uint16_t)(136))	/* (float) Home GPS coordinates as a float (8 bytes for potential "double" usage) */
+#define TIME_ZONE_ADJ_POLAND						((uint16_t)(144))	/* "1" in winter and "2" in summer (time adjustment for UTC+0 */
+
+#define ERROR_SNAPSHOTS_START_ADDRESS				((uint16_t)(1024))	/* Max 255 error snapshots due to 8bit counter (add: 1024 - 17280) */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* LCD */
+#define NO_OF_ROWS_IN_LCD		((uint8_t)(4))
+#define NO_OF_COLUMNS_IN_LCD	((uint8_t)(20))
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
 

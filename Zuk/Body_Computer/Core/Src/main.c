@@ -24,6 +24,7 @@
 #include "adc.h"
 #include "dma.h"
 #include "i2c.h"
+#include "spi.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -57,6 +58,7 @@
 /* USER CODE BEGIN PV */
 volatile uint32_t licznikShortPresses = 0;
 extern ENCButton_struct ENC_button;
+extern uint16_t ADC1Measures[NO_OF_ADC1_MEASURES];
 extern uint16_t ADC3Measures[NO_OF_ADC3_MEASURES];
 extern GPS_data_struct GPS;
 extern LCD_parameters_struct LCD;
@@ -115,13 +117,27 @@ int main(void)
   MX_USART1_UART_Init();
   MX_TIM7_Init();
   MX_I2C1_Init();
+  MX_TIM4_Init();
+  MX_SPI2_Init();
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
 
-  error = HAL_TIM_Encoder_Start(&htim8, TIM_CHANNEL_ALL);
+  if(NO_ERROR == error)
+	  error = HAL_TIM_Encoder_Start(&htim8, TIM_CHANNEL_ALL);
+
+  if(NO_ERROR == error)
+	  error = HAL_ADCEx_Calibration_Start(&hadc1);
+  if(NO_ERROR == error)
+	  error = HAL_ADCEx_Calibration_Start(&hadc3);
+
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ADC1Measures, NO_OF_ADC1_MEASURES);
+  HAL_ADC_Start_DMA(&hadc3, (uint32_t*)ADC3Measures, NO_OF_ADC3_MEASURES);
+
+  if(NO_ERROR == error)
+	  error = HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
+
   if(NO_ERROR != error)
 	  while(1) {}
-
-  HAL_ADC_Start_DMA(&hadc3, (uint32_t*)ADC3Measures, NO_OF_ADC3_MEASURES);
 
   HAL_Delay(300);
 

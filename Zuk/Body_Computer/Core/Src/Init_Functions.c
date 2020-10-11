@@ -67,7 +67,7 @@ Error_Code InitVariablesFromEEPROMCar(void)
 	if(NO_ERROR == error)
 	{
 		EEPROMData.data = &(CAR_EEPROM_counters.diagnosticSnapshotEEPROMIndex);
-		EEPROMData.memAddress = TOTAL_SNAPCHOTS_NUMBER_ADDRESS;
+		EEPROMData.memAddress = TOTAL_SNAPSHOTS_NUMBER_ADDRESS;
 		EEPROMData.size = 1u;
 		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
 		HAL_Delay(1);
