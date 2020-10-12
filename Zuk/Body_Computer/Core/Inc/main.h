@@ -29,6 +29,7 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f1xx_hal.h"
+#include "stm32f1xx_hal.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -352,6 +353,8 @@ void Error_Handler(void);
 #define BOARD_TEMP_STABILIZER_GPIO_Port GPIOC
 #define BOARD_TEMP_DCDC_Pin GPIO_PIN_3
 #define BOARD_TEMP_DCDC_GPIO_Port GPIOC
+#define LM35_CarWaterTemp_Pin GPIO_PIN_2
+#define LM35_CarWaterTemp_GPIO_Port GPIOA
 #define BUZZER_Pin GPIO_PIN_2
 #define BUZZER_GPIO_Port GPIOB
 #define LED_8_Pin GPIO_PIN_10
@@ -367,12 +370,6 @@ void Error_Handler(void);
 #define ENC_BUTTON_Pin GPIO_PIN_12
 #define ENC_BUTTON_GPIO_Port GPIOB
 #define ENC_BUTTON_EXTI_IRQn EXTI15_10_IRQn
-#define SPI2_SCK_SD_Pin GPIO_PIN_13
-#define SPI2_SCK_SD_GPIO_Port GPIOB
-#define SPI2_MISO_SD_Pin GPIO_PIN_14
-#define SPI2_MISO_SD_GPIO_Port GPIOB
-#define SPI2_MOSI_SD_Pin GPIO_PIN_15
-#define SPI2_MOSI_SD_GPIO_Port GPIOB
 #define ENC_A_Pin GPIO_PIN_6
 #define ENC_A_GPIO_Port GPIOC
 #define ENC_B_Pin GPIO_PIN_7

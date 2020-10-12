@@ -32,6 +32,9 @@
 #include "../EEPROM/EEPROM.h"
 #include "Init_Functions.h"
 
+#include "fatfs.h"
+#include "sdio.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -217,6 +220,7 @@ void StartTask250ms(void const * argument);
 void StartTask50ms(void const * argument);
 void ENC_Button_LongPress_Callback(void const * argument);
 
+extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
 /* GetIdleTaskMemory prototype (linked to static allocation support) */
@@ -390,7 +394,7 @@ void MX_FREERTOS_Init(void) {
   My_DumpToEEPROMHandle = osThreadCreate(osThread(My_DumpToEEPROM), NULL);
 
   /* definition and creation of My_DumpToSDCard */
-  osThreadDef(My_DumpToSDCard, StartTaskDumpToSDCard, osPriorityNormal, 0, 1024);
+  osThreadDef(My_DumpToSDCard, StartTaskDumpToSDCard, osPriorityBelowNormal, 0, 1024);
   My_DumpToSDCardHandle = osThreadCreate(osThread(My_DumpToSDCard), NULL);
 
   /* definition and creation of My_250ms_Task */
@@ -416,6 +420,8 @@ void MX_FREERTOS_Init(void) {
 /* USER CODE END Header_StartTask1000ms */
 void StartTask1000ms(void const * argument)
 {
+  /* init code for USB_DEVICE */
+  MX_USB_DEVICE_Init();
   /* USER CODE BEGIN StartTask1000ms */
 
 	TickType_t xLastWakeTime;
@@ -2083,12 +2089,13 @@ void StartTaskDumpToSDCard(void const * argument)
 	const TickType_t xFrequency = MY_DUMP_TO_SDCARD_TASK_TIME_PERIOD;
 //	Error_Code error = NO_ERROR;
 
-//	FRESULT SDResult = FR_OK;
-//	FATFS SDFatFs;
-//	FIL FileSDCard;
+	FRESULT SDResult = FR_OK;
+	FRESULT res = FR_OK;
+	FATFS SDFatFs;
+	FIL FileSDCard;
 //
-//	char ReadBuffer[100] = "";
-//	uint32_t NoOfReadBytes = 0;
+	char ReadBuffer[100] = "";
+	uint32_t NoOfReadBytes = 0;
 //
 //	SDResult = f_mount(&SDFatFs, "", 1);
 //	SDResult = f_open(&FileSDCard, "text.txt", FA_READ);
@@ -2099,6 +2106,50 @@ void StartTaskDumpToSDCard(void const * argument)
 //		{
 //
 //		}
+
+	uint8_t resulttutaj = 0;
+
+//	  char data[200];
+	  uint16_t bytes = 0;
+
+	  res = BSP_SD_Init();
+	  if(res != FR_OK) {
+//		  bytes = sprintf(data, "SD card initialization error.\n");
+//		  UART_Send(data, bytes);
+		  resulttutaj = 1;
+	  }
+	  else {
+//		  bytes = sprintf(data, "SD card initialized.\n");
+//		  UART_Send(data, bytes);
+	  }
+
+	  res = f_mount(&SDFatFs, "", 1);
+	  if(res != FR_OK) {
+//	  	  bytes = sprintf(data, "FatFS mount error.\n");
+//	  	  UART_Send(data, bytes);
+	  	resulttutaj = 2;
+	  }
+	  else {
+//	  	  bytes = sprintf(data, "FatFS mounted.\n");
+//	  	  UART_Send(data, bytes);
+	  }
+
+	  res = f_open(&FileSDCard, "test.txt", FA_READ);
+	  if(res != FR_OK) {
+//		  bytes = sprintf(data, "No 01.gco file.\n");
+//		  UART_Send(data, bytes);
+		  resulttutaj = 3;
+	  }
+	  else {
+//		  bytes = sprintf(data, "File opened.\n");
+//		  UART_Send(data, bytes);
+//		  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
+	  }
+
+	  resulttutaj = 0;
+
+	  	SDResult = f_read(&FileSDCard, ReadBuffer, 20, (UINT*)&NoOfReadBytes);
+	  	SDResult;
 
 	xLastWakeTime = xTaskGetTickCount();
 
