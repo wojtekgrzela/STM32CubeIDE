@@ -471,6 +471,7 @@ void StartTask1000ms(void const * argument)
 		if(NO_ERROR != error)
 		{
 			//TODO: dopisać zrzut błędu do EEPROM_BOARD z kodem błędu
+			my_error_handler(error);
 		}
 		else
 		{
@@ -483,6 +484,7 @@ void StartTask1000ms(void const * argument)
 		if(NO_ERROR != error)
 		{
 			//TODO: dopisać zrzut błędu do EEPROM_BOARD z kodem błędu
+			my_error_handler(error);
 		}
 		else
 		{
@@ -497,6 +499,7 @@ void StartTask1000ms(void const * argument)
 		if(NO_ERROR != error)
 		{
 			//TODO: dopisać zrzut błędu do EEPROM_BOARD z kodem błędu
+			my_error_handler(error);
 		}
 		else
 		{
@@ -509,6 +512,7 @@ void StartTask1000ms(void const * argument)
 		if(NO_ERROR != error)
 		{
 			//TODO: dopisać zrzut błędu do EEPROM_BOARD z kodem błędu
+			my_error_handler(error);
 		}
 		else
 		{
@@ -544,9 +548,6 @@ void StartTask500ms(void const * argument)
 
 	TickType_t xLastWakeTime;
 	const TickType_t xFrequency = MY_TASK_500_MS_TIME_PERIOD;
-	Error_Code error = NO_ERROR;
-
-	UNUSED(error);
 
 	xLastWakeTime = xTaskGetTickCount();
 
@@ -1256,16 +1257,32 @@ void StartTaskLCD(void const * argument)
 	memset(LCD_buffer, SPACE_IN_ASCII, (LCD.noOfRowsLCD * LCD.noOfColumnsLCD));
 
 	/** LCD Init (setting number of rows, columns, address, I2C handler **/
-	lcdInit(&hi2c2, LCD.addressLCD, LCD.noOfRowsLCD, LCD.noOfColumnsLCD);
+	if(TRUE != lcdInit(&hi2c2, LCD.addressLCD, LCD.noOfRowsLCD, LCD.noOfColumnsLCD))
+	{
+		error = LCD__INIT_FAIL;
+		my_error_handler(error);
+	}
 
 	// Print text at home position 0,0
-	lcdPrintStr((uint8_t*) "  Welcome on board,", 19);
+	if(TRUE != lcdPrintStr((uint8_t*)"  Welcome on board,", 19))
+	{
+		error = LCD__ERROR;
+		my_error_handler(error);
+	}
 
 	// Set cursor at zero position of line 3
-	lcdSetCursorPosition(0, Row3);
+	if(TRUE != lcdSetCursorPosition(0, Row3))
+	{
+		error = LCD__ERROR;
+		my_error_handler(error);
+	}
 
 	// Print text at cursor position
-	lcdPrintStr((uint8_t*) "      Captain!", 14);
+	if(TRUE != lcdPrintStr((uint8_t*)"      Captain!", 14))
+	{
+		error = LCD__ERROR;
+		my_error_handler(error);
+	}
 
 	/************/
 	vTaskDelay(3000);
@@ -1744,21 +1761,59 @@ void StartTaskLCD(void const * argument)
 				break;
 		}
 
-
-
+		if(NO_ERROR != error)
+		{
+			my_error_handler(error);
+		}
 
 		/** Send buffers to the LCD **/
-		lcdSetCursorPosition(0, Row1);
-		lcdPrintStr(LCD_buffer[Row1], LCD.noOfColumnsLCD);
+		if(TRUE != lcdSetCursorPosition(0, Row1))
+		{
+			error = LCD__ERROR;
+			my_error_handler(error);
+		}
+		if(TRUE != lcdPrintStr(LCD_buffer[Row1], LCD.noOfColumnsLCD))
+		{
+			error = LCD__ERROR;
+			my_error_handler(error);
+		}
 		vTaskDelay(1);
-		lcdSetCursorPosition(0, Row2);
-		lcdPrintStr(LCD_buffer[Row2], LCD.noOfColumnsLCD);
+
+		if(TRUE != lcdSetCursorPosition(0, Row2))
+		{
+			error = LCD__ERROR;
+			my_error_handler(error);
+		}
+		if(TRUE != lcdPrintStr(LCD_buffer[Row2], LCD.noOfColumnsLCD))
+		{
+			error = LCD__ERROR;
+			my_error_handler(error);
+		}
 		vTaskDelay(1);
-		lcdSetCursorPosition(0, Row3);
-		lcdPrintStr(LCD_buffer[Row3], LCD.noOfColumnsLCD);
+
+		if(TRUE != lcdSetCursorPosition(0, Row3))
+		{
+			error = LCD__ERROR;
+			my_error_handler(error);
+		}
+		if(TRUE != lcdPrintStr(LCD_buffer[Row3], LCD.noOfColumnsLCD))
+		{
+			error = LCD__ERROR;
+			my_error_handler(error);
+		}
 		vTaskDelay(1);
-		lcdSetCursorPosition(0, Row4);
-		lcdPrintStr(LCD_buffer[Row4], LCD.noOfColumnsLCD);
+
+		if(TRUE != lcdSetCursorPosition(0, Row4))
+		{
+			error = LCD__ERROR;
+			my_error_handler(error);
+		}
+		if(TRUE != lcdPrintStr(LCD_buffer[Row4], LCD.noOfColumnsLCD))
+		{
+			error = LCD__ERROR;
+			my_error_handler(error);
+		}
+		vTaskDelay(1);
 
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
@@ -1820,6 +1875,11 @@ void StartTaskGPS(void const * argument)
 		if (TRUE == GPS.DataReady)
 		{
 			error = parse_GPS_data(&GPS);
+		}
+
+		if(NO_ERROR != error)
+		{
+			my_error_handler(error);
 		}
 #endif
 
@@ -1915,7 +1975,7 @@ void StartTaskGPS(void const * argument)
 
 		if(NO_ERROR != error)
 		{
-			// TODO
+			my_error_handler(error);
 		}
 #endif
 
@@ -1953,7 +2013,9 @@ void StartTaskEEPROM(void const * argument)
 	error = InitVariablesFromEEPROMCar();
 
 	if(NO_ERROR != error)
-		while(1) {};
+	{
+		my_error_handler(error);
+	}
 
 	xLastWakeTime = xTaskGetTickCount();
 
@@ -1966,6 +2028,10 @@ void StartTaskEEPROM(void const * argument)
 		  if(NO_ERROR == error)
 		  {
 			  EEPROMData.isReady = True;//TODO: mem error dump
+		  }
+		  else
+		  {
+			  my_error_handler(error);
 		  }
 	  }
 	  else
@@ -1982,6 +2048,10 @@ void StartTaskEEPROM(void const * argument)
 			  if(NO_ERROR == error)
 			  {
 				  EEPROMData.isReady = True;//TODO: mem error dump
+			  }
+			  else
+			  {
+				  my_error_handler(error);
 			  }
 			  vTaskDelay(5);
 		  }
@@ -2052,7 +2122,11 @@ void StartTaskDumpToEEPROM(void const * argument)
 
 		  if(NO_ERROR == error)
 		  {
-  //			  EEPROMDataHandle->isReady = True; TODO
+//  			  EEPROMDataHandle->isReady = True; //TODO
+		  }
+		  else
+		  {
+			  my_error_handler(error);
 		  }
 
 	  }
@@ -2063,7 +2137,11 @@ void StartTaskDumpToEEPROM(void const * argument)
 			  error = WriteEEPROM(ErrorDataToSend.ErrorData.EEPROMParameters, &(ErrorDataToSend.ErrorData));
 			  if(NO_ERROR == error)
 			  {
-	//			  EEPROMDataHandle->isReady = True; TODO
+//				  EEPROMDataHandle->isReady = True; //TODO
+			  }
+			  else
+			  {
+				  my_error_handler(error);
 			  }
 			  vTaskDelay(5);
 		  }
@@ -2107,7 +2185,7 @@ void StartTaskDumpToSDCard(void const * argument)
 //
 //		}
 
-	uint8_t resulttutaj = 0;
+	vTaskDelay(1000);
 
 //	  char data[200];
 	  uint16_t bytes = 0;
@@ -2116,7 +2194,6 @@ void StartTaskDumpToSDCard(void const * argument)
 	  if(res != FR_OK) {
 //		  bytes = sprintf(data, "SD card initialization error.\n");
 //		  UART_Send(data, bytes);
-		  resulttutaj = 1;
 	  }
 	  else {
 //		  bytes = sprintf(data, "SD card initialized.\n");
@@ -2127,7 +2204,6 @@ void StartTaskDumpToSDCard(void const * argument)
 	  if(res != FR_OK) {
 //	  	  bytes = sprintf(data, "FatFS mount error.\n");
 //	  	  UART_Send(data, bytes);
-	  	resulttutaj = 2;
 	  }
 	  else {
 //	  	  bytes = sprintf(data, "FatFS mounted.\n");
@@ -2138,7 +2214,6 @@ void StartTaskDumpToSDCard(void const * argument)
 	  if(res != FR_OK) {
 //		  bytes = sprintf(data, "No 01.gco file.\n");
 //		  UART_Send(data, bytes);
-		  resulttutaj = 3;
 	  }
 	  else {
 //		  bytes = sprintf(data, "File opened.\n");
@@ -2146,10 +2221,7 @@ void StartTaskDumpToSDCard(void const * argument)
 //		  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
 	  }
 
-	  resulttutaj = 0;
-
 	  	SDResult = f_read(&FileSDCard, ReadBuffer, 20, (UINT*)&NoOfReadBytes);
-	  	SDResult;
 
 	xLastWakeTime = xTaskGetTickCount();
 
@@ -2238,6 +2310,11 @@ void StartTask250ms(void const * argument)
 			i_waterTemp = 0;
 		}
 
+		if(NO_ERROR != error)
+		{
+		  my_error_handler(error);
+		}
+
 		/* Oil Temperature Value measurement */
 //		oilTemperatureValue
 //		error = calculate_LM35_temperature((float*)&(EngineTemperatureLM35Table[i_waterTemp]), ADC1Measures[0]);
@@ -2271,8 +2348,6 @@ void StartTask50ms(void const * argument)
   /* USER CODE BEGIN StartTask50ms */
 	TickType_t xLastWakeTime;
 	const TickType_t xFrequency = MY_TASK_50_MS_TIME_PERIOD;
-	Error_Code error = NO_ERROR;
-	UNUSED(error);
 
 	volatile uint16_t TIM8CounterReadout = 0;
 	static uint16_t previousCounterValue = 0;
@@ -2293,8 +2368,6 @@ void StartTask50ms(void const * argument)
 		  previousCounterValue = TIM8CounterReadout;
 	  }
 
-
-
 	  vTaskDelayUntil(&xLastWakeTime, xFrequency);
   }
   /* USER CODE END StartTask50ms */
@@ -2308,9 +2381,6 @@ void ENC_Button_LongPress_Callback(void const * argument)
 	ENC_button.allFlags |= 0b00000110; /* Set first and second bit to q to
 	 	 	 	 	 	 	 	 	indicate the long press on both bits */
 
-//	++LCD.layer;
-//	if(LCD.layer >3)
-//		LCD.layer = 1;
   /* USER CODE END ENC_Button_LongPress_Callback */
 }
 

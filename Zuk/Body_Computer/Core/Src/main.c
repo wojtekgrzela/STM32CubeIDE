@@ -63,7 +63,7 @@ extern ENCButton_struct ENC_button;
 extern uint16_t ADC1Measures[NO_OF_ADC1_MEASURES];
 extern uint16_t ADC3Measures[NO_OF_ADC3_MEASURES];
 extern GPS_data_struct GPS;
-extern LCD_parameters_struct LCD;
+//extern LCD_parameters_struct LCD;
 extern uint32_t Tim7_Counter_100us;
 extern osTimerId My_Timer_ENC_ButtonHandle;
 
@@ -125,37 +125,54 @@ int main(void)
   MX_FATFS_Init();
   /* USER CODE BEGIN 2 */
 
-  if(NO_ERROR == error)
-	  error = HAL_TIM_Encoder_Start(&htim8, TIM_CHANNEL_ALL);
+  	error = (Error_Code)HAL_TIM_Encoder_Start(&htim8, TIM_CHANNEL_ALL);
 
-  if(NO_ERROR == error)
-	  error = HAL_ADCEx_Calibration_Start(&hadc1);
-  if(NO_ERROR == error)
-	  error = HAL_ADCEx_Calibration_Start(&hadc3);
+	if(NO_ERROR != error)
+	{
+		error = TIM__ENCODER_START_FAIL;
+		my_error_handler(error);
+	}
 
-  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ADC1Measures, NO_OF_ADC1_MEASURES);
-  HAL_ADC_Start_DMA(&hadc3, (uint32_t*)ADC3Measures, NO_OF_ADC3_MEASURES);
+	error = (Error_Code)HAL_ADCEx_Calibration_Start(&hadc1);
+	error = (Error_Code)HAL_ADCEx_Calibration_Start(&hadc3);
 
-  if(NO_ERROR == error)
-	  error = HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
+	if(NO_ERROR != error)
+	{
+		error = ADC__CALIBRATION_FAIL;
+		my_error_handler(error);
+	}
 
-  if(NO_ERROR != error)
-	  while(1) {}
+	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ADC1Measures, NO_OF_ADC1_MEASURES);
+	HAL_ADC_Start_DMA(&hadc3, (uint32_t*)ADC3Measures, NO_OF_ADC3_MEASURES);
 
-  HAL_Delay(300);
+	error = (Error_Code)HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
+
+	if(NO_ERROR != error)
+	{
+		error = TIM__PWM_START_FAIL;
+		my_error_handler(error);
+	}
+
+	HAL_Delay(300);
 
   /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
   /** !!!!TURNING THIS ON WILL ERASE WHOLE EEPROMS!!!! **/
 #if 0
   error = EraseWholeEEPROM(&EEPROM_car);
-  if(NO_ERROR != error)
-	  while(1) {}
+	if(NO_ERROR != error)
+	{
+		error = EEPROM__WHOLE_MEMORY_ERASE_FAIL;
+		my_error_handler(error);
+	}
 #endif
 
 #if 0
   error = EraseWholeEEPROM(&EEPROM_board);
-  if(NO_ERROR != error)
-	  while(1) {}
+	if(NO_ERROR != error)
+	{
+		error = EEPROM__WHOLE_MEMORY_ERASE_FAIL;
+		my_error_handler(error);
+	}
 #endif
 
   /* USER CODE END 2 */
@@ -170,6 +187,8 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+		error = OS__MAIN_WHILE_LOOP_REACHED;
+		my_error_handler(error);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -295,20 +314,22 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 		{
 			if(GPIO_PIN_SET == HAL_GPIO_ReadPin(ENC_BUTTON_GPIO_Port, ENC_BUTTON_Pin))	/*Button Pushed In*/
 			{
-				error = osTimerStart(My_Timer_ENC_ButtonHandle, ENC_BUTTON_LONG_PRESS_TIME);
+				error = (Error_Code)osTimerStart(My_Timer_ENC_ButtonHandle, ENC_BUTTON_LONG_PRESS_TIME);
 				if(NO_ERROR != error)
 				{
 					error = OS__STARTING_TIMER_FAILED;
+					my_error_handler(error);
 				}
 			}
 			else	/*Button Released*/
 			{
 				if(FALSE == ENC_button.longPressInfoForISR)	/* If long press was NOT detected then it is a short press */
 				{
-					error = osTimerStop(My_Timer_ENC_ButtonHandle);	/* Stop the timer */
+					error = (Error_Code)osTimerStop(My_Timer_ENC_ButtonHandle);	/* Stop the timer */
 					if(NO_ERROR != error)
 					{
 						error = OS__STOPPING_TIMER_FAILED;
+						my_error_handler(error);
 					}
 					ENC_button.shortPressDetected = TRUE;
 					HAL_GPIO_TogglePin(LED_7_GPIO_Port, LED_7_Pin);
@@ -361,6 +382,7 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
+	my_error_handler(UNKNOWN_ERROR);
 
   /* USER CODE END Error_Handler_Debug */
 }
