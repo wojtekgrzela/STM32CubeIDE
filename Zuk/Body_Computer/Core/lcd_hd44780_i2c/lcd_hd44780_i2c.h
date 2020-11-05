@@ -47,16 +47,6 @@ typedef struct
 	uint8_t noOfColumnsLCD;		/* 8 or 16 or 20 for standard LCDs */
 
 	uint8_t addressLCD;			/* Address on I2C line */
-
-	enum Layer_enum
-	{
-		Desktop_1	=	0x01,
-		Desktop_2	=	0x02,
-		Desktop_3	=	0x03,
-
-		Menu		=	0xF0,
-		Alarm		=	0xFF
-	} layer;
 } LCD_parameters_struct;
 
 
@@ -64,6 +54,7 @@ typedef struct
 {
 	uint8_t *messageHandler;		/* Gets a pointer to a global / static buffer */
 	uint8_t size;					/* Gets a size of the string under buffer WITHOUT '\0' terminating character! */
+	uint8_t messageReadyFLAG;		/* 0 - data not ready to be read or buffer in use; 1 - data ready and can be read */
 }LCD_message;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 

@@ -80,7 +80,8 @@ typedef struct
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+uint8_t tuBylemFLAG = 0;
+uint8_t TEMPBUFF[100];
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -100,6 +101,10 @@ extern TIM_HandleTypeDef htim8;
 extern TIM_HandleTypeDef htim7;
 #endif
 
+/* Handlers for SD Memory Card usage (TASK: My_DumpToSDCard) */
+extern FIL SDFile;
+extern FATFS SDFatFS;
+
 #ifdef RUNTIME_STATS_QUEUES
 #define QUEUE_EEPROM_WRITE_NAME		"EEPROM_WRITE"
 #define QUEUE_EEPROM_READ_NAME		"EEPROM_READ"
@@ -109,10 +114,11 @@ extern TIM_HandleTypeDef htim7;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* For debugging - task time etc. */
 volatile uint32_t Tim7_Counter_100us;
 
 /* For Signaling ENC button and scroll */
-volatile ENCButton_struct ENC_button = {};
+volatile ENCButton_struct ENC_button = {0};
 volatile int8_t EncoderCounterDiff = 0;
 
 /* For measurements from ADC3 */
@@ -121,72 +127,102 @@ volatile uint16_t ADC3Measures[NO_OF_ADC3_MEASURES] = { 0 };
 
 /* For GPS data, buffering, messages for LCD */
 GPS_data_struct GPS =
-		{ .TImeZoneAdjPoland = 2, .homeLatitude = 52.093731,
-				.homeLongitude = 20.661411 };
+{ .TimeZoneAdjPoland = 2,/* .homeLatitude = 52.093731, .homeLongitude = 20.661411,*/
+		.forLCD.hours.messageReadyFLAG = FALSE,
+		.forLCD.minutes.messageReadyFLAG = FALSE,
+		.forLCD.seconds.messageReadyFLAG = FALSE,
+		.forLCD.clock.messageReadyFLAG = FALSE,
+		.forLCD.latitude.messageReadyFLAG = FALSE,
+		.forLCD.latitudeIndicator.messageReadyFLAG = FALSE,
+		.forLCD.longitude.messageReadyFLAG = FALSE,
+		.forLCD.longitudeIndicator.messageReadyFLAG = FALSE,
+		.forLCD.status.messageReadyFLAG = FALSE,
+		.forLCD.satellitesUsed.messageReadyFLAG = FALSE,
+		.forLCD.altitude.messageReadyFLAG = FALSE,
+		.forLCD.speed.messageReadyFLAG = FALSE };
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* For LCD parameters and settings */
 LCD_parameters_struct LCD =
-{ .addressLCD = 0x27, .noOfRowsLCD = NO_OF_ROWS_IN_LCD, .noOfColumnsLCD = NO_OF_COLUMNS_IN_LCD, .layer = 1 };
-Enum_Layer HOME_SCREEN = Desktop_Layer;
-//Enum_Layer HOME_SCREEN = BoardSettings_Layer;
+{ .addressLCD = 0x27, .noOfRowsLCD = NO_OF_ROWS_IN_LCD, .noOfColumnsLCD = NO_OF_COLUMNS_IN_LCD };
 
+Enum_Layer HOME_SCREEN = Desktop_Layer;
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* For measuring Board temperatures with usage of NTC parameters */
 NTC_parameters_struct NTC =
 		{ .Beta = 4250, .R25 = 100000, .Rgnd = 10000, .T25 = 298, .beta_x_T25 =
 				1266500 };
 
-/* For EEPROMs usage, their addressing and blocking */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Counter for CAR EEPROM */
+CAR_EEPROM_counters_struct CAR_EEPROM_counters = {0};
+
+/* For CAR EEPROM usage, its addressing and blocking */
 EEPROM_parameters_struct EEPROM_car =
 { .EEPROM_hi2c = &hi2c1, .address = EEPROM_CAR_ADDRESS, .pin =
 		EEPROM_CAR_BLOCK_PIN, .port = EEPROM_CAR_BLOCK_PORT };
+
+/* CAR SETTINGS and VALUES*/
+CAR_mileage_struct CAR_mileage = {0};
+LCD_message totalMileageForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
+LCD_message tripMileageForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
+
+waterTempSettings_struct CAR_waterTemp = {0};
+float waterTemperatureValue = 0.0;
+LCD_message waterTemperatureValueForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
+
+oilTempSettings_struct CAR_oilTemp = {0};
+float oilTemperatureValue = 0.0;
+LCD_message oilTemperatureValueForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
+
+oilPressureSettings_struct CAR_oilPressure = {0};
+float oilPressureValue = 0.0;
+LCD_message oilPressureValueForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
+
+batterySettings_struct CAR_mainBattery = {0};
+float mainBatteryVoltageValue = 0.0;
+LCD_message mainBatteryVoltageValueForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
+
+batterySettings_struct CAR_auxiliaryBattery = {0};
+float auxiliaryBatteryVoltageValue = 0.0;
+LCD_message auxiliaryBatteryVoltageValueForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
+
+fuelSettings_struct CAR_fuel = {0};
+float fuelLevelValue = 0.0;
+LCD_message fuelLevelValueForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Counters for BOARD EEPROM */
+BOARD_EEPROM_counters_struct BOARD_EEPROM_counters = {0};
+
+/* For BOARD EEPROM usage, its addressing and blocking */
 EEPROM_parameters_struct EEPROM_board =
 { .EEPROM_hi2c = &hi2c1, .address = EEPROM_BOARD_ADDRESS, .pin =
 		EEPROM_BOARD_BLOCK_PIN, .port = EEPROM_BOARD_BLOCK_PORT };
 
-#ifdef BOARD_TEMPERATURE_MEASUREMENT
-LCD_message DCDC_3V3_temperature_LCD = {.messageHandler = NULL, .size = 0};
-LCD_message Stabilizer_5V_temperature_LCD = {.messageHandler = NULL, .size = 0};
-#endif
+/* CAR SETTINGS and VALUES*/
+boardVoltagesSettings_struct BOARD_voltage = {0};
+float voltage3V3 = 0.0;
+float voltage5V = 0.0;
+float voltageIn = 0.0;
+LCD_message voltage3V3ForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
+LCD_message voltage5VForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
+LCD_message voltageInForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
 
-#ifdef BOARD_VOLTAGE_MEASUREMENT
-LCD_message Voltage_Vin_LCD = {.messageHandler = NULL, .size = 0};
-LCD_message Voltage_5V_LCD = {.messageHandler = NULL, .size = 0};
-#endif
+boardTemperaturesSettings_struct BOARD_temperature = {0};
+int16_t temperature3V3DCDC = 0;
+int16_t temperature5VDCDC = 0;
+LCD_message temperature3V3DCDCForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
+LCD_message temperature5VDCDCForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
 
+uint8_t TimeZoneManualAdj = 0;		// for manual adjusting the time zone in clock
 
+buzzerMainSettings_struct BUZZER_settings = {0};
+LCDMainSettings_struct LCD_MainSettings = {0};
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/* Counters for EEPROM */
-CAR_EEPROM_counters_struct CAR_EEPROM_counters = {};
 
-/* CAR SETTINGS  and VALUES*/
-CAR_mileage_struct CAR_mileage = {};
-LCD_message totalMileageForLCD = {.messageHandler = NULL, .size = 0};
-LCD_message tripMileageForLCD = {.messageHandler = NULL, .size = 0};
-
-waterTempSettings_struct CAR_waterTemp = {};
-float waterTemperatureValue = 0.0;
-LCD_message waterTemperatureValueForLCD = {.messageHandler = NULL, .size = 0};
-
-oilTempSettings_struct CAR_oilTemp = {};
-float oilTemperatureValue = 0.0;
-LCD_message oilTemperatureValueForLCD = {.messageHandler = NULL, .size = 0};
-
-oilPressureSettings_struct CAR_oilPressure = {};
-float oilPressureValue = 0.0;
-LCD_message oilPressureValueForLCD = {.messageHandler = NULL, .size = 0};
-
-batterySettings_struct CAR_mainBattery = {};
-float mainBatteryVoltageValue = 0.0;
-LCD_message mainBatteryVoltageValueForLCD = {.messageHandler = NULL, .size = 0};
-
-batterySettings_struct CAR_auxiliaryBattery = {};
-float auxiliaryBatteryVoltageValue = 0.0;
-LCD_message auxiliaryBatteryVoltageValueForLCD = {.messageHandler = NULL, .size = 0};
-
-fuelSettings_struct CAR_fuel = {};
-float fuelLevelValue = 0.0;
-LCD_message fuelLevelValueForLCD = {.messageHandler = NULL, .size = 0};
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* USER CODE END Variables */
 osThreadId My_1000ms_TaskHandle;
@@ -238,14 +274,14 @@ void vApplicationMallocFailedHook(void);
 /* USER CODE BEGIN 1 */
 /* Functions needed when configGENERATE_RUN_TIME_STATS is on */
 __weak void configureTimerForRunTimeStats(void)
-{
+{	/* FOR DEBUGGING */
 #ifdef RUNTIME_STATS_TIMER_CONFIG
 	HAL_TIM_Base_Start_IT(&htim7);
 #endif
 }
 
 __weak unsigned long getRunTimeCounterValue(void)
-{
+{	/* FOR DEBUGGING */
 #ifdef RUNTIME_STATS_TIMER_CONFIG
 	return Tim7_Counter_100us;
 #endif
@@ -429,35 +465,21 @@ void StartTask1000ms(void const * argument)
 	Error_Code error = NO_ERROR;
 
 	static uint8_t totalMileageMessage[7] = "";
-	totalMileageForLCD.messageHandler = totalMileageMessage;
 	static uint8_t tripMileageMessage[8] = "";
+	totalMileageForLCD.messageHandler = totalMileageMessage;
 	tripMileageForLCD.messageHandler = tripMileageMessage;
 
-#ifdef BOARD_TEMPERATURE_MEASUREMENT
-	int16_t tempDCDC = 0;
-	int16_t tempStabilizer = 0;
+	static uint8_t temperature3V3DCDC_message[6] = {SPACE_IN_ASCII};
+	static uint8_t temperature5VDCDC_message[6] = {SPACE_IN_ASCII};
+	temperature3V3DCDCForLCD.messageHandler = temperature3V3DCDC_message;
+	temperature5VDCDCForLCD.messageHandler = temperature5VDCDC_message;
 
-	static uint8_t tempDCDC_message[6] = {SPACE_IN_ASCII};
-	static uint8_t tempStabilizer_message[6] = {SPACE_IN_ASCII};
-
-	DCDC_3V3_temperature_LCD.messageHandler = tempDCDC_message;
-	Stabilizer_5V_temperature_LCD.messageHandler = tempStabilizer_message;
-#endif
-
-#ifdef BOARD_VOLTAGE_MEASUREMENT
-	float voltageIn = 0.0;
-	float voltage5V = 0.0;
-
-	static uint8_t voltageIn_message[7] = {SPACE_IN_ASCII};
-	static uint8_t voltage5V_message[6] = {SPACE_IN_ASCII};
-
-	Voltage_Vin_LCD.messageHandler = voltageIn_message;
-	Voltage_5V_LCD.messageHandler = voltage5V_message;
-#endif
-
-#ifdef GPS_RECEIVING
-	HAL_UART_Receive_IT(&huart1, (uint8_t *)&(GPS.receivedByte), 1u);
-#endif
+	static uint8_t voltage3V3_message[5] = {SPACE_IN_ASCII};
+	static uint8_t voltage5V_message[5] = {SPACE_IN_ASCII};
+	static uint8_t voltageIn_message[6] = {SPACE_IN_ASCII};
+	voltage3V3ForLCD.messageHandler = voltage3V3_message;
+	voltage5VForLCD.messageHandler = voltage5V_message;
+	voltageInForLCD.messageHandler = voltageIn_message;
 
 	xLastWakeTime = xTaskGetTickCount();
 
@@ -465,67 +487,71 @@ void StartTask1000ms(void const * argument)
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 	for (;;)
 	{
-#ifdef BOARD_TEMPERATURE_MEASUREMENT
-		error = calculate_NTC_temperature(&tempDCDC, ADC3Measures[3]/*NTC near 5V stabilizer*/, &NTC);
+		error = calculate_NTC_temperature(&temperature5VDCDC, ADC3Measures[3]/*NTC near 5V stabilizer*/, &NTC);
 
 		if(NO_ERROR != error)
 		{
-			//TODO: dopisać zrzut błędu do EEPROM_BOARD z kodem błędu
 			my_error_handler(error);
 		}
 		else
 		{
-			snprintf((char*)Stabilizer_5V_temperature_LCD.messageHandler, 6, "%" PRIi16 "%cC", tempStabilizer, DEGREE_SYMBOL_LCD);
-			Stabilizer_5V_temperature_LCD.size = strlen((char*)Stabilizer_5V_temperature_LCD.messageHandler);
+			temperature5VDCDCForLCD.messageReadyFLAG = FALSE;
+			snprintf((char*)temperature5VDCDCForLCD.messageHandler, 6, "%" PRIi16 "%cC", temperature5VDCDC, DEGREE_SYMBOL_LCD);
+			temperature5VDCDCForLCD.size = strlen((char*)temperature5VDCDCForLCD.messageHandler);
+			temperature5VDCDCForLCD.messageReadyFLAG = TRUE;
 		}
 
-		error = calculate_NTC_temperature(&tempStabilizer, ADC3Measures[2]/*NTC near DC/DC*/, &NTC);
+		error = calculate_NTC_temperature(&temperature3V3DCDC, ADC3Measures[2]/*NTC near DC/DC*/, &NTC);
 
 		if(NO_ERROR != error)
 		{
-			//TODO: dopisać zrzut błędu do EEPROM_BOARD z kodem błędu
 			my_error_handler(error);
 		}
 		else
 		{
-			snprintf((char*)DCDC_3V3_temperature_LCD.messageHandler, 6, "%" PRIi16 "%cC", tempDCDC, DEGREE_SYMBOL_LCD);
-			DCDC_3V3_temperature_LCD.size = strlen((char*)DCDC_3V3_temperature_LCD.messageHandler);
+			temperature3V3DCDCForLCD.messageReadyFLAG = FALSE;
+			snprintf((char*)temperature3V3DCDCForLCD.messageHandler, 6, "%" PRIi16 "%cC", temperature3V3DCDC, DEGREE_SYMBOL_LCD);
+			temperature3V3DCDCForLCD.size = strlen((char*)temperature3V3DCDCForLCD.messageHandler);
+			temperature3V3DCDCForLCD.messageReadyFLAG = TRUE;
 		}
-#endif
 
-#ifdef BOARD_VOLTAGE_MEASUREMENT
 		error = calculate_voltage(&voltageIn, ADC3Measures[0]/*Vin*/, MEASURE_VIN_VOLTAGE_DIVIDER);
 
 		if(NO_ERROR != error)
 		{
-			//TODO: dopisać zrzut błędu do EEPROM_BOARD z kodem błędu
 			my_error_handler(error);
 		}
 		else
 		{
-			snprintf((char*)Voltage_Vin_LCD.messageHandler, 7, "%01" PRIu16 ".%02" PRIu16 "V", (uint16_t)voltageIn, (uint16_t)(voltageIn*100)%100);
-			Voltage_Vin_LCD.size = strlen((char*)Voltage_Vin_LCD.messageHandler);
+			voltageInForLCD.messageReadyFLAG = FALSE;
+			snprintf((char*)voltageInForLCD.messageHandler, 7, "%01" PRIu16 ".%02" PRIu16 "V", (uint16_t)voltageIn, (uint16_t)(voltageIn*100)%100);
+			voltageInForLCD.size = strlen((char*)voltageInForLCD.messageHandler);
+			voltageInForLCD.messageReadyFLAG = TRUE;
 		}
 
 		error = calculate_voltage(&voltage5V, ADC3Measures[1]/*5V*/, MEASURE_5V_VOLTAGE_DIVIDER);
 
 		if(NO_ERROR != error)
 		{
-			//TODO: dopisać zrzut błędu do EEPROM_BOARD z kodem błędu
 			my_error_handler(error);
 		}
 		else
 		{
-			snprintf((char*)Voltage_5V_LCD.messageHandler, 6, "%01" PRIu16 ".%02" PRIi16 "V", (uint16_t)voltage5V, (uint16_t)(voltage5V*100)%100);
-			Voltage_5V_LCD.size = strlen((char*)Voltage_5V_LCD.messageHandler);
+			voltage5VForLCD.messageReadyFLAG = FALSE;
+			snprintf((char*)voltage5VForLCD.messageHandler, 6, "%01" PRIu16 ".%02" PRIi16 "V", (uint16_t)voltage5V, (uint16_t)(voltage5V*100)%100);
+			voltage5VForLCD.size = strlen((char*)voltage5VForLCD.messageHandler);
+			voltage5VForLCD.messageReadyFLAG = TRUE;;
 		}
-#endif
 
+		totalMileageForLCD.messageReadyFLAG = FALSE;
 		snprintf((char*)totalMileageForLCD.messageHandler, 6, "%01" PRIu32, CAR_mileage.totalMileage);
 		totalMileageForLCD.size = strlen((char*)totalMileageForLCD.messageHandler);
+		totalMileageForLCD.messageReadyFLAG = TRUE;
 
+		tripMileageForLCD.messageReadyFLAG = FALSE;
 		snprintf((char*)tripMileageForLCD.messageHandler, 5, "%01" PRIu32 ".%01" PRIu32, (CAR_mileage.tripMileage/10), (CAR_mileage.tripMileage)%10);
 		tripMileageForLCD.size = strlen((char*)tripMileageForLCD.messageHandler);
+		tripMileageForLCD.messageReadyFLAG = FALSE;
 
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
@@ -579,8 +605,10 @@ void StartTaskLCD(void const * argument)
 	const TickType_t xFrequency = MY_LCD_TASK_TIME_PERIOD;
 	Error_Code error = NO_ERROR;
 
+	/* No better option for making a degree symbol was found so far */
 	uint8_t degreeSymbolCharacter[2] = "";
 	snprintf((char*)degreeSymbolCharacter, 2, "%c", DEGREE_SYMBOL_LCD);
+	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 	int32_t submenuIterator = 0;
 
@@ -1253,7 +1281,10 @@ void StartTaskLCD(void const * argument)
 	};
 	uint8_t LCD_Board_LCDSettingsList_SIZE = sizeof(LCD_Board_LCDSettingsList)/sizeof(LCDBoard);
 
+	/* Buffer of Rows*Columns size for whole display (80 bytes for 4x20) */
 	uint8_t LCD_buffer[LCD.noOfRowsLCD][LCD.noOfColumnsLCD];
+
+	/* Setting " " in the whole buffer */
 	memset(LCD_buffer, SPACE_IN_ASCII, (LCD.noOfRowsLCD * LCD.noOfColumnsLCD));
 
 	/** LCD Init (setting number of rows, columns, address, I2C handler **/
@@ -1285,6 +1316,7 @@ void StartTaskLCD(void const * argument)
 	}
 
 	/************/
+	/* For the "hello" text to display for 3 seconds */
 	vTaskDelay(3000);
 	/************/
 
@@ -1406,6 +1438,9 @@ void StartTaskLCD(void const * argument)
 					/* Main Battery Voltage */
 				error = copy_str_to_buffer((char*)mainBatteryVoltageValueForLCD.messageHandler, (char*)LCD_buffer[Row1], 0, mainBatteryVoltageValueForLCD.size);
 				error = copy_str_to_buffer("V", (char*)LCD_buffer[Row1], 5, 1);
+
+				if(1 == tuBylemFLAG)
+					error = copy_str_to_buffer((char*)TEMPBUFF, (char*)LCD_buffer[Row2],13 , 5);
 
 					/* Aux Battery Voltage */
 				error = copy_str_to_buffer((char*)auxiliaryBatteryVoltageValueForLCD.messageHandler, (char*)LCD_buffer[Row1], 7, auxiliaryBatteryVoltageValueForLCD.size);
@@ -1864,8 +1899,10 @@ void StartTaskGPS(void const * argument)
 	GPS.forLCD.longitudeIndicator.size	= 1u;
 #endif
 
-	xLastWakeTime = xTaskGetTickCount();
+	/* Turns on receiving from GPS */
+	HAL_UART_Receive_IT(&huart1, (uint8_t *)&(GPS.receivedByte), 1u);
 
+	xLastWakeTime = xTaskGetTickCount();
 
 	/* Infinite loop */
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -1888,7 +1925,7 @@ void StartTaskGPS(void const * argument)
 		{
 			error = copy_buffer_to_str((char*)GPS.rawData.UTC, (char*)tempbuffer, 0, 2);
 			tempHour = (uint8_t)atoi((char*)tempbuffer);
-			tempHour += GPS.TImeZoneAdjPoland;
+			tempHour += GPS.TimeZoneAdjPoland;
 
 			if(24 <= tempHour)
 			{
@@ -2010,7 +2047,17 @@ void StartTaskEEPROM(void const * argument)
 #endif
 
 	/*** EEPROM INIT SEQUENCE ***/
+
+	/* EEPROM Car initialization: */
 	error = InitVariablesFromEEPROMCar();
+
+	if(NO_ERROR != error)
+	{
+		my_error_handler(error);
+	}
+
+	/* EEPROM Board initialization: */
+	error == InitVariablesFromEEPROMBoard();
 
 	if(NO_ERROR != error)
 	{
@@ -2165,63 +2212,32 @@ void StartTaskDumpToSDCard(void const * argument)
 
 	TickType_t xLastWakeTime;
 	const TickType_t xFrequency = MY_DUMP_TO_SDCARD_TASK_TIME_PERIOD;
-//	Error_Code error = NO_ERROR;
+	Error_Code error = NO_ERROR;
 
-	FRESULT SDResult = FR_OK;
+//	  MX_USB_DEVICE_Init();
+
 	FRESULT res = FR_OK;
-	FATFS SDFatFs;
-	FIL FileSDCard;
-//
+//	FATFS SDFatFs;
+//	FIL FileSDCard;
+
 	char ReadBuffer[100] = "";
 	uint32_t NoOfReadBytes = 0;
-//
-//	SDResult = f_mount(&SDFatFs, "", 1);
-//	SDResult = f_open(&FileSDCard, "text.txt", FA_READ);
-//	SDResult = f_read(&FileSDCard, ReadBuffer, 20, (UINT*)&NoOfReadBytes);
 
-//	if (FR_OK != SDResult)
-//		while(1)
-//		{
-//
-//		}
-
-	vTaskDelay(1000);
-
-//	  char data[200];
-	  uint16_t bytes = 0;
 
 	  res = BSP_SD_Init();
-	  if(res != FR_OK) {
-//		  bytes = sprintf(data, "SD card initialization error.\n");
-//		  UART_Send(data, bytes);
-	  }
-	  else {
-//		  bytes = sprintf(data, "SD card initialized.\n");
-//		  UART_Send(data, bytes);
-	  }
 
-	  res = f_mount(&SDFatFs, "", 1);
-	  if(res != FR_OK) {
-//	  	  bytes = sprintf(data, "FatFS mount error.\n");
-//	  	  UART_Send(data, bytes);
-	  }
-	  else {
-//	  	  bytes = sprintf(data, "FatFS mounted.\n");
-//	  	  UART_Send(data, bytes);
-	  }
 
-	  res = f_open(&FileSDCard, "test.txt", FA_READ);
-	  if(res != FR_OK) {
-//		  bytes = sprintf(data, "No 01.gco file.\n");
-//		  UART_Send(data, bytes);
-	  }
-	  else {
-//		  bytes = sprintf(data, "File opened.\n");
-//		  UART_Send(data, bytes);
-//		  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
-	  }
+	  res = f_mount(&SDFatFS, "", 1);
 
-	  	SDResult = f_read(&FileSDCard, ReadBuffer, 20, (UINT*)&NoOfReadBytes);
+	  res = f_open(&SDFile, "test.txt", FA_READ);
+
+	  res = f_read(&SDFile, ReadBuffer, 20, (UINT*)&NoOfReadBytes);
+
+	  res = f_close(&SDFile);
+
+
+	  	error = copy_str_to_buffer(ReadBuffer, (char*)TEMPBUFF, 0, 20);
+	  	tuBylemFLAG = 1;
 
 	xLastWakeTime = xTaskGetTickCount();
 

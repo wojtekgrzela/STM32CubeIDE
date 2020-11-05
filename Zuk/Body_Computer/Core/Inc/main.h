@@ -47,6 +47,88 @@ extern "C" {
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
 
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef enum
+{
+	MainMenu_Layer			=	0x00,
+	Desktop_Layer			=	0x01,
+	GPS_Layer				=	0x02,
+	CarInfo_Layer			=	0x03,
+	JarvisInfo_Layer		=	0x04,
+	Last3Diag_Layer			=	0x05,
+	Last3Err_Layer			=	0x06,
+	CarSettings_Layer		=	0x07,
+	BoardSettings_Layer		=	0x08,
+
+	ClearDiagnosticSnapshots	=	0x71,
+	ClearTripMileage			=	0x72,
+	WaterSettings_Layer			=	0x73,
+	OilTempSettings_Layer		=	0x74,
+	OilPressureSettings_Layer	=	0x75,
+	FuelSettings_Layer			=	0x76,
+	MainBatterySettings_Layer	=	0x77,
+	AuxBatterySettings_Layer	=	0x78,
+
+	ClearErrorsSnapshots		=	0x81,
+	AdjTimePoland				=	0x82,
+	AdjTimeZone					=	0x83,
+	InterVoltSettings_Layer		=	0x84,
+	InterTempSettings_Layer		=	0x85,
+	BuzzerSettings_Layer		=	0x86,
+	LCDSettings_Layer			=	0x87,
+
+	YesNo_Layer				=	0xF0,
+	Ctrl_Layer				=	0xF1,
+
+	Alarm_Layer				=	0xFF
+}Enum_Layer;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef enum
+{
+	None_EnterAction			=	0x00,
+	NotApplicable_EnterAction	=	0x00,
+	No_EnterAction				=	0x00,
+
+	GoInto_EnterAction			=	0x01,
+	OnOff_EnterAction			=	0x02,
+	YesNo_EnterAction			=	0x03,
+	Ctrl_EnterAction			=	0x04,
+
+	WinterSummer_EnterAction	=	0x10,
+
+	Alarm_EnterAction			=	0xFF
+}Enum_ActionForEnter;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef enum
+{
+	None_ScreenType				=	0x00,
+	NotApplicable_ScreenType	=	0x00,
+	No_ScreenType				=	0x00,
+
+	OneScreen_ScreenType		=	0x01,
+	ScrollList_ScreenType		=	0x02,
+	YesNo_ScreenType			=	0x03,
+	Ctrl_ScreenType				=	0x04,
+
+	Alarm_ScreenType			=	0xFF
+}Enum_ScreenType;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef enum
+{
+	Row1	=	0x00,
+	Row2	=	0x01,
+	Row3	=	0x02,
+	Row4	=	0x03,
+}Enum_LCDRow;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Diagnostic codes */
 typedef enum
@@ -77,6 +159,15 @@ typedef struct
 	uint16_t value;										//8 bytes total (2 unused)
 
 }Diagnostic_Snapshot_struct;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Error_code Snapshot */
+typedef struct
+{
+	Error_Code snapshotIdentificator;					//4 bytes total
+	float value;										//8 bytes total
+}Error_Snapshot_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -229,85 +320,103 @@ typedef struct
 }CAR_EEPROM_counters_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-typedef enum
+typedef struct
 {
-	MainMenu_Layer			=	0x00,
-	Desktop_Layer			=	0x01,
-	GPS_Layer				=	0x02,
-	CarInfo_Layer			=	0x03,
-	JarvisInfo_Layer		=	0x04,
-	Last3Diag_Layer			=	0x05,
-	Last3Err_Layer			=	0x06,
-	CarSettings_Layer		=	0x07,
-	BoardSettings_Layer		=	0x08,
+	float board3V3SupplyLowThreshold;
+	float board3V3SupplyHighThreshold;
+	float board5VSupplyLowThreshold;
+	float board5VSupplyHighThreshold;
+	float boardVinSupplyLowThreshold;
 
-	ClearDiagnosticSnapshots	=	0x71,
-	ClearTripMileage			=	0x72,
-	WaterSettings_Layer			=	0x73,
-	OilTempSettings_Layer		=	0x74,
-	OilPressureSettings_Layer	=	0x75,
-	FuelSettings_Layer			=	0x76,
-	MainBatterySettings_Layer	=	0x77,
-	AuxBatterySettings_Layer	=	0x78,
-
-	ClearErrorsSnapshots		=	0x81,
-	AdjTimePoland				=	0x82,
-	AdjTimeZone					=	0x83,
-	InterVoltSettings_Layer		=	0x84,
-	InterTempSettings_Layer		=	0x85,
-	BuzzerSettings_Layer		=	0x86,
-	LCDSettings_Layer			=	0x87,
-
-	YesNo_Layer				=	0xF0,
-	Ctrl_Layer				=	0xF1,
-
-	Alarm_Layer				=	0xFF
-}Enum_Layer;
+	union
+	{
+		uint8_t allSettings;
+		struct
+		{
+			uint8_t board3V3SupplyAlarmOn		:1;
+			uint8_t board3V3SupplyBuzzerAlarmOn	:1;
+			uint8_t board5VSupplyAlarmOn		:1;
+			uint8_t board5VSupplyBuzzerAlarmON	:1;
+			uint8_t boardVinSupplyAlarmOn		:1;
+			uint8_t oardVinSupplyBuzzerAlarmOn	:1;
+			/* 2 more free bits here */
+		};
+	};
+}boardVoltagesSettings_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-typedef enum
+typedef struct
 {
-	None_EnterAction			=	0x00,
-	NotApplicable_EnterAction	=	0x00,
-	No_EnterAction				=	0x00,
+	float board5VDCDCTemperatureHighThreshold;
+	float board3V3DCDCTemperatureHighThreshold;
 
-	GoInto_EnterAction			=	0x01,
-	OnOff_EnterAction			=	0x02,
-	YesNo_EnterAction			=	0x03,
-	Ctrl_EnterAction			=	0x04,
-
-	WinterSummer_EnterAction	=	0x10,
-
-	Alarm_EnterAction			=	0xFF
-}Enum_ActionForEnter;
+	union
+	{
+		uint8_t allSettings;
+		struct
+		{
+			uint8_t board5VDCDCTemperatureHighAlarmON			:1;
+			uint8_t board5VDCDCTemperatureHighBuzzerAlarmOn		:1;
+			uint8_t board3V3DCDCTemperatureHighAlarmOn			:1;
+			uint8_t oard3V3DCDCTemperatureHighBuzzerAlarmOn	:1;
+			/* 4 more free bits here */
+		};
+	};
+}boardTemperaturesSettings_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-typedef enum
+typedef struct
 {
-	None_ScreenType				=	0x00,
-	NotApplicable_ScreenType	=	0x00,
-	No_ScreenType				=	0x00,
-
-	OneScreen_ScreenType		=	0x01,
-	ScrollList_ScreenType		=	0x02,
-	YesNo_ScreenType			=	0x03,
-	Ctrl_ScreenType				=	0x04,
-
-	Alarm_ScreenType			=	0xFF
-}Enum_ScreenType;
+	union
+	{
+		uint8_t allSettings;
+		struct
+		{
+			uint8_t buzzerMainSwitchOn			:1;
+			uint8_t buzzerMainAlarmsSwitchOn	:1;
+			uint8_t buzzerMainButtonsSwitchOn	:1;
+			uint8_t buzzerWhenShortPressOn		:1;
+			uint8_t buzzerWhenLognPressOn		:1;
+		};
+	};
+}buzzerMainSettings_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-typedef enum
+typedef struct
 {
-	Row1	=	0x00,
-	Row2	=	0x01,
-	Row3	=	0x02,
-	Row4	=	0x03,
-}Enum_LCDRow;
+	Enum_Layer homeScreen;	// should be 4 bytes
+	uint8_t autoHomeReturnTime;
+	uint8_t backlightLevel;
+	uint8_t secondsToAutoTurnOffBacklight;
+	uint8_t autoBacklightOffHourStart;
+	uint8_t autoBacklightOffHourEnd;
+
+	union
+	{
+		uint8_t allSettings;
+		struct
+		{
+			uint8_t autoBacklightOffAtNightOn	:1;
+			/* 7 more free bits here */
+		};
+	};
+}LCDMainSettings_struct;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef struct
+{
+	uint8_t errorSnapshotEEPROMIndex;
+	uint8_t didTheNumberOfErrorSnapshotsOverflowed;
+}BOARD_EEPROM_counters_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -520,13 +629,37 @@ void Error_Handler(void);
 #define OIL_LOW_PRESSURE_ALARM_THRESHOLD_ADDRESS				((uint16_t)(819))
 #define OIL_PRESSURE_ALL_SETTINGS_ADDRESS						((uint16_t)(820))
 
+#define ERROR_SNAPSHOTS_START_ADDRESS				((uint16_t)(1024))	/* Max 255 diagnostic snapshots due to 8bit counter (add: 1024 - 17280) */
+
 /* EEPROM BOARD ADDRESSES AND SETTINGS */
 #define NUMBER_OF_ERROR_SNAPSHOTS							((uint16_t)(64))	/* 8 bit counter - 0-255 snapshots */
-#define NUMBER_OF_ERROR_SNAPSHOTS_OVERFLOWED_ADDRESS		((uint16_t)(64))	/* indicates if the counter overflowed */
+#define NUMBER_OF_ERROR_SNAPSHOTS_OVERFLOWED_ADDRESS		((uint16_t)(65))	/* indicates if the counter overflowed */
 
-#define HOME_LATITUDE								((uint16_t)(128))	/* (float) Home GPS coordinates as a float (8 bytes for potential "double" usage) */
-#define HOME_LONGITUDE								((uint16_t)(136))	/* (float) Home GPS coordinates as a float (8 bytes for potential "double" usage) */
-#define TIME_ZONE_ADJ_POLAND						((uint16_t)(144))	/* "1" in winter and "2" in summer (time adjustment for UTC+0 */
+#define HOME_LATITUDE_ADDRESS								((uint16_t)(128))	/* (float) Home GPS coordinates as a float (8 bytes for potential "double" usage) */
+#define HOME_LONGITUDE_ADDRESS								((uint16_t)(136))	/* (float) Home GPS coordinates as a float (8 bytes for potential "double" usage) */
+#define TIME_ZONE_ADJ_POLAND_ADDRESS						((uint16_t)(144))	/* "1" in winter and "2" in summer (time adjustment for UTC+0 */
+#define TIME_MANUAL_ADJUSTMENT_ADDRESS						((uint16_t)(148))	/* "+-12h" in order to be able to adjust to the time zone */
+
+#define BOARD_5V_SUPPLY_LOW_THRESHOLD_ADDRESS					((uint16_t)(256))
+#define BOARD_5V_SUPPLY_HIGH_THRESHOLD_ADDRESS					((uint16_t)(260))
+#define BOARD_3V3_SUPPLY_LOW_THRESHOLD_ADDRESS					((uint16_t)(264))
+#define BOARD_3V3_SUPPLY_HIGH_THRESHOLD_ADDRESS					((uint16_t)(268))
+#define BOARD_VIN_SUPPLY_LOW_THRESHOLD_ADDRESS					((uint16_t)(272))
+#define BOARD_VOLTAGE_ALL_SETTINGS_ADDRESS						((uint16_t)(276))
+
+#define BOARD_5V_TEMPERATURE_THRESHOLD_ADDRESS					((uint16_t)(280))
+#define BOARD_3V3_TEMPERATURE_THRESHOLD_ADDRESS					((uint16_t)(284))
+#define BOARD_TEMPERATURE_ALL_SETTINGS_ADDRESS					((uint16_t)(288))
+
+#define BOARD_BUZZER_ALL_SETTINGS_ADDRESS						((uint16_t)(300))
+
+#define BOARD_LCD_HOME_SCREEN_ADDRESS							((uint16_t)(320))
+#define BOARD_LCD_AUTO_HOME_RETURN_TIME_ADDRESS					((uint16_t)(321))
+#define BOARD_LCD_BACKLIGHT_LEVEL_ADDRESS						((uint16_t)(322))
+#define BOARD_LCD_SECONDS_TO_AUTO_TURN_OFF_BACKLIGHT_ADDRESS	((uint16_t)(323))
+#define BOARD_LCD_AUTO_BACKLIGHT_OFF_HOUR_START_ADDRESS			((uint16_t)(324))
+#define BOARD_LCD_AUTO_BACKLIGHT_OFF_HOUR_END_ADDRESS			((uint16_t)(325))
+#define BOARD_LCD_ALL_SETTINGS_ADDRESS							((uint16_t)(330))
 
 #define ERROR_SNAPSHOTS_START_ADDRESS				((uint16_t)(1024))	/* Max 255 error snapshots due to 8bit counter (add: 1024 - 17280) */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */

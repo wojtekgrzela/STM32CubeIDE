@@ -239,6 +239,8 @@ int8_t STORAGE_Read_FS(uint8_t lun, uint8_t *buf, uint32_t blk_addr, uint16_t bl
 {
   /* USER CODE BEGIN 6 */
     HAL_SD_ReadBlocks(&hsd, buf, blk_addr, (uint32_t) blk_len, 10);
+    //    HAL_SD_ReadBlocks_DMA(&hsd, buf, blk_addr, (uint32_t) blk_len);
+//        HAL_SD_ReadBlocks_IT(&hsd, buf, blk_addr, (uint32_t) blk_len);
   return (USBD_OK);
   /* USER CODE END 6 */
 }
@@ -252,6 +254,8 @@ int8_t STORAGE_Write_FS(uint8_t lun, uint8_t *buf, uint32_t blk_addr, uint16_t b
 {
   /* USER CODE BEGIN 7 */
     HAL_SD_WriteBlocks(&hsd, buf, blk_addr, (uint32_t) blk_len, 10);
+//        HAL_SD_WriteBlocks_DMA(&hsd, buf, blk_addr, (uint32_t) blk_len);
+//        HAL_SD_WriteBlocks_IT(&hsd, buf, blk_addr, (uint32_t) blk_len);
   return (USBD_OK);
   /* USER CODE END 7 */
 }

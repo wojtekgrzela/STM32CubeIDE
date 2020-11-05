@@ -7,6 +7,7 @@
 
 
 #include "ErrorCodes.h"
+#include "main.h"
 
 #ifndef TRUE
 #define TRUE	(uint8_t)(1)

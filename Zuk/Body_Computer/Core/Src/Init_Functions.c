@@ -40,7 +40,7 @@ Error_Code EraseWholeEEPROM(EEPROM_parameters_struct * EEPROMParameters)
 
 
 /**
- * A function that reads all the values saved in EEPROM at start
+ * A function that reads all the values saved in Car EEPROM at start
  * of the BodyComputer (settings, counters etc.)
  *
  * @param void
@@ -53,11 +53,18 @@ Error_Code InitVariablesFromEEPROMCar(void)
 	EEPROMData.EEPROMParameters = &EEPROM_car;
 	EEPROMData.memAddressSize = 2u;
 
-	union data16bit_union
+	union data32bit_union
 	{
-		uint8_t d8bit[2];
-		uint16_t d16bit;
-	}data16bit = {};
+		uint8_t u8bit[4];
+		uint16_t ud16bit[2];
+		uint32_t u32bit;
+
+		int8_t i8bit[4];
+		int16_t i16bit[2];
+		int32_t i32bit;
+
+		float f32bit;
+	}data_union = {0};
 
 	uint32_t tempTotalMileage = 0;
 	uint32_t tempTripMileage = 0;
@@ -108,6 +115,7 @@ Error_Code InitVariablesFromEEPROMCar(void)
 			}
 		}
 	}
+
 	if(NO_ERROR == error)
 	{
 		CAR_mileage.totalMileage = tempTotalMileage;
@@ -171,72 +179,6 @@ Error_Code InitVariablesFromEEPROMCar(void)
 		HAL_Delay(1);
 	}
 
-	/** Main Battery Settings **/
-	if(NO_ERROR == error)
-	{
-		EEPROMData.data = data16bit.d8bit;
-		EEPROMData.memAddress = MAIN_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS;
-		EEPROMData.size = 1u;
-		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
-		HAL_Delay(1);
-		CAR_mainBattery.batteryLowVoltageAlarmThreshold = data16bit.d16bit;
-
-		EEPROMData.data = data16bit.d8bit;
-		EEPROMData.memAddress = MAIN_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS;
-		EEPROMData.size = 1u;
-		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
-		HAL_Delay(1);
-		CAR_mainBattery.batteryHighVoltageAlarmThreshold = data16bit.d16bit;
-
-		EEPROMData.data = data16bit.d8bit;
-		EEPROMData.memAddress = MAIN_BATTERY_ALL_SETTINGS_ADDRESS;
-		EEPROMData.size = 1u;
-		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
-		HAL_Delay(1);
-		CAR_mainBattery.allSettings = data16bit.d16bit;
-	}
-
-	/** Auxiliary Battery Settings **/
-	if(NO_ERROR == error)
-	{
-		EEPROMData.data = data16bit.d8bit;
-		EEPROMData.memAddress = AUXILIARY_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS;
-		EEPROMData.size = 1u;
-		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
-		HAL_Delay(1);
-		CAR_auxiliaryBattery.batteryLowVoltageAlarmThreshold = data16bit.d16bit;
-
-		EEPROMData.data = data16bit.d8bit;
-		EEPROMData.memAddress = AUXILIARY_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS;
-		EEPROMData.size = 1u;
-		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
-		HAL_Delay(1);
-		CAR_auxiliaryBattery.batteryLowVoltageAlarmThreshold = data16bit.d16bit;
-
-		EEPROMData.data = data16bit.d8bit;
-		EEPROMData.memAddress = AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS;
-		EEPROMData.size = 1u;
-		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
-		HAL_Delay(1);
-		CAR_auxiliaryBattery.batteryLowVoltageAlarmThreshold = data16bit.d16bit;
-	}
-
-	/** Fuel settings **/
-	if(NO_ERROR == error)
-	{
-		EEPROMData.data = &(CAR_fuel.fuelLowLevelWarningThreshold);
-		EEPROMData.memAddress = FUEL_LOW_LEVEL_WARNING_THRESHOLD_ADDRESS;
-		EEPROMData.size = 1u;
-		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
-		HAL_Delay(1);
-
-		EEPROMData.data = &(CAR_fuel.allSettings);
-		EEPROMData.memAddress = FUEL_ALL_SETTINGS_ADDRESS;
-		EEPROMData.size = 1u;
-		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
-		HAL_Delay(1);
-	}
-
 	/** Oil Pressure settings **/
 	if(NO_ERROR == error)
 	{
@@ -259,6 +201,69 @@ Error_Code InitVariablesFromEEPROMCar(void)
 		HAL_Delay(1);
 	}
 
+	/** Fuel settings **/
+	if(NO_ERROR == error)
+	{
+		EEPROMData.data = &(CAR_fuel.fuelLowLevelWarningThreshold);
+		EEPROMData.memAddress = FUEL_LOW_LEVEL_WARNING_THRESHOLD_ADDRESS;
+		EEPROMData.size = 1u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+
+		EEPROMData.data = &(CAR_fuel.allSettings);
+		EEPROMData.memAddress = FUEL_ALL_SETTINGS_ADDRESS;
+		EEPROMData.size = 1u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+	}
+
+	/** Main Battery Settings **/
+	if(NO_ERROR == error)
+	{
+		EEPROMData.data = data_union.u8bit;
+		EEPROMData.memAddress = MAIN_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS;
+		EEPROMData.size = 4u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+		CAR_mainBattery.batteryLowVoltageAlarmThreshold = data_union.f32bit;
+
+		EEPROMData.data = data_union.u8bit;
+		EEPROMData.memAddress = MAIN_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS;
+		EEPROMData.size = 4u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+		CAR_mainBattery.batteryHighVoltageAlarmThreshold = data_union.f32bit;
+
+		EEPROMData.data = &(CAR_mainBattery.allSettings);
+		EEPROMData.memAddress = MAIN_BATTERY_ALL_SETTINGS_ADDRESS;
+		EEPROMData.size = 1u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+	}
+
+	/** Auxiliary Battery Settings **/
+	if(NO_ERROR == error)
+	{
+		EEPROMData.data = data_union.u8bit;
+		EEPROMData.memAddress = AUXILIARY_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS;
+		EEPROMData.size = 4u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+		CAR_auxiliaryBattery.batteryLowVoltageAlarmThreshold = data_union.f32bit;
+
+		EEPROMData.data = data_union.u8bit;
+		EEPROMData.memAddress = AUXILIARY_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS;
+		EEPROMData.size = 4u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+		CAR_auxiliaryBattery.batteryHighVoltageAlarmThreshold = data_union.f32bit;
+
+		EEPROMData.data = &(CAR_auxiliaryBattery.allSettings);
+		EEPROMData.memAddress = AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS;
+		EEPROMData.size = 1u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+	}
 
 
 	return error;
@@ -267,9 +272,213 @@ Error_Code InitVariablesFromEEPROMCar(void)
 
 
 
+/**
+ * A function that reads all the values saved in Board EEPROM at start
+ * of the BodyComputer (settings, counters etc.)
+ *
+ * @param void
+ * @retval Error_Code: gives a value of error if one occurs
+ */
+Error_Code InitVariablesFromEEPROMBoard(void)
+{
+	Error_Code error = NO_ERROR;
+	EEPROM_data_struct EEPROMData;
+	EEPROMData.EEPROMParameters = &EEPROM_board;
+	EEPROMData.memAddressSize = 2u;
+
+	union data32bit_union
+	{
+		uint8_t u8bit[4];
+		uint16_t ud16bit[2];
+		uint32_t u32bit;
+
+		int8_t i8bit[4];
+		int16_t i16bit[2];
+		int32_t i32bit;
+
+		float f32bit;
+	}data_union = {0};
 
 
+	/** Error Snapshot EEPROM Index **/
+	if(NO_ERROR == error)
+	{
+		EEPROMData.data = &(BOARD_EEPROM_counters.errorSnapshotEEPROMIndex);
+		EEPROMData.memAddress = NUMBER_OF_ERROR_SNAPSHOTS;
+		EEPROMData.size = 1u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+	}
 
+	/** Error Snapshot EEPROM Index Overflow **/
+	if(NO_ERROR == error)
+	{
+		EEPROMData.data = &(BOARD_EEPROM_counters.didTheNumberOfErrorSnapshotsOverflowed);
+		EEPROMData.memAddress = NUMBER_OF_ERROR_SNAPSHOTS_OVERFLOWED_ADDRESS;
+		EEPROMData.size = 1u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+	}
+
+	/** GPS and Time settings **/
+	if(NO_ERROR == error)
+	{
+		EEPROMData.data = data_union.u8bit;
+		EEPROMData.memAddress = HOME_LATITUDE_ADDRESS;
+		EEPROMData.size = 4u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+		GPS.homeLatitude = data_union.f32bit;
+
+		EEPROMData.data = data_union.u8bit;
+		EEPROMData.memAddress = HOME_LONGITUDE_ADDRESS;
+		EEPROMData.size = 4u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+		GPS.homeLongitude= data_union.f32bit;
+
+		EEPROMData.data = &(GPS.TimeZoneAdjPoland);
+		EEPROMData.memAddress = TIME_ZONE_ADJ_POLAND_ADDRESS;
+		EEPROMData.size = 1u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+
+		EEPROMData.data = &TimeZoneManualAdj;
+		EEPROMData.memAddress = TIME_MANUAL_ADJUSTMENT_ADDRESS;
+		EEPROMData.size = 1u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+	}
+
+	/** Board voltages settings **/
+	if(NO_ERROR == error)
+	{
+		EEPROMData.data = data_union.u8bit;
+		EEPROMData.memAddress = BOARD_5V_SUPPLY_LOW_THRESHOLD_ADDRESS;
+		EEPROMData.size = 4u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+		BOARD_voltage.board5VSupplyLowThreshold = data_union.f32bit;
+
+		EEPROMData.data = data_union.u8bit;
+		EEPROMData.memAddress = BOARD_5V_SUPPLY_HIGH_THRESHOLD_ADDRESS;
+		EEPROMData.size = 4u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+		BOARD_voltage.board5VSupplyHighThreshold = data_union.f32bit;
+
+		EEPROMData.data = data_union.u8bit;
+		EEPROMData.memAddress = BOARD_3V3_SUPPLY_LOW_THRESHOLD_ADDRESS;
+		EEPROMData.size = 4u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+		BOARD_voltage.board3V3SupplyLowThreshold = data_union.f32bit;
+
+		EEPROMData.data = data_union.u8bit;
+		EEPROMData.memAddress = BOARD_3V3_SUPPLY_HIGH_THRESHOLD_ADDRESS;
+		EEPROMData.size = 4u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+		BOARD_voltage.board3V3SupplyHighThreshold = data_union.f32bit;
+
+		EEPROMData.data = data_union.u8bit;
+		EEPROMData.memAddress = BOARD_VIN_SUPPLY_LOW_THRESHOLD_ADDRESS;
+		EEPROMData.size = 4u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+		BOARD_voltage.boardVinSupplyLowThreshold = data_union.f32bit;
+
+		EEPROMData.data = &(BOARD_voltage.allSettings);
+		EEPROMData.memAddress = BOARD_VOLTAGE_ALL_SETTINGS_ADDRESS;
+		EEPROMData.size = 1u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+	}
+
+	/** Board temperatures settings **/
+	if(NO_ERROR == error)
+	{
+		EEPROMData.data = data_union.u8bit;
+		EEPROMData.memAddress = BOARD_5V_TEMPERATURE_THRESHOLD_ADDRESS;
+		EEPROMData.size = 4u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+		BOARD_temperature.board5VDCDCTemperatureHighThreshold = data_union.f32bit;
+
+		EEPROMData.data = data_union.u8bit;
+		EEPROMData.memAddress = BOARD_3V3_TEMPERATURE_THRESHOLD_ADDRESS;
+		EEPROMData.size = 4u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+		BOARD_temperature.board3V3DCDCTemperatureHighThreshold = data_union.f32bit;
+
+		EEPROMData.data = &(BOARD_temperature.allSettings);
+		EEPROMData.memAddress = BOARD_TEMPERATURE_ALL_SETTINGS_ADDRESS;
+		EEPROMData.size = 1u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+	}
+
+	/** Board buzzer settings **/
+	if(NO_ERROR == error)
+	{
+		EEPROMData.data = &(BUZZER_settings.allSettings);
+		EEPROMData.memAddress = BOARD_BUZZER_ALL_SETTINGS_ADDRESS;
+		EEPROMData.size = 1u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+	}
+
+	/** Board LCD settings **/
+	if(NO_ERROR == error)
+	{
+		EEPROMData.data = data_union.u8bit;
+		EEPROMData.memAddress = BOARD_LCD_HOME_SCREEN_ADDRESS;
+		EEPROMData.size = 4u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+		LCD_MainSettings.homeScreen = data_union.u32bit;
+
+		EEPROMData.data = &(LCD_MainSettings.autoHomeReturnTime);
+		EEPROMData.memAddress = BOARD_LCD_AUTO_HOME_RETURN_TIME_ADDRESS;
+		EEPROMData.size = 1u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+
+		EEPROMData.data = &(LCD_MainSettings.backlightLevel);
+		EEPROMData.memAddress = BOARD_LCD_BACKLIGHT_LEVEL_ADDRESS;
+		EEPROMData.size = 1u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+
+		EEPROMData.data = &(LCD_MainSettings.secondsToAutoTurnOffBacklight);
+		EEPROMData.memAddress = BOARD_LCD_SECONDS_TO_AUTO_TURN_OFF_BACKLIGHT_ADDRESS;
+		EEPROMData.size = 1u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+
+		EEPROMData.data = &(LCD_MainSettings.autoBacklightOffHourStart);
+		EEPROMData.memAddress = BOARD_LCD_AUTO_BACKLIGHT_OFF_HOUR_START_ADDRESS;
+		EEPROMData.size = 1u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+
+		EEPROMData.data = &(LCD_MainSettings.autoBacklightOffHourEnd);
+		EEPROMData.memAddress = BOARD_LCD_AUTO_BACKLIGHT_OFF_HOUR_END_ADDRESS;
+		EEPROMData.size = 1u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+
+		EEPROMData.data = &(LCD_MainSettings.allSettings);
+		EEPROMData.memAddress = BOARD_LCD_ALL_SETTINGS_ADDRESS;
+		EEPROMData.size = 1u;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(1);
+	}
+
+
+		return error;
+	}
 
 
 
