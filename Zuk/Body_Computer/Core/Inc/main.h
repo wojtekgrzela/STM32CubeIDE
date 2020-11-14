@@ -454,6 +454,8 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define OIL_PRESSURE_BINARY_IN_Pin GPIO_PIN_14
+#define OIL_PRESSURE_BINARY_IN_GPIO_Port GPIOC
 #define MEASURE_VIN_Pin GPIO_PIN_0
 #define MEASURE_VIN_GPIO_Port GPIOC
 #define MEASURE_5V_Pin GPIO_PIN_1
@@ -531,6 +533,7 @@ void Error_Handler(void);
 #define MY_TASK_500_MS_TIME_PERIOD			(TickType_t)(500)
 #define MY_TASK_1000_MS_TIME_PERIOD			(TickType_t)(1000)
 
+#define DEBOUNCING_TIME_FOR_ENCODER_BUTTON	((uint32_t)(20))	/* Value in milliseconds */
 #define ENC_BUTTON_LONG_PRESS_TIME			((uint32_t)(1000))	/* Value in milliseconds */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -538,6 +541,9 @@ void Error_Handler(void);
 /* FUNCTIONALITIES AND FEATURES */
 #define BOARD_TEMPERATURE_MEASUREMENT
 #define BOARD_VOLTAGE_MEASUREMENT
+
+#define OIL_PRESSURE_BINARY_SENSOR
+#define OIL_PRESSURE_ANALOG_SENSOR
 
 #define GPS_RECEIVING
 #ifdef GPS_RECEIVING
@@ -563,13 +569,23 @@ void Error_Handler(void);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/* ADC's measurements */
+/* Measurements */
 #define NO_OF_ENGINE_WATER_TEMP_MEASUREMENTS_ADDED			((uint8_t)(4))
 #define NO_OF_ENGINE_OIL_TEMP_MEASUREMENTS_ADDED			((uint8_t)(4))
+
+#ifdef OIL_PRESSURE_ANALOG_SENSOR
 #define NO_OF_ENGINE_OIL_PRESSURE_MEASUREMENTS_ADDED		((uint8_t)(4))
+#endif
+#ifdef OIL_PRESSURE_BINARY_SENSOR
+#define GPIO_PORT_OIL_PRESSURE_SENSOR						(OIL_PRESSURE_BINARY_IN_GPIO_Port)
+#define GPIO_PIN_OIL_PRESSURE_SENSOR						(OIL_PRESSURE_BINARY_IN_Pin)
+#endif
+
 #define NO_OF_MAIN_BATTERY_VOLTAGE_MEASUREMENTS_ADDED		((uint8_t)(4))
-#define NO_OF_AUXILIARY_BATTERY_VOLTAGE_MEASUREMENTS_ADDED	((uint8_t)(4))
-#define NO_OF_FUEL_LEVEL_MEASUREMENTS_ADDED					((uint8_t)(20))
+#define MAIN_BATTERY_VOLTAGE_DIVIDER						((float)(1.0))	//TODO
+#define NO_OF_AUXILIARY_BATTERY_VOLTAGE_MEASUREMENTS_ADDED	((uint8_t)(4))	//TODO
+#define AUXILIARY_BATTERY_VOLTAGE_DIVIDER					((float)(1.0))
+#define NO_OF_FUEL_LEVEL_MEASUREMENTS_ADDED					((uint8_t)(5))
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -578,6 +594,12 @@ void Error_Handler(void);
 #define True									((uint8_t)(1))
 #define FALSE									((uint8_t)(0))
 #define False									((uint8_t)(0))
+#define NO										((uint8_t)(0))
+#define No										((uint8_t)(0))
+#define NOK										((uint8_t)(0))
+#define YES										((uint8_t)(1))
+#define Yes										((uint8_t)(1))
+#define OK										((uint8_t)(1))
 #define DEGREE_SYMBOL_LCD						((uint8_t)(0b11011111))
 #define SPACE_IN_ASCII							((uint8_t)(0x20))
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -670,6 +692,10 @@ void Error_Handler(void);
 #define NO_OF_COLUMNS_IN_LCD	((uint8_t)(20))
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* SD CARD */
+#define TEST_MESSAGE_FOR_CHECK		("This is a test text.")
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
 /* USER CODE END Private defines */

@@ -58,6 +58,12 @@ void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOD, LED_5_Pin|LED_4_Pin|LED_3_Pin|LED_2_Pin, GPIO_PIN_RESET);
 
+  /*Configure GPIO pin : PtPin */
+  GPIO_InitStruct.Pin = OIL_PRESSURE_BINARY_IN_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(OIL_PRESSURE_BINARY_IN_GPIO_Port, &GPIO_InitStruct);
+
   /*Configure GPIO pins : PBPin PBPin PBPin */
   GPIO_InitStruct.Pin = BUZZER_Pin|EEPROM_WP_1_Pin|EEPROM_WP_2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;

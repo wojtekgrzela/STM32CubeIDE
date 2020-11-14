@@ -67,6 +67,9 @@ typedef enum
 	GPS__NO_SYMBOL_FOUND							= 8001,
 	GPS__INVALID_DATA_START							= 8002,
 
+	/** SD Card errors **/
+	SDCARD__INITIAL_READ_FAILED						= 9001,
+
 	/*** UNKNOWN / UNDEFINED ERROR ***/
 	UNKNOWN_ERROR									= 0x8FFFFFFF
 }Error_Code;

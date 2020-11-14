@@ -96,6 +96,7 @@ extern I2C_HandleTypeDef hi2c1;
 extern I2C_HandleTypeDef hi2c2;
 extern UART_HandleTypeDef huart1;
 extern TIM_HandleTypeDef htim8;
+extern SD_HandleTypeDef hsd;
 
 #ifdef RUNTIME_STATS_TIMER_CONFIG
 extern TIM_HandleTypeDef htim7;
@@ -177,8 +178,15 @@ float oilTemperatureValue = 0.0;
 LCD_message oilTemperatureValueForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
 
 oilPressureSettings_struct CAR_oilPressure = {0};
+#ifdef OIL_PRESSURE_ANALOG_SENSOR
 float oilPressureValue = 0.0;
 LCD_message oilPressureValueForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
+#endif
+#ifdef OIL_PRESSURE_BINARY_SENSOR
+uint8_t oilPressureValueBinary = NOK;
+LCD_message oilPressureValueBinaryForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
+#endif
+
 
 batterySettings_struct CAR_mainBattery = {0};
 float mainBatteryVoltageValue = 0.0;
@@ -1436,43 +1444,53 @@ void StartTaskLCD(void const * argument)
 			{
 				/*** First Row ***/
 					/* Main Battery Voltage */
-				error = copy_str_to_buffer((char*)mainBatteryVoltageValueForLCD.messageHandler, (char*)LCD_buffer[Row1], 0, mainBatteryVoltageValueForLCD.size);
+				if(TRUE == mainBatteryVoltageValueForLCD.messageReadyFLAG)
+					error = copy_str_to_buffer((char*)mainBatteryVoltageValueForLCD.messageHandler, (char*)LCD_buffer[Row1], 0, mainBatteryVoltageValueForLCD.size);
 				error = copy_str_to_buffer("V", (char*)LCD_buffer[Row1], 5, 1);
 
 				if(1 == tuBylemFLAG)
 					error = copy_str_to_buffer((char*)TEMPBUFF, (char*)LCD_buffer[Row2],13 , 5);
 
 					/* Aux Battery Voltage */
-				error = copy_str_to_buffer((char*)auxiliaryBatteryVoltageValueForLCD.messageHandler, (char*)LCD_buffer[Row1], 7, auxiliaryBatteryVoltageValueForLCD.size);
+				if(TRUE == auxiliaryBatteryVoltageValueForLCD.messageReadyFLAG)
+					error = copy_str_to_buffer((char*)auxiliaryBatteryVoltageValueForLCD.messageHandler, (char*)LCD_buffer[Row1], 7, auxiliaryBatteryVoltageValueForLCD.size);
 				error = copy_str_to_buffer("V", (char*)LCD_buffer[Row1], 12, 1);
 
 					/* clock */
-				error = copy_str_to_buffer((char*)GPS.forLCD.hours.messageHandler, (char*)LCD_buffer[Row1], 15, GPS.forLCD.hours.size);
-				error = copy_str_to_buffer(":", (char*)LCD_buffer[Row1], (15+GPS.forLCD.hours.size), 1);
-				error = copy_str_to_buffer((char*)GPS.forLCD.minutes.messageHandler, (char*)LCD_buffer[Row1], (15+GPS.forLCD.hours.size+1), GPS.forLCD.minutes.size);
+				if((TRUE == GPS.forLCD.hours.messageReadyFLAG) && (TRUE == GPS.forLCD.minutes.messageReadyFLAG))
+				{
+					error = copy_str_to_buffer((char*)GPS.forLCD.hours.messageHandler, (char*)LCD_buffer[Row1], 15, GPS.forLCD.hours.size);
+					error = copy_str_to_buffer(":", (char*)LCD_buffer[Row1], (15+GPS.forLCD.hours.size), 1);
+					error = copy_str_to_buffer((char*)GPS.forLCD.minutes.messageHandler, (char*)LCD_buffer[Row1], (15+GPS.forLCD.hours.size+1), GPS.forLCD.minutes.size);
+				}
 
 				/*** Second Row ***/
 					/* Water temperature */
 				error = copy_str_to_buffer("Water: ", (char*)LCD_buffer[Row2], 0, 7);
-				error = copy_str_to_buffer((char*)waterTemperatureValueForLCD.messageHandler, (char*)LCD_buffer[Row2], 7, waterTemperatureValueForLCD.size);
+				if(TRUE == waterTemperatureValueForLCD.messageReadyFLAG)
+					error = copy_str_to_buffer((char*)waterTemperatureValueForLCD.messageHandler, (char*)LCD_buffer[Row2], 7, waterTemperatureValueForLCD.size);
 				error = copy_str_to_buffer((char*)degreeSymbolCharacter, (char*)LCD_buffer[Row2], 7+waterTemperatureValueForLCD.size, 1);
 				error = copy_str_to_buffer("C", (char*)LCD_buffer[Row2], 7+waterTemperatureValueForLCD.size+1, 1);
 
 				/*** Third Row ***/
 					/* Speed */
-				error = copy_str_to_buffer((char*)GPS.forLCD.speed.messageHandler, (char*)LCD_buffer[Row3], 0, GPS.forLCD.speed.size);
+				if(TRUE == GPS.forLCD.speed.messageReadyFLAG)
+					error = copy_str_to_buffer((char*)GPS.forLCD.speed.messageHandler, (char*)LCD_buffer[Row3], 0, GPS.forLCD.speed.size);
 				error = copy_str_to_buffer("km/h", (char*)LCD_buffer[Row3], (GPS.forLCD.speed.size+1), 4);
 					/* Total Mileage */
-				error = copy_str_to_buffer((char*)totalMileageForLCD.messageHandler, (char*)LCD_buffer[Row3], 9, totalMileageForLCD.size);
+				if(TRUE == totalMileageForLCD.messageReadyFLAG)
+					error = copy_str_to_buffer((char*)totalMileageForLCD.messageHandler, (char*)LCD_buffer[Row3], 9, totalMileageForLCD.size);
 				error = copy_str_to_buffer("km", (char*)LCD_buffer[Row3], (9+totalMileageForLCD.size+1), 2);
 
 				/*** Fourth Row ***/
 					/* Engine RPM */
 				//TODO
-//				error = copy_str_to_buffer((char*)RPM.messageHandler, (char*)LCD_buffer[Row4], 8, RPM.size);
+//				if(TRUE == RPMForLCD.messageReadyFLAG)
+//					error = copy_str_to_buffer((char*)RPMForLCD.messageHandler, (char*)LCD_buffer[Row4], 8, RPM.size);
 				error = copy_str_to_buffer("rpm", (char*)LCD_buffer[Row4], 5, 3);
 					/* Trip Mileage */
-				error = copy_str_to_buffer((char*)tripMileageForLCD.messageHandler, (char*)LCD_buffer[Row4], 9, tripMileageForLCD.size);
+				if(TRUE == tripMileageForLCD.messageReadyFLAG)
+					error = copy_str_to_buffer((char*)tripMileageForLCD.messageHandler, (char*)LCD_buffer[Row4], 9, tripMileageForLCD.size);
 				error = copy_str_to_buffer("km", (char*)LCD_buffer[Row4], (9+tripMileageForLCD.size+1), 2);
 
 				if(ENC_button.shortPressDetected)
@@ -1491,36 +1509,43 @@ void StartTaskLCD(void const * argument)
 			{
 				/*** First Row ***/
 					/* Fix / NoFix */
-				error = copy_str_to_buffer((char*)GPS.forLCD.status.messageHandler, (char*)LCD_buffer[Row1], 0, GPS.forLCD.status.size);
-
+				if(TRUE == GPS.forLCD.status.messageReadyFLAG)
+					error = copy_str_to_buffer((char*)GPS.forLCD.status.messageHandler, (char*)LCD_buffer[Row1], 0, GPS.forLCD.status.size);
 					/* Speed */
-				error = copy_str_to_buffer((char*)GPS.forLCD.speed.messageHandler, (char*)LCD_buffer[Row1], 6, GPS.forLCD.speed.size);
+				if(TRUE == GPS.forLCD.speed.messageReadyFLAG)
+					error = copy_str_to_buffer((char*)GPS.forLCD.speed.messageHandler, (char*)LCD_buffer[Row1], 6, GPS.forLCD.speed.size);
 				error = copy_str_to_buffer("km/h", (char*)LCD_buffer[Row1], (6+GPS.forLCD.speed.size+1), 4);
-
 					/* clock */
-				error = copy_str_to_buffer((char*)GPS.forLCD.hours.messageHandler, (char*)LCD_buffer[Row1], 15, GPS.forLCD.hours.size);
-				error = copy_str_to_buffer(":", (char*)LCD_buffer[Row1], (15+GPS.forLCD.hours.size), 1);
-				error = copy_str_to_buffer((char*)GPS.forLCD.minutes.messageHandler, (char*)LCD_buffer[Row1], (15+GPS.forLCD.hours.size+1), GPS.forLCD.minutes.size);
+				if((TRUE == GPS.forLCD.hours.messageReadyFLAG) && (TRUE == GPS.forLCD.minutes.messageReadyFLAG))
+				{
+					error = copy_str_to_buffer((char*)GPS.forLCD.hours.messageHandler, (char*)LCD_buffer[Row1], 15, GPS.forLCD.hours.size);
+					error = copy_str_to_buffer(":", (char*)LCD_buffer[Row1], (15+GPS.forLCD.hours.size), 1);
+					error = copy_str_to_buffer((char*)GPS.forLCD.minutes.messageHandler, (char*)LCD_buffer[Row1], (15+GPS.forLCD.hours.size+1), GPS.forLCD.minutes.size);
+				}
 
 				/*** Second Row ***/
 					/* GPS: Latitude */
 				error = copy_str_to_buffer("Lat.:", (char*)LCD_buffer[Row2], 0, 5);
-				error = copy_str_to_buffer((char*)GPS.forLCD.latitude.messageHandler, (char*)LCD_buffer[Row2], 6, GPS.forLCD.latitude.size);
+				if(TRUE == GPS.forLCD.latitude.messageReadyFLAG)
+					error = copy_str_to_buffer((char*)GPS.forLCD.latitude.messageHandler, (char*)LCD_buffer[Row2], 6, GPS.forLCD.latitude.size);
 					/* GPS: Latitude Indicator */
-				error = copy_str_to_buffer((char*)GPS.forLCD.latitudeIndicator.messageHandler, (char*)LCD_buffer[Row2], 6+GPS.forLCD.latitude.size+1, GPS.forLCD.latitudeIndicator.size);
+				if(TRUE == GPS.forLCD.latitudeIndicator.messageReadyFLAG)
+					error = copy_str_to_buffer((char*)GPS.forLCD.latitudeIndicator.messageHandler, (char*)LCD_buffer[Row2], 6+GPS.forLCD.latitude.size+1, GPS.forLCD.latitudeIndicator.size);
 
 
 				/*** Third Row ***/
 					/* GPS: Longitude */
 				error = copy_str_to_buffer("Lon.:", (char*)LCD_buffer[Row3], 0, 5);
-				error = copy_str_to_buffer((char*)GPS.forLCD.longitude.messageHandler, (char*)LCD_buffer[Row3], 6, GPS.forLCD.longitude.size);
+				if(TRUE == GPS.forLCD.longitude.messageReadyFLAG)
+					error = copy_str_to_buffer((char*)GPS.forLCD.longitude.messageHandler, (char*)LCD_buffer[Row3], 6, GPS.forLCD.longitude.size);
 					/* GPS: Longitude Indicator */
 				error = copy_str_to_buffer((char*)GPS.forLCD.longitudeIndicator.messageHandler, (char*)LCD_buffer[Row3], 6+GPS.forLCD.longitude.size+1, GPS.forLCD.longitudeIndicator.size);
 
 				/*** Fourth Row ***/
 					/* GPS: Altitude */
 				error = copy_str_to_buffer("Alt.:", (char*)LCD_buffer[Row4], 0, 5);
-				error = copy_str_to_buffer((char*)GPS.forLCD.altitude.messageHandler, (char*)LCD_buffer[Row4], 6, GPS.forLCD.altitude.size);
+				if(TRUE == GPS.forLCD.altitude)
+					error = copy_str_to_buffer((char*)GPS.forLCD.altitude.messageHandler, (char*)LCD_buffer[Row4], 6, GPS.forLCD.altitude.size);
 				error = copy_str_to_buffer("m npm", (char*)LCD_buffer[Row4], (6+GPS.forLCD.altitude.size+1), 5);
 
 				if(ENC_button.shortPressDetected)
@@ -2190,7 +2215,7 @@ void StartTaskDumpToEEPROM(void const * argument)
 			  {
 				  my_error_handler(error);
 			  }
-			  vTaskDelay(5);
+			  vTaskDelay((TickType_t)5u);
 		  }
 	  }
 
@@ -2214,30 +2239,49 @@ void StartTaskDumpToSDCard(void const * argument)
 	const TickType_t xFrequency = MY_DUMP_TO_SDCARD_TASK_TIME_PERIOD;
 	Error_Code error = NO_ERROR;
 
-//	  MX_USB_DEVICE_Init();
+	MX_USB_DEVICE_Init();
 
-	FRESULT res = FR_OK;
-//	FATFS SDFatFs;
-//	FIL FileSDCard;
+	FRESULT result = FR_OK;
 
 	char ReadBuffer[100] = "";
 	uint32_t NoOfReadBytes = 0;
 
+	/* Check if SD card is ready to be used */
+	while(HAL_SD_STATE_READY != hsd.State)
+	{
+		vTaskDelay((TickType_t)10);
+	}
 
-	  res = BSP_SD_Init();
+	result = BSP_SD_Init();
 
+	if(FR_OK == result)
+	{
+		result = f_mount(&SDFatFS, "", 1);
+	}
+	if(FR_OK == result)
+	{
+	result = f_open(&SDFile, "test.txt", FA_READ);
+	}
+	if(FR_OK == result)
+	{
+	result = f_read(&SDFile, ReadBuffer, 20, (UINT*)&NoOfReadBytes);
+	}
+	if(FR_OK == result)
+	{
+	result = f_close(&SDFile);
+	}
 
-	  res = f_mount(&SDFatFS, "", 1);
+	if(TRUE != compare_two_strings(ReadBuffer, TEST_MESSAGE_FOR_CHECK, 0u, 20u))
+	{
+		error = SDCARD__INITIAL_READ_FAILED;
+		my_error_handler(error);
 
-	  res = f_open(&SDFile, "test.txt", FA_READ);
+		/* Stop the task now, because if the card is not read correctly then do not proceed! */
+		vTaskSuspend(My_DumpToSDCardHandle);
+	}
 
-	  res = f_read(&SDFile, ReadBuffer, 20, (UINT*)&NoOfReadBytes);
-
-	  res = f_close(&SDFile);
-
-
-	  	error = copy_str_to_buffer(ReadBuffer, (char*)TEMPBUFF, 0, 20);
-	  	tuBylemFLAG = 1;
+	error = copy_str_to_buffer(ReadBuffer, (char*)TEMPBUFF, 0, 20);
+	tuBylemFLAG = 1;
 
 	xLastWakeTime = xTaskGetTickCount();
 
@@ -2266,43 +2310,57 @@ void StartTask250ms(void const * argument)
 
 	/* For calculating the engine parameters (counting the mean value) */
 	static volatile float EngineWaterTemperatureTable[NO_OF_ENGINE_WATER_TEMP_MEASUREMENTS_ADDED] = {0};
-	static volatile float EngineOilTemperatureTable[NO_OF_ENGINE_OIL_TEMP_MEASUREMENTS_ADDED] = {0};
-	static volatile float EngineOilPressureTable[NO_OF_ENGINE_OIL_PRESSURE_MEASUREMENTS_ADDED] = {0};
-	static volatile float MainBatteryVoltageValueTable[NO_OF_MAIN_BATTERY_VOLTAGE_MEASUREMENTS_ADDED] = {0};
-	static volatile float AuxiliaryBatteryVoltageValueTable[NO_OF_AUXILIARY_BATTERY_VOLTAGE_MEASUREMENTS_ADDED] = {0};
-	static volatile float FuelLevelValueTable[NO_OF_FUEL_LEVEL_MEASUREMENTS_ADDED] = {0};
-
+	static volatile float EngineWaterTemperatureMovingAverage[NO_OF_ENGINE_WATER_TEMP_MEASUREMENTS_ADDED] = {0};
 	static uint8_t i_waterTemp = 0;
-	static uint8_t i_oilTemp = 0;
-	static uint8_t i_oilPressure = 0;
-	static uint8_t i_mainBateryVoltage = 0;
-	static uint8_t i_auxBatteryVoltage = 0;
-	static uint8_t i_fuelLevel = 0;
-
 	static float tempEngineWaterTemp = 0.0;
-	static float tempEngineOilTemp = 0.0;
-	static float tempEngineOilPressure = 0.0;
-	static float tempMainBatteryVoltage = 0.0;
-	static float tempAuxBatteryVoltage = 0.0;
-	static float tempFuelLevel = 0.0;
-
+	float waterTemperatureValue_beforeMovingAverage = 0.0;
 	static uint8_t waterTemperatureValueMessage[4] = "";
 	waterTemperatureValueForLCD.messageHandler = waterTemperatureValueMessage;
 
+	static volatile float EngineOilTemperatureTable[NO_OF_ENGINE_OIL_TEMP_MEASUREMENTS_ADDED] = {0};
+	static volatile float EngineOilTemperatureTableMovingAverage[NO_OF_ENGINE_OIL_TEMP_MEASUREMENTS_ADDED] = {0};
+	static uint8_t i_oilTemp = 0;
+	static float tempEngineOilTemp = 0.0;
+	float oilTemperatureValue_beforeMovingAverage = 0.0;
 	static uint8_t oilTemperatureValueMessage[4] = "";
 	oilTemperatureValueForLCD.messageHandler = oilTemperatureValueMessage;
 
+#ifdef OIL_PRESSURE_ANALOG_SENSOR
+	static volatile float EngineOilPressureTable[NO_OF_ENGINE_OIL_PRESSURE_MEASUREMENTS_ADDED] = {0};
+//	static volatile float EngineOilPressureTableMovingAverage[NO_OF_ENGINE_OIL_PRESSURE_MEASUREMENTS_ADDED] = {0};
+	static uint8_t i_oilPressure = 0;
+	static float tempEngineOilPressure = 0.0;
 	static uint8_t oilPressureValueMessage[4] = "";
 	oilPressureValueForLCD.messageHandler = oilPressureValueMessage;
+#endif
 
+#ifdef OIL_PRESSURE_BINARY_SENSOR
+	static uint8_t oilPressureValueBinaryMessage[4] = "";	//OK, NOK
+	oilPressureValueBinaryForLCD.messageHandler = oilPressureValueBinaryMessage;
+#endif
+
+	static volatile float MainBatteryVoltageValueTable[NO_OF_MAIN_BATTERY_VOLTAGE_MEASUREMENTS_ADDED] = {0};
+//	static volatile float MainBatteryVoltageValueTableMovingAverage[NO_OF_MAIN_BATTERY_VOLTAGE_MEASUREMENTS_ADDED] = {0};
+	static uint8_t i_mainBateryVoltage = 0;
+	static float tempMainBatteryVoltage = 0.0;
 	static uint8_t mainBatteryVoltageValueMessage[6] = "";
 	mainBatteryVoltageValueForLCD.messageHandler = mainBatteryVoltageValueMessage;
 
+	static volatile float AuxiliaryBatteryVoltageValueTable[NO_OF_AUXILIARY_BATTERY_VOLTAGE_MEASUREMENTS_ADDED] = {0};
+//	static volatile float AuxiliaryBatteryVoltageValueTableMovingAverage[NO_OF_AUXILIARY_BATTERY_VOLTAGE_MEASUREMENTS_ADDED] = {0};
+	static uint8_t i_auxBatteryVoltage = 0;
+	static float tempAuxBatteryVoltage = 0.0;
 	static uint8_t auxiliaryBatteryVoltageValueMessage[6] = "";
 	auxiliaryBatteryVoltageValueForLCD.messageHandler = auxiliaryBatteryVoltageValueMessage;
 
+	static volatile float FuelLevelValueTable[NO_OF_FUEL_LEVEL_MEASUREMENTS_ADDED] = {0};
+	static volatile float FuelLevelValueTableMovingAverage[NO_OF_FUEL_LEVEL_MEASUREMENTS_ADDED] = {0};
+	static uint8_t i_fuelLevel = 0;
+	static float tempFuelLevel = 0.0;
+	float fuelLevelValue_beforeMovingAverage = 0.0;
 	static uint8_t fuelLevelValueMessage[3] = "";
 	fuelLevelValueForLCD.messageHandler = fuelLevelValueMessage;
+
 
 	xLastWakeTime = xTaskGetTickCount();
 
@@ -2318,9 +2376,22 @@ void StartTask250ms(void const * argument)
 		}
 		else
 		{
+			waterTemperatureValue_beforeMovingAverage = tempEngineWaterTemp / NO_OF_ENGINE_WATER_TEMP_MEASUREMENTS_ADDED;
+			EngineWaterTemperatureMovingAverage[NO_OF_ENGINE_WATER_TEMP_MEASUREMENTS_ADDED-1] = waterTemperatureValue_beforeMovingAverage;
+			tempEngineWaterTemp = waterTemperatureValue_beforeMovingAverage;
+
+			for(uint8_t j = 0; j< (NO_OF_ENGINE_WATER_TEMP_MEASUREMENTS_ADDED - 1); ++j)
+			{
+				EngineWaterTemperatureMovingAverage[j] = EngineWaterTemperatureMovingAverage[j+1];
+				tempEngineWaterTemp += EngineWaterTemperatureMovingAverage[j];
+			}
+
 			waterTemperatureValue = tempEngineWaterTemp / NO_OF_ENGINE_WATER_TEMP_MEASUREMENTS_ADDED;
+
+			waterTemperatureValueForLCD.messageReadyFLAG = FALSE;
 			snprintf((char*)waterTemperatureValueForLCD.messageHandler, 4, "%3" PRIu16, (uint16_t)waterTemperatureValue);
 			waterTemperatureValueForLCD.size = strlen((char*)waterTemperatureValueForLCD.messageHandler);
+			waterTemperatureValueForLCD.messageReadyFLAG = TRUE;
 
 			tempEngineWaterTemp = 0;
 			i_waterTemp = 0;
@@ -2332,22 +2403,184 @@ void StartTask250ms(void const * argument)
 		}
 
 		/* Oil Temperature Value measurement */
-//		oilTemperatureValue
-//		error = calculate_LM35_temperature((float*)&(EngineTemperatureLM35Table[i_waterTemp]), ADC1Measures[0]);
+		if(NO_OF_ENGINE_OIL_TEMP_MEASUREMENTS_ADDED > i_oilTemp)
+		{
+			error = calculate_LM35_temperature((float*)&(EngineOilTemperatureTable[i_oilTemp]), ADC1Measures[0]);
+			tempEngineOilTemp += EngineOilTemperatureTable[i_oilTemp];
+			i_oilTemp += 1;
+		}
+		else
+		{
+			oilTemperatureValue_beforeMovingAverage = tempEngineOilTemp / NO_OF_ENGINE_OIL_TEMP_MEASUREMENTS_ADDED;
+			EngineOilTemperatureTableMovingAverage[NO_OF_ENGINE_OIL_TEMP_MEASUREMENTS_ADDED-1] = oilTemperatureValue_beforeMovingAverage;
+			tempEngineOilTemp = oilTemperatureValue_beforeMovingAverage;
+
+			for(uint8_t j = 0; j< (NO_OF_ENGINE_OIL_TEMP_MEASUREMENTS_ADDED - 1); ++j)
+			{
+				EngineOilTemperatureTableMovingAverage[j] = EngineOilTemperatureTableMovingAverage[j+1];
+				tempEngineOilTemp += EngineOilTemperatureTableMovingAverage[j];
+			}
+
+			oilTemperatureValue = tempEngineOilTemp / NO_OF_ENGINE_OIL_TEMP_MEASUREMENTS_ADDED;
+
+			oilTemperatureValueForLCD.messageReadyFLAG = FALSE;
+			snprintf((char*)oilTemperatureValueForLCD.messageHandler, 4, "%3" PRIu16, (uint16_t)oilTemperatureValue);
+			oilTemperatureValueForLCD.size = strlen((char*)oilTemperatureValueForLCD.messageHandler);
+			oilTemperatureValueForLCD.messageReadyFLAG = TRUE;
+
+			tempEngineOilTemp = 0;
+			i_oilTemp = 0;
+		}
+
+		if(NO_ERROR != error)
+		{
+		  my_error_handler(error);
+		}
 
 		/* Oil Pressure Value measurement */
-//		oilPressureValue
+#ifdef OIL_PRESSURE_ANALOG_SENSOR
+		if(NO_OF_ENGINE_OIL_PRESSURE_MEASUREMENTS_ADDED > i_oilPressure)
+		{
+			error = calculate_EngineOilPressure((float*)&(EngineOilPressureTable[i_oilPressure]), ADC1Measures[0]);
+			tempEngineOilPressure += EngineOilPressureTable[i_oilPressure];
+			i_oilPressure += 1;
+		}
+		else
+		{
+			oilPressureValue = tempEngineOilPressure / NO_OF_ENGINE_OIL_PRESSURE_MEASUREMENTS_ADDED;
+
+			oilPressureValueForLCD.messageReadyFLAG = FALSE;
+			snprintf((char*)oilPressureValueForLCD.messageHandler, 4, "%01" PRIu16 ".%01" PRIu16, (uint16_t)oilPressureValue, (uint16_t)(oilPressureValue*10)%10);
+			oilPressureValueForLCD.size = strlen((char*)oilPressureValueForLCD.messageHandler);
+			oilPressureValueForLCD.messageReadyFLAG = TRUE;
+
+			tempEngineOilPressure = 0;
+			i_oilPressure = 0;
+		}
+#endif
+
+#ifdef OIL_PRESSURE_BINARY_SENSOR
+		if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIO_PORT_OIL_PRESSURE_SENSOR, GPIO_PORT_OIL_PRESSURE_SENSOR))
+		{
+			oilPressureValueBinary = OK;
+			oilPressureValueBinaryForLCD.messageReadyFLAG = FALSE;
+			snprintf((char*)oilPressureValueBinaryForLCD.messageHandler, 4, "OK");
+			oilPressureValueBinaryForLCD.size = strlen((char*)oilPressureValueForLCD.messageHandler);
+			oilPressureValueBinaryForLCD.messageReadyFLAG = TRUE;
+		}
+		else
+		{
+			oilPressureValueBinary = NOK;
+			oilPressureValueBinaryForLCD.messageReadyFLAG = FALSE;
+			snprintf((char*)oilPressureValueBinaryForLCD.messageHandler, 4, "NOK");
+			oilPressureValueBinaryForLCD.size = strlen((char*)oilPressureValueForLCD.messageHandler);
+			oilPressureValueBinaryForLCD.messageReadyFLAG = TRUE;
+		}
+#endif
+
+		if(NO_ERROR != error)
+		{
+		  my_error_handler(error);
+		}
 
 		/* Main Battery Voltage Value measurement */
-//		mainBatteryVoltageValue
+		if(NO_OF_MAIN_BATTERY_VOLTAGE_MEASUREMENTS_ADDED > i_mainBateryVoltage)
+		{
+			for(uint8_t j = 1; j< (NO_OF_MAIN_BATTERY_VOLTAGE_MEASUREMENTS_ADDED); ++j)
+			{
+				MainBatteryVoltageValueTable[j] = MainBatteryVoltageValueTable[j-1];
+				tempMainBatteryVoltage += MainBatteryVoltageValueTable[j];
+			}
+
+			error = calculate_voltage((float*)&(MainBatteryVoltageValueTable[0u]), ADC1Measures[0], MAIN_BATTERY_VOLTAGE_DIVIDER);
+			tempMainBatteryVoltage += MainBatteryVoltageValueTable[0u];
+			mainBatteryVoltageValue = tempMainBatteryVoltage / NO_OF_MAIN_BATTERY_VOLTAGE_MEASUREMENTS_ADDED;
+
+			mainBatteryVoltageValueForLCD.messageReadyFLAG = FALSE;
+			snprintf((char*)mainBatteryVoltageValueForLCD.messageHandler, 6, "%02" PRIu16 ".%02" PRIu16, (uint16_t)mainBatteryVoltageValue, (uint16_t)(mainBatteryVoltageValue*100)%100);
+			mainBatteryVoltageValueForLCD.size = strlen((char*)mainBatteryVoltageValueForLCD.messageHandler);
+			mainBatteryVoltageValueForLCD.messageReadyFLAG = TRUE;
+
+			i_mainBateryVoltage += 1;
+		}
+		else
+		{
+			tempMainBatteryVoltage = 0;
+			i_mainBateryVoltage = 0;
+		}
+
+		if(NO_ERROR != error)
+		{
+		  my_error_handler(error);
+		}
 
 		/* Auxiliary Battery Voltage Value measurement */
-//		auxiliaryBatteryVoltageValue
+		if(NO_OF_AUXILIARY_BATTERY_VOLTAGE_MEASUREMENTS_ADDED > i_auxBatteryVoltage)
+		{
+			for(uint8_t j = 1; j< (NO_OF_AUXILIARY_BATTERY_VOLTAGE_MEASUREMENTS_ADDED); ++j)
+			{
+				AuxiliaryBatteryVoltageValueTable[j] = AuxiliaryBatteryVoltageValueTable[j-1];
+				tempAuxBatteryVoltage += AuxiliaryBatteryVoltageValueTable[j];
+			}
+
+			error = calculate_voltage((float*)&(AuxiliaryBatteryVoltageValueTable[0u]), ADC1Measures[0], AUXILIARY_BATTERY_VOLTAGE_DIVIDER);
+			tempAuxBatteryVoltage += AuxiliaryBatteryVoltageValueTable[0u];
+			auxiliaryBatteryVoltageValue = tempAuxBatteryVoltage / NO_OF_AUXILIARY_BATTERY_VOLTAGE_MEASUREMENTS_ADDED;
+
+			auxiliaryBatteryVoltageValueForLCD.messageReadyFLAG = FALSE;
+			snprintf((char*)auxiliaryBatteryVoltageValueForLCD.messageHandler, 6, "%02" PRIu16 ".%02" PRIu16, (uint16_t)auxiliaryBatteryVoltageValue, (uint16_t)(auxiliaryBatteryVoltageValue*100)%100);
+			auxiliaryBatteryVoltageValueForLCD.size = strlen((char*)auxiliaryBatteryVoltageValueForLCD.messageHandler);
+			auxiliaryBatteryVoltageValueForLCD.messageReadyFLAG = TRUE;
+
+			i_auxBatteryVoltage += 1;
+		}
+		else
+		{
+			tempAuxBatteryVoltage = 0;
+			i_auxBatteryVoltage = 0;
+		}
+
+		if(NO_ERROR != error)
+		{
+		  my_error_handler(error);
+		}
 
 		/* Fuel Level Value measurement */
-//		fuelLevelValue
+		if(NO_OF_FUEL_LEVEL_MEASUREMENTS_ADDED > i_fuelLevel)
+		{
+			error = calculate_fuelLevel((float*)&(FuelLevelValueTable[i_fuelLevel]), ADC1Measures[0]);
+			tempFuelLevel += FuelLevelValueTable[i_fuelLevel];
+			i_fuelLevel += 1;
+		}
+		else
+		{
+			fuelLevelValue_beforeMovingAverage = tempFuelLevel / NO_OF_FUEL_LEVEL_MEASUREMENTS_ADDED;
+			FuelLevelValueTableMovingAverage[NO_OF_FUEL_LEVEL_MEASUREMENTS_ADDED-1] = fuelLevelValue_beforeMovingAverage;
+			tempFuelLevel = fuelLevelValue_beforeMovingAverage;
 
-		  vTaskDelayUntil(&xLastWakeTime, xFrequency);
+			for(uint8_t j = 0; j< (NO_OF_FUEL_LEVEL_MEASUREMENTS_ADDED - 1); ++j)
+			{
+				FuelLevelValueTableMovingAverage[j] = FuelLevelValueTableMovingAverage[j+1];
+				tempFuelLevel += FuelLevelValueTableMovingAverage[j];
+			}
+
+			fuelLevelValue = tempFuelLevel / NO_OF_FUEL_LEVEL_MEASUREMENTS_ADDED;
+
+			fuelLevelValueForLCD.messageReadyFLAG = FALSE;
+			snprintf((char*)fuelLevelValueForLCD.messageHandler, 4, "%3" PRIu16, (uint16_t)fuelLevelValue);
+			fuelLevelValueForLCD.size = strlen((char*)fuelLevelValueForLCD.messageHandler);
+			fuelLevelValueForLCD.messageReadyFLAG = TRUE;
+
+			tempEngineWaterTemp = 0;
+			i_waterTemp = 0;
+		}
+
+		if(NO_ERROR != error)
+		{
+		  my_error_handler(error);
+		}
+
+		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
   /* USER CODE END StartTask250ms */
 }

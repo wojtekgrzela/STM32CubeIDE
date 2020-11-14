@@ -93,12 +93,6 @@ typedef struct
 Error_Code parse_GPS_data(GPS_data_struct* const GPS);
 Error_Code track_GPS_movement(const GPS_data_struct* const GPS);
 
-static float calculate_Course(float latitudeStart, float longitudeStart, float latitudeEnd, float longitudeEnd);
-static float calculate_Distance(float latitudeStart, float longitudeStart, float latitudeEnd, float longitudeEnd);
-static inline float to_Radians(const float decimalDegree);
-static inline float to_Degrees(const float radians);
-static inline float pow2(float var);
-
 
 __weak Error_Code save_GPS_point(const GPS_data_struct* const GPS);
 

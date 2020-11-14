@@ -112,8 +112,7 @@ Error_Code calculate_NTC_temperature(int16_t *temperature, const uint16_t ADC_va
 
 /**
  * A function that calculates the temperature basing on given ADC value
- * read from LM35 termometer. It gives the temperature x10 to have the
- * decimal point.
+ * read from LM35 termometer.
  *
  * @param temperature: a pointer to the temperature it will calculate
  * @param ADC_value: a value from ADC
@@ -139,13 +138,37 @@ Error_Code calculate_LM35_temperature(float *temperature, const uint16_t ADC_val
 
 
 /**
+ * A function that calculates the oil pressure basing on given ADC value
+ * read a sensor.
+ *
+ * @param oilPressure: a pointer to the oil pressure it will calculate
+ * @param ADC_value: a value from ADC
+ * @retval Error_Code: gives a value of error if one occurs
+ */
+Error_Code calculate_EngineOilPressure(float *oilPressure, const uint16_t ADC_value)
+{
+	Error_Code error = NO_ERROR;
+
+	if((MIN_ADC_VALUE > ADC_value) || (MAX_ADC_VALUE < ADC_value))
+	{
+		error = ADC__VALUE_INCORRECT;
+	}
+
+	*oilPressure = 1.0;	//TODO
+
+	return error;
+}
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+
+
+/**
  * A function that calculates the voltage basing on ADC value and voltage
  * divider multiplied by 10.000 (for better accuracy).
  *
  * @param result: a pointer to the result value (voltage)
  * @param measure: the measured ADC value
- * @param voltageDivider_x10000: the used voltage divider multiplied by
- * 			10.000 for better accuracy
+ * @param voltageDivider: the used voltage divider
  * @retval Error_Code: gives a value of error if one occurs
  */
 Error_Code calculate_voltage(float *result, const uint16_t measure, const float voltageDivider)
@@ -159,6 +182,33 @@ Error_Code calculate_voltage(float *result, const uint16_t measure, const float 
 	else
 	{
 		*result = ((float)(measure) / ADC_RESOLUTION_X_REF_VOLTAGE_float) / voltageDivider;
+	}
+
+	return error;
+}
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+
+
+/**
+ * A function that calculates the fuel level based on the reading
+ * from the sensor in the tank.
+ *
+ * @param result: a pointer to the result value (voltage)
+ * @param measure: the measured ADC value
+ * @retval Error_Code: gives a value of error if one occurs
+ */
+Error_Code calculate_fuelLevel(float *result, const uint16_t measure)
+{
+	Error_Code error = NO_ERROR;
+
+	if((MIN_ADC_VALUE >= measure) || (MAX_ADC_VALUE < measure))
+	{
+		error = ADC__VALUE_INCORRECT;
+	}
+	else
+	{
+		*result = 45.0;	//TODO - value just for reference
 	}
 
 	return error;

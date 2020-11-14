@@ -19,6 +19,12 @@
 #define MAX_SPEED_IN_TRAFFIC_JAM		((float)(2.0))
 #define MAX_DISTANCE_IN_TRAFFIC_JAM		((int32_t)(50))
 
+static float calculate_Course(float latitudeStart, float longitudeStart, float latitudeEnd, float longitudeEnd);
+static float calculate_Distance(float latitudeStart, float longitudeStart, float latitudeEnd, float longitudeEnd);
+static inline float to_Radians(const float decimalDegree);
+static inline float to_Degrees(const float radians);
+static inline float pow2(float var);
+
 /**
  * A function that copies the data from GPS buffer from UART and
  * performs parsing on it. There is parsing for GPVTG and GPGGA
