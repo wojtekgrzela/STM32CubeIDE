@@ -86,7 +86,7 @@ static inline float integrate(float error)
  * @param error: the controlled value error
  * @retval float: the result of differentiation
  */
-static inline float integrate(float error)
+static inline float differentiate(float error)
 {
 	static float errorPrevious = 0;
 	float y = ((error - errorPrevious) / PIDparam.dt);

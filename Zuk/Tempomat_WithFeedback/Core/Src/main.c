@@ -554,6 +554,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 			STATE = OFF;
 			Set_Electromagnes_Off();
 			Set_Direction(NOTHING);
+			PWM_PULSE = 0u;
 		}
 		else
 		{
@@ -639,7 +640,7 @@ void Complete_Shutdown(void)
 	STATE = OFF;
 	Set_Electromagnes_Off();
 	Set_Direction(NOTHING);
-	PWM_PULSE;
+	PWM_PULSE = 0u;
 }
 
 
