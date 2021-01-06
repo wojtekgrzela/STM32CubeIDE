@@ -49,6 +49,7 @@ typedef enum
 	/*** EEPROM errors ***/
 	EEPROM__TRIED_TO_WRITE_WHILE_LOCKED				= 4001,
 	EEPROM__WHOLE_MEMORY_ERASE_FAIL					= 4002,
+	EEPROM__SIZE_TO_WRITE_IS_ZERO					= 4003,
 
 	/*** ADCs errors ***/
 	ADC__VALUE_INCORRECT							= 5001,
@@ -61,6 +62,7 @@ typedef enum
 	/*** LCD & String errors ***/
 	LCD__INIT_FAIL									= 7001,
 	LCD__ERROR										= 7002,
+	LCD__LAYER_CHOICE_FAILURE						= 7003,
 	STRING__EMPTY									= 7010,
 
 	/*** GPS errors ***/

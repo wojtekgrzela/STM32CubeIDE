@@ -39,43 +39,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/*** A structure with all the info for diagnostic snapshot ***/
-typedef struct
-{
-	union
-	{
-		uint8_t data[40];
-		struct
-		{
-			Diagnostic_Snapshot_struct diag_mess_from_queue;	//8 bytes total
-			uint8_t rawTime[6/*Size of raw time from GPS*/];	//16 bytes total (2 unused)
-			uint8_t latitude[10];								//24 bytes total
-			uint8_t latitudeIndicator;							//28 bytes total (3 unused)
-			uint8_t longitude[11];								//36 bytes total
-			uint8_t longitudeIndicator;							//40 bytes total (3 unused) = 37 bytes of data
-		};
-	};
-	EEPROM_data_struct DiagnosticDataForEEPROM;
-}DiagnosticDataToSend_struct;
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/*** A structure with all the info for error snapshot ***/
-typedef struct
-{
-	union
-	{
-		uint8_t data[10];
-		struct
-		{
-			Error_Code error_mess_from_queue;					//4 bytes total
-			uint8_t rawTime[6/*Size of raw time from GPS*/];	//12 bytes total (2 unused) = 10 bytes of data
-		};
-	};
-	EEPROM_data_struct ErrorData;
-}ErrorDataToSend_struct;
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -465,7 +429,7 @@ void MX_FREERTOS_Init(void) {
 void StartTask1000ms(void const * argument)
 {
   /* init code for USB_DEVICE */
-  MX_USB_DEVICE_Init();
+//  MX_USB_DEVICE_Init();
   /* USER CODE BEGIN StartTask1000ms */
 
 	TickType_t xLastWakeTime;
@@ -622,6 +586,30 @@ void StartTaskLCD(void const * argument)
 
 	Enum_Layer currentLayer = HOME_SCREEN;
 
+	/******************************************************/
+	/* For reading the data from EEPROM and displaying it */
+	static uint8_t isDoneOnce = FALSE;
+
+	DiagnosticDataToEEPROM_struct DiagnosticDataRead =
+	{ .DiagnosticDataForEEPROM =
+		{ .EEPROMParameters = &EEPROM_car,
+		.data = DiagnosticDataRead.data,
+		.size = MAX_DIAGNOSTIC_SNAPSHOT_SIZE,
+		.memAddress = 0,
+		.memAddressSize = 2 },
+	.diag_mess_from_queue =
+		{ .snapshotIdentificator = DIAGNOSTICS_OK,
+		.value = 0 } };
+
+	ErrorDataToEEPROM_struct ErrorDataRead =
+	{ .ErrorDataForEEPROM =
+		{ .data = ErrorDataRead.data,
+		.size = MAX_ERROR_SNAPSHOT_SIZE,
+		.memAddress = 0,
+		.memAddressSize = 2	},
+	.error_mess_from_queue = NO_ERROR };
+	/******************************************************/
+
 	LCDBoard LCD_MainMenu =
 			{ .name = "Main Menu",
 			.nameActualSize = sizeof("Main Menu")-1,
@@ -634,7 +622,7 @@ void StartTaskLCD(void const * argument)
 			{ .name = "Are you sure?",
 			.nameActualSize = sizeof("Are you sure?")-1,
 			.layer = YesNo_Layer,
-			.actionForEnter = YesNo_EnterAction,
+			.actionForEnter = Done_EnterAction,
 			.screenType = YesNo_ScreenType,
 			.layerPrevious = MainMenu_Layer /* Should be last one opened */ };
 
@@ -1430,7 +1418,7 @@ void StartTaskLCD(void const * argument)
 
 				if(ENC_button.shortPressDetected)
 				{
-					error = shortButtonPressDetected_LCD_scroll(&LCD_MainMenu, LCD_MainMenuList, &currentLayer, &submenuIterator);
+					error = shortButtonPressDetected_LCD(&LCD_MainMenu, LCD_MainMenuList, &currentLayer, &submenuIterator);
 				}
 
 				if(ENC_button.longPressDetected)
@@ -1544,7 +1532,7 @@ void StartTaskLCD(void const * argument)
 				/*** Fourth Row ***/
 					/* GPS: Altitude */
 				error = copy_str_to_buffer("Alt.:", (char*)LCD_buffer[Row4], 0, 5);
-				if(TRUE == GPS.forLCD.altitude)
+				if(TRUE == GPS.forLCD.altitude.messageReadyFLAG)
 					error = copy_str_to_buffer((char*)GPS.forLCD.altitude.messageHandler, (char*)LCD_buffer[Row4], 6, GPS.forLCD.altitude.size);
 				error = copy_str_to_buffer("m npm", (char*)LCD_buffer[Row4], (6+GPS.forLCD.altitude.size+1), 5);
 
@@ -1579,16 +1567,142 @@ void StartTaskLCD(void const * argument)
 			}
 			case Last3Diag_Layer:
 			{
+				error = copy_str_to_buffer("Last 3 Diag Snaps.:", (char*)LCD_buffer[Row3], 0u, 18u);
+
+				if(FALSE == isDoneOnce)
+				{
+					if(TRUE == CAR_EEPROM_counters.didTheNumberOfDiagnosticSnapshotsOverflowed)
+					{
+						for(uint8_t i=0; i<3; ++i)
+						{
+							DiagnosticDataRead.DiagnosticDataForEEPROM.memAddress = DIAGNOSTIC_SNAPSHOTS_START_ADDRESS + (uint16_t)((uint8_t)(CAR_EEPROM_counters.diagnosticSnapshotEEPROMIndex - i)*EEPROM_PAGE_SIZE);
+							xQueueSend(Queue_EEPROM_readHandle, &(DiagnosticDataRead.DiagnosticDataForEEPROM), (TickType_t)100U/*100ms wait time if the queue is full*/);
+
+//							while(FALSE == DiagnosticDataRead.DiagnosticDataForEEPROM.isReady)
+//							{
+//								static TickType_t lastTick = (TickType_t)0U;
+//								if((xTaskGetTickCount() - lastTick) > MAX_WAIT_TIME_FOR_EEPROM)
+//								{
+//									error = copy_str_to_buffer("ERROR", (char*)LCD_buffer[Row3], 7u, 5u);
+//									break;
+//								}
+//								else
+//								{
+									vTaskDelay((TickType_t)500U);	/* wait for 10ms if there is no response from the EEPROM read and the data is not ready yet */
+//								}
+//							}
+							//TODO getting description of the diagnostic problem
+							//TODO writing the description into the LCD buffer
+						}
+					}
+					else
+					{
+						if(0u != CAR_EEPROM_counters.diagnosticSnapshotEEPROMIndex)
+						{
+							for(uint8_t i=0; ((i<3) && (i<=CAR_EEPROM_counters.diagnosticSnapshotEEPROMIndex)); ++i)
+							{
+								DiagnosticDataRead.DiagnosticDataForEEPROM.memAddress = DIAGNOSTIC_SNAPSHOTS_START_ADDRESS + (uint16_t)((uint8_t)(CAR_EEPROM_counters.diagnosticSnapshotEEPROMIndex - i)*EEPROM_PAGE_SIZE);
+								xQueueSend(Queue_EEPROM_readHandle, &(DiagnosticDataRead.DiagnosticDataForEEPROM), (TickType_t)100U/*100ms wait time if the queue is full*/);
+
+//								while(FALSE == DiagnosticDataRead.DiagnosticDataForEEPROM.isReady)
+//								{
+//									static TickType_t lastTick = (TickType_t)0U;
+//									if((xTaskGetTickCount() - lastTick) > MAX_WAIT_TIME_FOR_EEPROM)
+//									{
+//										error = copy_str_to_buffer("ERROR", (char*)LCD_buffer[Row3], 7u, 5u);
+//										break;
+//									}
+//									else
+//									{
+										vTaskDelay((TickType_t)500U);	/* wait for 10ms if there is no response from the EEPROM read and the data is not ready yet */
+//									}
+//								}
+								//TODO getting description of the diagnostic problem
+								//TODO writing the description into the LCD buffer
+							}
+						}
+						else
+						{
+							error = copy_str_to_buffer("Nothing to display", (char*)LCD_buffer[Row3], 7u, 5u);
+						}
+					}
+					isDoneOnce = TRUE;
+				}//if(FALSE == isDoneOnce)
+
 				if(ENC_button.longPressDetected)
 				{
+					isDoneOnce = FALSE;
 					error = longButtonPressDetected_LCD(&LCD_MainMenuList[4], &currentLayer, &submenuIterator);
 				}
 				break;
 			}
 			case Last3Err_Layer:
 			{
+				error = copy_str_to_buffer("Last 3 Error Snaps.:", (char*)LCD_buffer[Row1], 0u, 19u);
+
+				if(FALSE == isDoneOnce)
+				{
+					if(TRUE == BOARD_EEPROM_counters.didTheNumberOfErrorSnapshotsOverflowed)
+					{
+						for(uint8_t i=0; i<3; ++i)
+						{
+							ErrorDataRead.ErrorDataForEEPROM.memAddress = ERROR_SNAPSHOTS_START_ADDRESS + (uint16_t)((uint8_t)(BOARD_EEPROM_counters.errorSnapshotEEPROMIndex - i)*EEPROM_PAGE_SIZE);
+							xQueueSend(Queue_EEPROM_readHandle, &(ErrorDataRead.ErrorDataForEEPROM), (TickType_t)100U/*100ms wait time if the queue is full*/);
+//
+//							while(FALSE == ErrorDataRead.ErrorDataForEEPROM.isReady)
+//							{
+//								static TickType_t lastTick = (TickType_t)0U;
+//								if((xTaskGetTickCount() - lastTick) > MAX_WAIT_TIME_FOR_EEPROM)
+//								{
+//									error = copy_str_to_buffer("ERROR", (char*)LCD_buffer[Row3], 7u, 5u);
+//									break;
+//								}
+//								else
+//								{
+									vTaskDelay((TickType_t)5000U);	/* wait for 10ms if there is no response from the EEPROM read and the data is not ready yet */
+//								}
+//							}
+							//TODO getting description of the error problem
+							//TODO writing the description into the LCD buffer
+						}
+					}
+					else
+					{
+						if(0u != BOARD_EEPROM_counters.errorSnapshotEEPROMIndex)
+						{
+							for(uint8_t i=0; ((i<3) && (i<=BOARD_EEPROM_counters.errorSnapshotEEPROMIndex)); ++i)
+							{
+								ErrorDataRead.ErrorDataForEEPROM.memAddress = ERROR_SNAPSHOTS_START_ADDRESS + (uint16_t)((uint8_t)(BOARD_EEPROM_counters.errorSnapshotEEPROMIndex - i)*EEPROM_PAGE_SIZE);
+								xQueueSend(Queue_EEPROM_readHandle, &(ErrorDataRead.ErrorDataForEEPROM), (TickType_t)100U/*100ms wait time if the queue is full*/);
+
+//								while(FALSE == ErrorDataRead.ErrorDataForEEPROM.isReady)
+//								{
+//									static TickType_t lastTick = (TickType_t)0U;
+//									if((xTaskGetTickCount() - lastTick) > MAX_WAIT_TIME_FOR_EEPROM)
+//									{
+//										error = copy_str_to_buffer("ERROR", (char*)LCD_buffer[Row3], 7u, 5u);
+//										break;
+//									}
+//									else
+//									{
+										vTaskDelay((TickType_t)500U);	/* wait for 10ms if there is no response from the EEPROM read and the data is not ready yet */
+//									}
+//								}
+								//TODO getting description of the error problem
+								//TODO writing the description into the LCD buffer
+							}
+						}
+						else
+						{
+							error = copy_str_to_buffer("Nothing to display", (char*)LCD_buffer[Row3], 7u, 5u);
+						}
+					}
+					isDoneOnce = TRUE;
+				}//if(FALSE == isDoneOnce)
+
 				if(ENC_button.longPressDetected)
 				{
+					isDoneOnce = FALSE;
 					error = longButtonPressDetected_LCD(&LCD_MainMenuList[5], &currentLayer, &submenuIterator);
 				}
 				break;
@@ -1602,7 +1716,7 @@ void StartTaskLCD(void const * argument)
 
 				if(ENC_button.shortPressDetected)
 				{
-					error = shortButtonPressDetected_LCD_scroll(&(LCD_MainMenuList[6]), LCD_CarSettingsList, &currentLayer, &submenuIterator);
+					error = shortButtonPressDetected_LCD(&(LCD_MainMenuList[6]), LCD_CarSettingsList, &currentLayer, &submenuIterator);
 				}
 
 				if(ENC_button.longPressDetected)
@@ -1618,6 +1732,23 @@ void StartTaskLCD(void const * argument)
 
 			case ClearDiagnosticSnapshots:
 			{
+				char tempBuff[4u] = {' '};
+				error = copy_str_to_buffer("No. diag snaps:", (char*)LCD_buffer[Row1], 0u, 15u);
+				snprintf(tempBuff, 4u, "%3" PRIu16, CAR_EEPROM_counters.diagnosticSnapshotEEPROMIndex);
+				error = copy_str_to_buffer(tempBuff, (char*)LCD_buffer[Row1], 16u, 3u);
+
+				error = copy_str_to_buffer("Overflowed?", (char*)LCD_buffer[Row2], 0u, 11u);
+				error = copy_str_to_buffer(((TRUE == CAR_EEPROM_counters.didTheNumberOfDiagnosticSnapshotsOverflowed) ? "Yes" : " No"), (char*)LCD_buffer[Row2], 16u, 3u);
+
+				error = copy_str_to_buffer("Click enter to clear", (char*)LCD_buffer[Row3], 0u, 20u);
+				error = copy_str_to_buffer("Diagnostic snapshots", (char*)LCD_buffer[Row4], 0u, 20u);
+
+				if(ENC_button.shortPressDetected)
+				{
+					LCD_YesNo.layerPrevious = ClearDiagnosticSnapshots;
+					error = shortButtonPressDetected_LCD(&(LCD_CarSettingsList[0]), LCD_CarSettingsList, &currentLayer, &submenuIterator);
+				}
+
 				if(ENC_button.longPressDetected)
 				{
 					error = longButtonPressDetected_LCD(&LCD_CarSettingsList[0], &currentLayer, &submenuIterator);
@@ -1626,6 +1757,20 @@ void StartTaskLCD(void const * argument)
 			}
 			case ClearTripMileage:
 			{
+				error = copy_str_to_buffer("Trip mileage:", (char*)LCD_buffer[Row1], 0u, 15u);
+				if(TRUE == tripMileageForLCD.messageReadyFLAG)
+					error = copy_str_to_buffer((char*)tripMileageForLCD.messageHandler, (char*)LCD_buffer[Row2], 0u, tripMileageForLCD.size);
+				error = copy_str_to_buffer("km", (char*)LCD_buffer[Row2], (tripMileageForLCD.size+1), 2u);
+
+				error = copy_str_to_buffer("Click enter to clear", (char*)LCD_buffer[Row3], 0u, 20u);
+				error = copy_str_to_buffer("the trip mileage", (char*)LCD_buffer[Row4], 0u, 16u);
+
+				if(ENC_button.shortPressDetected)
+				{
+					LCD_YesNo.layerPrevious = ClearTripMileage;
+					error = shortButtonPressDetected_LCD(&(LCD_CarSettingsList[1]), LCD_CarSettingsList, &currentLayer, &submenuIterator);
+				}
+
 				if(ENC_button.longPressDetected)
 				{
 					error = longButtonPressDetected_LCD(&LCD_CarSettingsList[1], &currentLayer, &submenuIterator);
@@ -1722,7 +1867,7 @@ void StartTaskLCD(void const * argument)
 
 				if(ENC_button.shortPressDetected)
 				{
-					error = shortButtonPressDetected_LCD_scroll(&LCD_MainMenuList[7], LCD_BoardSettingsList, &currentLayer, &submenuIterator);
+					error = shortButtonPressDetected_LCD(&LCD_MainMenuList[7], LCD_BoardSettingsList, &currentLayer, &submenuIterator);
 				}
 
 				if(ENC_button.longPressDetected)
@@ -1812,10 +1957,65 @@ void StartTaskLCD(void const * argument)
 			}
 
 			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+			/* Actions layers */
+
+			case YesNo_Layer:
+			{
+				error = copy_str_to_buffer(LCD_YesNo.name, (char*)LCD_buffer[Row1], 3, LCD_YesNo.nameActualSize);
+
+				switch(LCD_YesNo.layerPrevious)
+				{
+					case ClearDiagnosticSnapshots:
+					{
+						error = copy_str_to_buffer("Short press: Yes", (char*)LCD_buffer[Row2], 0, 16);
+						error = copy_str_to_buffer("Long press: No", (char*)LCD_buffer[Row3], 0, 14);
+
+						if(ENC_button.shortPressDetected)
+						{
+							EEPROM_data_struct EEPROMData = {0};
+
+							CAR_EEPROM_counters.diagnosticSnapshotEEPROMIndex = 1u;
+							CAR_EEPROM_counters.didTheNumberOfDiagnosticSnapshotsOverflowed = FALSE;
+							EEPROMData.EEPROMParameters = &EEPROM_car;
+							EEPROMData.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE;
+							EEPROMData.size = UINT8_T_SIZE;
+							EEPROMData.memAddress = TOTAL_SNAPSHOTS_NUMBER_ADDRESS;
+							EEPROMData.data = &(CAR_EEPROM_counters.diagnosticSnapshotEEPROMIndex);
+							xQueueSend(Queue_EEPROM_writeHandle, &EEPROMData, (TickType_t)100U/*100ms wait time if the queue is full*/);
+
+							EEPROMData.memAddress = NUMBER_OF_DIAGNOSTIC_SNAPSHOTS_OVERFLOWED_ADDRESS;
+							EEPROMData.data = &(CAR_EEPROM_counters.didTheNumberOfDiagnosticSnapshotsOverflowed);
+							xQueueSend(Queue_EEPROM_writeHandle, &EEPROMData, (TickType_t)100U/*100ms wait time if the queue is full*/);
+
+							vTaskDelay((TickType_t)MAX_WAIT_TIME_FOR_EEPROM);	/* wait for 500ms if there is no response from the EEPROM read and the data is not ready yet */
+
+							if(DATA_READY == EEPROMData.isReady)
+							{
+								error = copy_str_to_buffer("ERROR", (char*)LCD_buffer[Row4], 7u, 5u);
+								vTaskDelay((TickType_t)2000U);	/* Print "ERROR" for 2 seconds */
+							}
+
+							error = shortButtonPressDetected_LCD(&LCD_YesNo, LCD_CarSettingsList, &currentLayer, &submenuIterator);
+						}
+
+						break;
+					}//case ClearDiagnosticSnapshots:
+					default:
+					{
+						break;
+					}//default:
+				}//switch(LCD_YesNo.layerPrevious)
+				if(ENC_button.longPressDetected)
+				{
+					error = longButtonPressDetected_LCD(&LCD_BoardSettingsList[0], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
 
 			default:
 			{
-				while(True) {}
+				error = LCD__LAYER_CHOICE_FAILURE;
+				my_error_handler(error);
 				currentLayer = HOME_SCREEN;
 			}
 				break;
@@ -2082,7 +2282,7 @@ void StartTaskEEPROM(void const * argument)
 	}
 
 	/* EEPROM Board initialization: */
-	error == InitVariablesFromEEPROMBoard();
+	error = InitVariablesFromEEPROMBoard();
 
 	if(NO_ERROR != error)
 	{
@@ -2099,7 +2299,7 @@ void StartTaskEEPROM(void const * argument)
 		  error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
 		  if(NO_ERROR == error)
 		  {
-			  EEPROMData.isReady = True;//TODO: mem error dump
+			  EEPROMData.isReady = DATA_READY;//TODO: mem error dump
 		  }
 		  else
 		  {
@@ -2110,16 +2310,24 @@ void StartTaskEEPROM(void const * argument)
 	  {
 		  if(pdTRUE == xQueueReceive(Queue_EEPROM_writeHandle, &EEPROMData, (TickType_t)0))
 		  {
-			  for(uint8_t i=0; i < EEPROMData.size; ++i)
+			  if(0u == EEPROMData.size)
 			  {
-				  localBuffer[i] = EEPROMData.data[i];
+				  error = EEPROM__SIZE_TO_WRITE_IS_ZERO;
 			  }
-			  EEPROMData.data = localBuffer;
+			  else
+			  {
+				  for(uint8_t i=0; i < EEPROMData.size; ++i)
+				  {
+					  localBuffer[i] = EEPROMData.data[i];
+				  }
+				  EEPROMData.data = localBuffer;
 
-			  error = WriteEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+				  error = WriteEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+			  }
+
 			  if(NO_ERROR == error)
 			  {
-				  EEPROMData.isReady = True;//TODO: mem error dump
+				  EEPROMData.isReady = DATA_READY;//TODO: mem error dump
 			  }
 			  else
 			  {
@@ -2149,16 +2357,20 @@ void StartTaskDumpToEEPROM(void const * argument)
 	const TickType_t xFrequency = MY_DUMP_TO_EEPROM_TASK_TIME_PERIOD;
 	Error_Code error = NO_ERROR;
 
-	DiagnosticDataToSend_struct DiagnosticDataToSend =
+	DiagnosticDataToEEPROM_struct DiagnosticDataToSend =
 	{ .DiagnosticDataForEEPROM =
-	{ .EEPROMParameters = &EEPROM_car, .data = DiagnosticDataToSend.data,
-			.size = 35, .memAddress = 0, .memAddressSize = 2 },
-			.diag_mess_from_queue =
-			{ .snapshotIdentificator = DIAGNOSTICS_OK, .value = 0 } };
+		{ .EEPROMParameters = &EEPROM_car,
+		.data = DiagnosticDataToSend.data,
+		.size = MAX_DIAGNOSTIC_SNAPSHOT_SIZE,
+		.memAddress = 0,
+		.memAddressSize = 2 },
+	.diag_mess_from_queue =
+		{ .snapshotIdentificator = DIAGNOSTICS_OK,
+		.value = 0 } };
 
-	ErrorDataToSend_struct ErrorDataToSend =
-	{ .ErrorData.EEPROMParameters = &EEPROM_board, .error_mess_from_queue =
-			NO_ERROR };
+	ErrorDataToEEPROM_struct ErrorDataToSend =
+	{ .ErrorDataForEEPROM.EEPROMParameters = &EEPROM_board,
+	.error_mess_from_queue = NO_ERROR };
 
 #ifdef RUNTIME_STATS_QUEUES
 	vQueueAddToRegistry(Queue_diagnostic_snapshot_dumpHandle, QUEUE_DIAGNOSTIC_DUMP_NAME);
@@ -2194,7 +2406,7 @@ void StartTaskDumpToEEPROM(void const * argument)
 
 		  if(NO_ERROR == error)
 		  {
-//  			  EEPROMDataHandle->isReady = True; //TODO
+			  DiagnosticDataToSend.DiagnosticDataForEEPROM.isReady = DATA_READY; //TODO
 		  }
 		  else
 		  {
@@ -2206,10 +2418,10 @@ void StartTaskDumpToEEPROM(void const * argument)
 	  {
 		  if(pdTRUE == xQueueReceive(Queue_error_snapshot_dumpHandle, &(ErrorDataToSend.error_mess_from_queue), (TickType_t)0))
 		  {
-			  error = WriteEEPROM(ErrorDataToSend.ErrorData.EEPROMParameters, &(ErrorDataToSend.ErrorData));
+			  error = WriteEEPROM(ErrorDataToSend.ErrorDataForEEPROM.EEPROMParameters, &(ErrorDataToSend.ErrorDataForEEPROM));
 			  if(NO_ERROR == error)
 			  {
-//				  EEPROMDataHandle->isReady = True; //TODO
+				  ErrorDataToSend.ErrorDataForEEPROM.isReady = DATA_READY; //TODO
 			  }
 			  else
 			  {
@@ -2249,7 +2461,7 @@ void StartTaskDumpToSDCard(void const * argument)
 	/* Check if SD card is ready to be used */
 	while(HAL_SD_STATE_READY != hsd.State)
 	{
-		vTaskDelay((TickType_t)10);
+		vTaskDelay((TickType_t)100);
 	}
 
 	result = BSP_SD_Init();

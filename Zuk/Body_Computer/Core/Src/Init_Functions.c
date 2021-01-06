@@ -53,18 +53,7 @@ Error_Code InitVariablesFromEEPROMCar(void)
 	EEPROMData.EEPROMParameters = &EEPROM_car;
 	EEPROMData.memAddressSize = 2u;
 
-	union data32bit_union
-	{
-		uint8_t u8bit[4];
-		uint16_t ud16bit[2];
-		uint32_t u32bit;
-
-		int8_t i8bit[4];
-		int16_t i16bit[2];
-		int32_t i32bit;
-
-		float f32bit;
-	}data_union = {0};
+	data32bit_union data_union = {0};
 
 	uint32_t tempTotalMileage = 0;
 	uint32_t tempTripMileage = 0;
@@ -286,18 +275,7 @@ Error_Code InitVariablesFromEEPROMBoard(void)
 	EEPROMData.EEPROMParameters = &EEPROM_board;
 	EEPROMData.memAddressSize = 2u;
 
-	union data32bit_union
-	{
-		uint8_t u8bit[4];
-		uint16_t ud16bit[2];
-		uint32_t u32bit;
-
-		int8_t i8bit[4];
-		int16_t i16bit[2];
-		int32_t i32bit;
-
-		float f32bit;
-	}data_union = {0};
+	data32bit_union data_union = {0};
 
 
 	/** Error Snapshot EEPROM Index **/

@@ -9,6 +9,9 @@
 #include "EEPROM.h"
 
 
+const uint8_t EEPROM_dataReady = 1u;
+const uint8_t EEPROM_dataNotReady = 0u;
+
 
 /**
  * A function that sets the Write Protect Pin HIGH for the EEPROM

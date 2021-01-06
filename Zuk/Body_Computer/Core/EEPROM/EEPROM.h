@@ -31,11 +31,68 @@ typedef struct
 	uint16_t memAddressSize;
 	uint16_t memAddress;
 	uint16_t size;
-	uint8_t isReady :1;
-	uint8_t *data;
+	uint8_t* isReady;
+	uint8_t* data;
 	EEPROM_parameters_struct *EEPROMParameters;
 }EEPROM_data_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Unions for read data conversions (variables, structures, communicates) */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef union data32bit_union
+{
+	uint8_t u8bit[4];
+	uint16_t ud16bit[2];
+	uint32_t u32bit;
+
+	int8_t i8bit[4];
+	int16_t i16bit[2];
+	int32_t i32bit;
+
+	float f32bit;
+} data32bit_union;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*** A structure with all the info for diagnostic snapshot ***/
+typedef struct
+{
+	union
+	{
+		uint8_t data[MAX_DIAGNOSTIC_SNAPSHOT_SIZE];
+		struct
+		{
+			Diagnostic_Snapshot_struct diag_mess_from_queue;	//8 bytes total
+			uint8_t rawTime[6/*Size of raw time from GPS*/];	//16 bytes total (2 unused)
+			uint8_t latitude[10];								//24 bytes total
+			uint8_t latitudeIndicator;							//28 bytes total (3 unused)
+			uint8_t longitude[11];								//36 bytes total
+			uint8_t longitudeIndicator;							//40 bytes total (3 unused) = 37 bytes of data
+		};
+	};
+	EEPROM_data_struct DiagnosticDataForEEPROM;
+}DiagnosticDataToEEPROM_struct;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*** A structure with all the info for error snapshot ***/
+typedef struct
+{
+	union
+	{
+		uint8_t data[10];
+		struct
+		{
+			Error_Code error_mess_from_queue;					//4 bytes total
+			uint8_t rawTime[6/*Size of raw time from GPS*/];	//12 bytes total (2 unused) = 10 bytes of data
+		};
+	};
+	EEPROM_data_struct ErrorDataForEEPROM;
+}ErrorDataToEEPROM_struct;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+extern const uint8_t EEPROM_dataReady;
+extern const uint8_t EEPROM_dataNotReady;
+
+#define DATA_READY		((uint8_t*)(&EEPROM_dataReady))
+#define DATA_NOT_READY	((uint8_t*)(&EEPROM_dataNotReady))
 
 
 Error_Code LockEEPROM(EEPROM_parameters_struct *const EEPROM);

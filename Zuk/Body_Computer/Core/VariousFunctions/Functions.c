@@ -378,14 +378,55 @@ Error_Code scroll_list(LCDBoard* boardList, uint8_t boardListSize, LCDBoard* cur
  * @param boardListSize: the length of the list
  * @retval error: the error code
  */
-Error_Code shortButtonPressDetected_LCD_scroll(LCDBoard* currentBoard, LCDBoard* boardList, Enum_Layer* layerSwitchVariable, int32_t* submenuIterator)
+Error_Code shortButtonPressDetected_LCD(LCDBoard* currentBoard, LCDBoard* boardList, Enum_Layer* layerSwitchVariable, int32_t* submenuIterator)
 {
 	Error_Code error = NO_ERROR;
 
-	ENC_button.longPressDetected = FALSE;
-	ENC_button.shortPressDetected = FALSE;
-	*layerSwitchVariable = boardList[*submenuIterator].layer;
-	*submenuIterator = -1;
+	switch(currentBoard->actionForEnter)
+	{
+		case YesNo_EnterAction:
+		{
+			ENC_button.longPressDetected = FALSE;
+			ENC_button.shortPressDetected = FALSE;
+			*layerSwitchVariable = YesNo_Layer;
+			*submenuIterator = -1;
+			break;
+		}
+		case GoInto_EnterAction:
+		{
+			ENC_button.longPressDetected = FALSE;
+			ENC_button.shortPressDetected = FALSE;
+			*layerSwitchVariable = boardList[*submenuIterator].layer;
+			*submenuIterator = -1;
+			break;
+		}
+		case OnOff_EnterAction:	//TODO
+		{
+			ENC_button.longPressDetected = FALSE;
+			ENC_button.shortPressDetected = FALSE;
+			break;
+		}
+		case Ctrl_EnterAction:	//TODO
+		{
+			ENC_button.longPressDetected = FALSE;
+			ENC_button.shortPressDetected = FALSE;
+			break;
+		}
+		case Done_EnterAction:
+		{
+			ENC_button.longPressDetected = FALSE;
+			ENC_button.shortPressDetected = FALSE;
+			*layerSwitchVariable = currentBoard->layerPrevious;
+			break;
+		}
+		case 0x00:	/* None_EnterAction / NotApplicable_EnterAction / No_EnterAction */
+		default:
+		{
+			ENC_button.longPressDetected = FALSE;
+			ENC_button.shortPressDetected = FALSE;
+			break;
+		}
+	}
 
 	return error;
 }
@@ -395,7 +436,7 @@ Error_Code shortButtonPressDetected_LCD_scroll(LCDBoard* currentBoard, LCDBoard*
 
 /**
  * A function that makes a scroll list on an LCD
- * display (ecrolling menu).
+ * display (scrolling menu).
  *
  * @param boardList: the list to scroll through
  * @param boardListSize: the length of the list
