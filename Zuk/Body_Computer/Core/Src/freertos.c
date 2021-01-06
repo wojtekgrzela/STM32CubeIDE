@@ -588,8 +588,6 @@ void StartTaskLCD(void const * argument)
 
 	/******************************************************/
 	/* For reading the data from EEPROM and displaying it */
-	static uint8_t isDoneOnce = FALSE;
-
 	DiagnosticDataToEEPROM_struct DiagnosticDataRead =
 	{ .DiagnosticDataForEEPROM =
 		{ .EEPROMParameters = &EEPROM_car,
@@ -1567,6 +1565,8 @@ void StartTaskLCD(void const * argument)
 			}
 			case Last3Diag_Layer:
 			{
+				static uint8_t isDoneOnce = FALSE;
+				static uint8_t isEmpty = FALSE;
 				error = copy_str_to_buffer("Last 3 Diag Snaps.:", (char*)LCD_buffer[Row3], 0u, 18u);
 
 				if(FALSE == isDoneOnce)
@@ -1578,19 +1578,13 @@ void StartTaskLCD(void const * argument)
 							DiagnosticDataRead.DiagnosticDataForEEPROM.memAddress = DIAGNOSTIC_SNAPSHOTS_START_ADDRESS + (uint16_t)((uint8_t)(CAR_EEPROM_counters.diagnosticSnapshotEEPROMIndex - i)*EEPROM_PAGE_SIZE);
 							xQueueSend(Queue_EEPROM_readHandle, &(DiagnosticDataRead.DiagnosticDataForEEPROM), (TickType_t)100U/*100ms wait time if the queue is full*/);
 
-//							while(FALSE == DiagnosticDataRead.DiagnosticDataForEEPROM.isReady)
-//							{
-//								static TickType_t lastTick = (TickType_t)0U;
-//								if((xTaskGetTickCount() - lastTick) > MAX_WAIT_TIME_FOR_EEPROM)
-//								{
-//									error = copy_str_to_buffer("ERROR", (char*)LCD_buffer[Row3], 7u, 5u);
-//									break;
-//								}
-//								else
-//								{
-									vTaskDelay((TickType_t)500U);	/* wait for 10ms if there is no response from the EEPROM read and the data is not ready yet */
-//								}
-//							}
+							vTaskDelay((TickType_t)MAX_WAIT_TIME_FOR_EEPROM);	/* The wait time for the response from EEPROM */
+
+							if(DATA_READY == DiagnosticDataRead.DiagnosticDataForEEPROM.isReady)
+							{
+								error = copy_str_to_buffer("ERROR", (char*)LCD_buffer[Row3], 7u, 5u);
+								vTaskDelay((TickType_t)2000U);	/* Print "ERROR" for 2 seconds */
+							}
 							//TODO getting description of the diagnostic problem
 							//TODO writing the description into the LCD buffer
 						}
@@ -1604,40 +1598,41 @@ void StartTaskLCD(void const * argument)
 								DiagnosticDataRead.DiagnosticDataForEEPROM.memAddress = DIAGNOSTIC_SNAPSHOTS_START_ADDRESS + (uint16_t)((uint8_t)(CAR_EEPROM_counters.diagnosticSnapshotEEPROMIndex - i)*EEPROM_PAGE_SIZE);
 								xQueueSend(Queue_EEPROM_readHandle, &(DiagnosticDataRead.DiagnosticDataForEEPROM), (TickType_t)100U/*100ms wait time if the queue is full*/);
 
-//								while(FALSE == DiagnosticDataRead.DiagnosticDataForEEPROM.isReady)
-//								{
-//									static TickType_t lastTick = (TickType_t)0U;
-//									if((xTaskGetTickCount() - lastTick) > MAX_WAIT_TIME_FOR_EEPROM)
-//									{
-//										error = copy_str_to_buffer("ERROR", (char*)LCD_buffer[Row3], 7u, 5u);
-//										break;
-//									}
-//									else
-//									{
-										vTaskDelay((TickType_t)500U);	/* wait for 10ms if there is no response from the EEPROM read and the data is not ready yet */
-//									}
-//								}
+								vTaskDelay((TickType_t)MAX_WAIT_TIME_FOR_EEPROM);	/* The wait time for the response from EEPROM */
+
+								if(DATA_READY == DiagnosticDataRead.DiagnosticDataForEEPROM.isReady)
+								{
+									error = copy_str_to_buffer("ERROR", (char*)LCD_buffer[Row3], 7u, 5u);
+									vTaskDelay((TickType_t)2000U);	/* Print "ERROR" for 2 seconds */
+								}
 								//TODO getting description of the diagnostic problem
 								//TODO writing the description into the LCD buffer
 							}
 						}
 						else
 						{
-							error = copy_str_to_buffer("Nothing to display", (char*)LCD_buffer[Row3], 7u, 5u);
+							isEmpty = TRUE;
 						}
 					}
 					isDoneOnce = TRUE;
 				}//if(FALSE == isDoneOnce)
 
+				if(TRUE == isEmpty)
+				{
+					error = copy_str_to_buffer("Nothing to display", (char*)LCD_buffer[Row3], 7u, 5u);
+				}
 				if(ENC_button.longPressDetected)
 				{
 					isDoneOnce = FALSE;
+					isEmpty = FALSE;
 					error = longButtonPressDetected_LCD(&LCD_MainMenuList[4], &currentLayer, &submenuIterator);
 				}
 				break;
 			}
 			case Last3Err_Layer:
 			{
+				static uint8_t isDoneOnce = FALSE;
+				static uint8_t isEmpty = FALSE;
 				error = copy_str_to_buffer("Last 3 Error Snaps.:", (char*)LCD_buffer[Row1], 0u, 19u);
 
 				if(FALSE == isDoneOnce)
@@ -1648,20 +1643,14 @@ void StartTaskLCD(void const * argument)
 						{
 							ErrorDataRead.ErrorDataForEEPROM.memAddress = ERROR_SNAPSHOTS_START_ADDRESS + (uint16_t)((uint8_t)(BOARD_EEPROM_counters.errorSnapshotEEPROMIndex - i)*EEPROM_PAGE_SIZE);
 							xQueueSend(Queue_EEPROM_readHandle, &(ErrorDataRead.ErrorDataForEEPROM), (TickType_t)100U/*100ms wait time if the queue is full*/);
-//
-//							while(FALSE == ErrorDataRead.ErrorDataForEEPROM.isReady)
-//							{
-//								static TickType_t lastTick = (TickType_t)0U;
-//								if((xTaskGetTickCount() - lastTick) > MAX_WAIT_TIME_FOR_EEPROM)
-//								{
-//									error = copy_str_to_buffer("ERROR", (char*)LCD_buffer[Row3], 7u, 5u);
-//									break;
-//								}
-//								else
-//								{
-									vTaskDelay((TickType_t)5000U);	/* wait for 10ms if there is no response from the EEPROM read and the data is not ready yet */
-//								}
-//							}
+
+							vTaskDelay((TickType_t)MAX_WAIT_TIME_FOR_EEPROM);	/* The wait time for the response from EEPROM */
+
+							if(DATA_READY == ErrorDataRead.ErrorDataForEEPROM.isReady)
+							{
+								error = copy_str_to_buffer("ERROR", (char*)LCD_buffer[Row3], 7u, 5u);
+								vTaskDelay((TickType_t)2000U);	/* Print "ERROR" for 2 seconds */
+							}
 							//TODO getting description of the error problem
 							//TODO writing the description into the LCD buffer
 						}
@@ -1675,34 +1664,33 @@ void StartTaskLCD(void const * argument)
 								ErrorDataRead.ErrorDataForEEPROM.memAddress = ERROR_SNAPSHOTS_START_ADDRESS + (uint16_t)((uint8_t)(BOARD_EEPROM_counters.errorSnapshotEEPROMIndex - i)*EEPROM_PAGE_SIZE);
 								xQueueSend(Queue_EEPROM_readHandle, &(ErrorDataRead.ErrorDataForEEPROM), (TickType_t)100U/*100ms wait time if the queue is full*/);
 
-//								while(FALSE == ErrorDataRead.ErrorDataForEEPROM.isReady)
-//								{
-//									static TickType_t lastTick = (TickType_t)0U;
-//									if((xTaskGetTickCount() - lastTick) > MAX_WAIT_TIME_FOR_EEPROM)
-//									{
-//										error = copy_str_to_buffer("ERROR", (char*)LCD_buffer[Row3], 7u, 5u);
-//										break;
-//									}
-//									else
-//									{
-										vTaskDelay((TickType_t)500U);	/* wait for 10ms if there is no response from the EEPROM read and the data is not ready yet */
-//									}
-//								}
+								vTaskDelay((TickType_t)MAX_WAIT_TIME_FOR_EEPROM);	/* The wait time for the response from EEPROM */
+
+								if(DATA_READY == ErrorDataRead.ErrorDataForEEPROM.isReady)
+								{
+									error = copy_str_to_buffer("ERROR", (char*)LCD_buffer[Row3], 7u, 5u);
+									vTaskDelay((TickType_t)2000U);	/* Print "ERROR" for 2 seconds */
+								}
 								//TODO getting description of the error problem
 								//TODO writing the description into the LCD buffer
 							}
 						}
 						else
 						{
-							error = copy_str_to_buffer("Nothing to display", (char*)LCD_buffer[Row3], 7u, 5u);
+							isEmpty = TRUE;
 						}
 					}
 					isDoneOnce = TRUE;
 				}//if(FALSE == isDoneOnce)
 
+				if(TRUE == isEmpty)
+				{
+					error = copy_str_to_buffer("Nothing to display", (char*)LCD_buffer[Row3], 7u, 5u);
+				}
 				if(ENC_button.longPressDetected)
 				{
 					isDoneOnce = FALSE;
+					isEmpty = FALSE;
 					error = longButtonPressDetected_LCD(&LCD_MainMenuList[5], &currentLayer, &submenuIterator);
 				}
 				break;
@@ -1974,7 +1962,7 @@ void StartTaskLCD(void const * argument)
 						{
 							EEPROM_data_struct EEPROMData = {0};
 
-							CAR_EEPROM_counters.diagnosticSnapshotEEPROMIndex = 1u;
+							CAR_EEPROM_counters.diagnosticSnapshotEEPROMIndex = 0u;
 							CAR_EEPROM_counters.didTheNumberOfDiagnosticSnapshotsOverflowed = FALSE;
 							EEPROMData.EEPROMParameters = &EEPROM_car;
 							EEPROMData.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE;
@@ -1987,7 +1975,7 @@ void StartTaskLCD(void const * argument)
 							EEPROMData.data = &(CAR_EEPROM_counters.didTheNumberOfDiagnosticSnapshotsOverflowed);
 							xQueueSend(Queue_EEPROM_writeHandle, &EEPROMData, (TickType_t)100U/*100ms wait time if the queue is full*/);
 
-							vTaskDelay((TickType_t)MAX_WAIT_TIME_FOR_EEPROM);	/* wait for 500ms if there is no response from the EEPROM read and the data is not ready yet */
+							vTaskDelay((TickType_t)MAX_WAIT_TIME_FOR_EEPROM);	/* wait for xx ms for EEPROM to be able to process that */
 
 							if(DATA_READY == EEPROMData.isReady)
 							{
