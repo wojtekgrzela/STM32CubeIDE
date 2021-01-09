@@ -62,27 +62,111 @@ typedef enum
 	CarSettings_Layer		=	0x07,
 	BoardSettings_Layer		=	0x08,
 
-	ClearDiagnosticSnapshots	=	0x71,
-	ClearTripMileage			=	0x72,
-	WaterSettings_Layer			=	0x73,
-	OilTempSettings_Layer		=	0x74,
-	OilPressureSettings_Layer	=	0x75,
-	FuelSettings_Layer			=	0x76,
-	MainBatterySettings_Layer	=	0x77,
-	AuxBatterySettings_Layer	=	0x78,
+		/* CarSettings_Layer */
+		ClearDiagnosticSnapshots	=	0x71,
+		ClearTripMileage			=	0x72,
+		WaterSettings_Layer			=	0x73,
+		OilTempSettings_Layer		=	0x74,
+		OilPressureSettings_Layer	=	0x75,
+		FuelSettings_Layer			=	0x76,
+		MainBatterySettings_Layer	=	0x77,
+		AuxBatterySettings_Layer	=	0x78,
 
-	ClearErrorsSnapshots		=	0x81,
-	AdjTimePoland				=	0x82,
-	AdjTimeZone					=	0x83,
-	InterVoltSettings_Layer		=	0x84,
-	InterTempSettings_Layer		=	0x85,
-	BuzzerSettings_Layer		=	0x86,
-	LCDSettings_Layer			=	0x87,
+		/* BoardSettings_Layer */
+		ClearErrorsSnapshots		=	0x81,
+		AdjTimePoland				=	0x82,
+		AdjTimeZone					=	0x83,
+		InterVoltSettings_Layer		=	0x84,
+		InterTempSettings_Layer		=	0x85,
+		BuzzerSettings_Layer		=	0x86,
+		LCDSettings_Layer			=	0x87,
 
-	YesNo_Layer				=	0xF0,
-	Ctrl_Layer				=	0xF1,
+			/* CarSettings_Layer -> WaterSettings_Layer */
+			WaterHighTempWarningThreshold	=	0x731,
+			WaterHighTempAlarmThreshold		=	0x732,
+			WaterHighTempFanOnThreshold		=	0x733,
+			WaterHighTempFanOffThreshold	=	0x734,
+			WaterTempWarningOn				=	0x735,
+			WaterTempAlarmOn				=	0x736,
+			WaterFanControlOn				=	0x737,
+			WaterTempWarningBuzzerOn		=	0x738,
+			WaterTempAlarmBuzzerOn			=	0x739,
+			WaterTempWarningSnapshotOn		=	0x73A,
+			WaterTempAlarmSpashotOn			=	0x73B,
 
-	Alarm_Layer				=	0xFF
+			/* CarSettings_Layer -> OilTempSettings_Layer */
+			OilHighTempWarningThreshold		=	0x741,
+			OilHighTempAlarmThreshold		=	0x742,
+			OilTempWarningOn				=	0x743,
+			OilTempAlarmOn					=	0x744,
+			OilTempWarningBuzzerOn			=	0x745,
+			OilTempAlarmBuzzerOn			=	0x746,
+			OilTempWarningSnapshotOn		=	0x747,
+			OilTempAlarmSpashotOn			=	0x748,
+
+			/* CarSettings_Layer -> OilPressureSettings_Layer */
+			OilHighPressureAlarmThreshold	=	0x751,
+			OilLowPressureAlarmThreshold	=	0x752,
+			OilPressureAnalogMeasurement	=	0x753,
+			OilHighPressureAlarmOn			=	0x754,
+			OilLowPressureAlarmOn			=	0x755,
+			OilPressureAlarmBuzzerOn		=	0x756,
+			OilPressureAlarmSnapshotOn		=	0x757,
+
+			/* CarSettings_Layer -> FuelSettings_Layer */
+			FuelLowLevelWarningThreshold	=	0x761,
+			FuelLowLevelWarningOn			=	0x762,
+			FuelLowLevelWarningBuzzerOn		=	0x763,
+
+			/* CarSettings_Layer -> MainBatterySettings_Layer */
+			MainBatteryLowVoltageAlarmThreshold		=	0x771,
+			MainBatteryHighVoltageAlarmThreshold	=	0x772,
+			MainBatteryLowVoltageAlarmOn			=	0x773,
+			MainBatteryHighVoltageAlarmOn			=	0x774,
+			MainBatteryAlarmBuzzerOn				=	0x775,
+			MainBatteryLowVoltageSnapshotOn			=	0x776,
+			MainBatteryHighVoltageSnapshotOn		=	0x777,
+
+			/* CarSettings_Layer -> AuxBatterySettings_Layer */
+			AuxBatteryLowVoltageAlarmThreshold		=	0x781,
+			AuxBatteryHighVoltageAlarmThreshold		=	0x782,
+			AuxBatteryLowVoltageAlarmOn				=	0x783,
+			AuxBatteryHighVoltageAlarmOn			=	0x784,
+			AuxBatteryAlarmBuzzerOn					=	0x785,
+			AuxBatteryLowVoltageSnapshotOn			=	0x786,
+			AuxBatteryHighVoltageSnapshotOn			=	0x787,
+
+			/* BoardSettings_Layer -> InterVoltSettings_Layer */
+			Supply5VLowThreshold		=	0x841,
+			Supply5VHighThreshold		=	0x842,
+			Supply3V3LowThreshold		=	0x843,
+			Supply3V3HighThreshold		=	0x844,
+			SupplyVinLowThreshold		=	0x845,
+
+			/* BoardSettings_Layer -> InterTempSettings_Layer */
+			DCDC3V3HighTempThreshold	=	0x851,
+			DCDC5VHighTempThreshold		=	0x852,
+
+			/* BoardSettings_Layer -> BuzzerSettings_Layer */
+			BuzzerMainSwitch			=	0x861,
+			BuzzerMainAlarmsSwitch		=	0x862,
+			BuzzerMainButtonsSwitch		=	0x863,
+			BuzzerWhenShortPress		=	0x864,
+			BuzzerWhenLongPress			=	0x865,
+
+			/* BoardSettings_Layer -> LCDSettings_Layer */
+			BacklightBrightnessLevel	=	0x871,
+			SecondsToTurnOffBacklight	=	0x872,
+			AutoBacklightOffStartHour	=	0x873,
+			AutoBacklightOffEndHour		=	0x874,
+			HomeScreen					=	0x875,
+			AutoHomeReturnTime			=	0x876,
+			AutoBacklightOff			=	0x877,
+
+	YesNo_Layer				=	0xF000,
+	Ctrl_Layer				=	0xF100,
+
+	Alarm_Layer				=	0xFFFF
 }Enum_Layer;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 

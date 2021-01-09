@@ -1434,7 +1434,7 @@ void StartTaskLCD(void const * argument)
 					error = copy_str_to_buffer((char*)mainBatteryVoltageValueForLCD.messageHandler, (char*)LCD_buffer[Row1], 0, mainBatteryVoltageValueForLCD.size);
 				error = copy_str_to_buffer("V", (char*)LCD_buffer[Row1], 5, 1);
 
-				if(1 == tuBylemFLAG)
+				if(1 == tuBylemFLAG)	//TODO: do usuniecia po ogarnieciu obslugi MicroSD
 					error = copy_str_to_buffer((char*)TEMPBUFF, (char*)LCD_buffer[Row2],13 , 5);
 
 					/* Aux Battery Voltage */
@@ -1567,7 +1567,7 @@ void StartTaskLCD(void const * argument)
 			{
 				static uint8_t isDoneOnce = FALSE;
 				static uint8_t isEmpty = FALSE;
-				error = copy_str_to_buffer("Last 3 Diag Snaps.:", (char*)LCD_buffer[Row3], 0u, 18u);
+				error = copy_str_to_buffer("Last 3 Diag. Snaps.:", (char*)LCD_buffer[Row1], 0u, 20u);
 
 				if(FALSE == isDoneOnce)
 				{
@@ -1619,7 +1619,7 @@ void StartTaskLCD(void const * argument)
 
 				if(TRUE == isEmpty)
 				{
-					error = copy_str_to_buffer("Nothing to display", (char*)LCD_buffer[Row3], 7u, 5u);
+					error = copy_str_to_buffer("Nothing to display", (char*)LCD_buffer[Row3], 1u, 18u);
 				}
 				if(ENC_button.longPressDetected)
 				{
@@ -1633,7 +1633,7 @@ void StartTaskLCD(void const * argument)
 			{
 				static uint8_t isDoneOnce = FALSE;
 				static uint8_t isEmpty = FALSE;
-				error = copy_str_to_buffer("Last 3 Error Snaps.:", (char*)LCD_buffer[Row1], 0u, 19u);
+				error = copy_str_to_buffer("Last 3 Error Snaps.:", (char*)LCD_buffer[Row1], 0u, 20u);
 
 				if(FALSE == isDoneOnce)
 				{
@@ -1685,7 +1685,7 @@ void StartTaskLCD(void const * argument)
 
 				if(TRUE == isEmpty)
 				{
-					error = copy_str_to_buffer("Nothing to display", (char*)LCD_buffer[Row3], 7u, 5u);
+					error = copy_str_to_buffer("Nothing to display", (char*)LCD_buffer[Row3], 1u, 19u);
 				}
 				if(ENC_button.longPressDetected)
 				{
@@ -1717,6 +1717,7 @@ void StartTaskLCD(void const * argument)
 
 			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
 			/* Car settings list : */
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
 
 			case ClearDiagnosticSnapshots:
 			{
@@ -1778,6 +1779,24 @@ void StartTaskLCD(void const * argument)
 				}
 				break;
 			}
+
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+			/* Water settings list : */
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+
+//			case WaterSettings_Layer:
+//			{
+//				error = copy_str_to_buffer("7.3.", (char*)LCD_buffer[Row1], 0, 4);
+//				error = copy_str_to_buffer(LCD_CarSettingsList[2].name, (char*)LCD_buffer[Row1], 4, LCD_CarSettingsList[2].nameActualSize);
+//
+//				scroll_list(LCD_Car_WaterTempSettingsList, LCD_Car_WaterTempSettingsList_SIZE, &(LCD_CarSettingsList[2]), &(LCD_buffer[Row1]), (int8_t*)&EncoderCounterDiff, &submenuIterator);
+//
+//				if(ENC_button.longPressDetected)
+//				{
+//					error = longButtonPressDetected_LCD(&LCD_CarSettingsList[2], &currentLayer, &submenuIterator);
+//				}
+//				break;
+//			}
 			case OilTempSettings_Layer:
 			{
 				error = copy_str_to_buffer("7.4.", (char*)LCD_buffer[Row1], 0, 4);
@@ -1866,9 +1885,33 @@ void StartTaskLCD(void const * argument)
 			}
 
 			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+			/* Board settings list : */
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
 
 			case ClearErrorsSnapshots:
 			{
+				char tempBuff[4u] = {' '};
+				error = copy_str_to_buffer("No. error snaps:", (char*)LCD_buffer[Row1], 0u, 16u);
+				snprintf(tempBuff, 4u, "%3" PRIu16, BOARD_EEPROM_counters.errorSnapshotEEPROMIndex);
+				error = copy_str_to_buffer(tempBuff, (char*)LCD_buffer[Row1], 17u, 3u);
+
+				error = copy_str_to_buffer("Overflowed?", (char*)LCD_buffer[Row2], 0u, 11u);
+				error = copy_str_to_buffer(((TRUE == BOARD_EEPROM_counters.didTheNumberOfErrorSnapshotsOverflowed) ? "Yes" : " No"), (char*)LCD_buffer[Row2], 16u, 3u);
+
+				error = copy_str_to_buffer("Click enter to clear", (char*)LCD_buffer[Row3], 0u, 20u);
+				error = copy_str_to_buffer("All error snapshots", (char*)LCD_buffer[Row4], 0u, 20u);
+
+				if(ENC_button.shortPressDetected)
+				{
+					LCD_YesNo.layerPrevious = ClearErrorsSnapshots;
+					error = shortButtonPressDetected_LCD(&(LCD_CarSettingsList[0]), LCD_CarSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					error = longButtonPressDetected_LCD(&LCD_CarSettingsList[0], &currentLayer, &submenuIterator);
+				}
+				break;
 				if(ENC_button.longPressDetected)
 				{
 					error = longButtonPressDetected_LCD(&LCD_BoardSettingsList[0], &currentLayer, &submenuIterator);
@@ -1950,23 +1993,24 @@ void StartTaskLCD(void const * argument)
 			case YesNo_Layer:
 			{
 				error = copy_str_to_buffer(LCD_YesNo.name, (char*)LCD_buffer[Row1], 3, LCD_YesNo.nameActualSize);
+				error = copy_str_to_buffer("Short press: Yes", (char*)LCD_buffer[Row2], 0, 16);
+				error = copy_str_to_buffer("Long press: No", (char*)LCD_buffer[Row3], 0, 14);
 
 				switch(LCD_YesNo.layerPrevious)
 				{
 					case ClearDiagnosticSnapshots:
 					{
-						error = copy_str_to_buffer("Short press: Yes", (char*)LCD_buffer[Row2], 0, 16);
-						error = copy_str_to_buffer("Long press: No", (char*)LCD_buffer[Row3], 0, 14);
-
 						if(ENC_button.shortPressDetected)
 						{
 							EEPROM_data_struct EEPROMData = {0};
 
 							CAR_EEPROM_counters.diagnosticSnapshotEEPROMIndex = 0u;
 							CAR_EEPROM_counters.didTheNumberOfDiagnosticSnapshotsOverflowed = FALSE;
+
 							EEPROMData.EEPROMParameters = &EEPROM_car;
 							EEPROMData.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE;
 							EEPROMData.size = UINT8_T_SIZE;
+
 							EEPROMData.memAddress = TOTAL_SNAPSHOTS_NUMBER_ADDRESS;
 							EEPROMData.data = &(CAR_EEPROM_counters.diagnosticSnapshotEEPROMIndex);
 							xQueueSend(Queue_EEPROM_writeHandle, &EEPROMData, (TickType_t)100U/*100ms wait time if the queue is full*/);
@@ -1988,8 +2032,72 @@ void StartTaskLCD(void const * argument)
 
 						break;
 					}//case ClearDiagnosticSnapshots:
+					case ClearTripMileage:
+					{
+						if(ENC_button.shortPressDetected)
+						{
+							EEPROM_data_struct EEPROMData = {0};
+
+							CAR_mileage.tripMileage = 0U;
+
+							EEPROMData.EEPROMParameters = &EEPROM_car;
+							EEPROMData.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE;
+							EEPROMData.size = UINT32_T_SIZE;
+
+							EEPROMData.memAddress = TRIP_MILEAGE_START_ADDRESS;	//TODO - improve to write in the place we should as there is a table of addresses where the mileage is written!!
+							EEPROMData.data = &(CAR_mileage.tripMileage);
+							xQueueSend(Queue_EEPROM_writeHandle, &EEPROMData, (TickType_t)100U/*100ms wait time if the queue is full*/);
+
+							vTaskDelay((TickType_t)MAX_WAIT_TIME_FOR_EEPROM);	/* wait for xx ms for EEPROM to be able to process that */
+
+							if(DATA_READY == EEPROMData.isReady)
+							{
+								error = copy_str_to_buffer("ERROR", (char*)LCD_buffer[Row4], 7u, 5u);
+								vTaskDelay((TickType_t)2000U);	/* Print "ERROR" for 2 seconds */
+							}
+
+							error = shortButtonPressDetected_LCD(&LCD_YesNo, LCD_CarSettingsList, &currentLayer, &submenuIterator);
+						}
+
+						break;
+					}//case ClearTripMileage:
+					case ClearErrorsSnapshots:
+					{
+						if(ENC_button.shortPressDetected)
+						{
+							EEPROM_data_struct EEPROMData = {0};
+
+							BOARD_EEPROM_counters.errorSnapshotEEPROMIndex = 0u;
+							BOARD_EEPROM_counters.didTheNumberOfErrorSnapshotsOverflowed = FALSE;
+
+							EEPROMData.EEPROMParameters = &EEPROM_board;
+							EEPROMData.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE;
+							EEPROMData.size = UINT8_T_SIZE;
+
+							EEPROMData.memAddress = NUMBER_OF_ERROR_SNAPSHOTS;
+							EEPROMData.data = &(CAR_EEPROM_counters.diagnosticSnapshotEEPROMIndex);
+							xQueueSend(Queue_EEPROM_writeHandle, &EEPROMData, (TickType_t)100U/*100ms wait time if the queue is full*/);
+
+							EEPROMData.memAddress = NUMBER_OF_ERROR_SNAPSHOTS_OVERFLOWED_ADDRESS;
+							EEPROMData.data = &(CAR_EEPROM_counters.didTheNumberOfDiagnosticSnapshotsOverflowed);
+							xQueueSend(Queue_EEPROM_writeHandle, &EEPROMData, (TickType_t)100U/*100ms wait time if the queue is full*/);
+
+							vTaskDelay((TickType_t)MAX_WAIT_TIME_FOR_EEPROM);	/* wait for xx ms for EEPROM to be able to process that */
+
+							if(DATA_READY == EEPROMData.isReady)
+							{
+								error = copy_str_to_buffer("ERROR", (char*)LCD_buffer[Row4], 7u, 5u);
+								vTaskDelay((TickType_t)2000U);	/* Print "ERROR" for 2 seconds */
+							}
+
+							error = shortButtonPressDetected_LCD(&LCD_YesNo, LCD_CarSettingsList, &currentLayer, &submenuIterator);
+						}
+
+						break;
+					}//case ClearErrorsSnapshots:
 					default:
 					{
+						error = LCD__LAYER_CHOICE_FAILURE;
 						break;
 					}//default:
 				}//switch(LCD_YesNo.layerPrevious)
@@ -2003,7 +2111,6 @@ void StartTaskLCD(void const * argument)
 			default:
 			{
 				error = LCD__LAYER_CHOICE_FAILURE;
-				my_error_handler(error);
 				currentLayer = HOME_SCREEN;
 			}
 				break;
@@ -2155,72 +2262,118 @@ void StartTaskGPS(void const * argument)
 				itoa(tempHour, (char*)&tempbuffer[1], 10);
 			}
 
+			GPS.forLCD.hours.messageReadyFLAG = FALSE;
 			error = copy_buffer_to_str((char*)tempbuffer, (char*)GPS.message_buffers.hours, 0u, GPS.forLCD.hours.size);
+			GPS.forLCD.hours.messageReadyFLAG = TRUE;
 
+			GPS.forLCD.minutes.messageReadyFLAG = FALSE;
 			error = copy_buffer_to_str((char*)GPS.rawData.UTC, (char*)GPS.message_buffers.minutes, 2u, GPS.forLCD.minutes.size);
+			GPS.forLCD.minutes.messageReadyFLAG = TRUE;
 
+			GPS.forLCD.seconds.messageReadyFLAG = FALSE;
 			error = copy_buffer_to_str((char*)GPS.rawData.UTC, (char*)GPS.message_buffers.seconds, 4u, GPS.forLCD.seconds.size);
+			GPS.forLCD.seconds.messageReadyFLAG = TRUE;
 		}
 		else
 		{
+			GPS.forLCD.hours.messageReadyFLAG = FALSE;
+			GPS.forLCD.minutes.messageReadyFLAG = FALSE;
+			GPS.forLCD.seconds.messageReadyFLAG = FALSE;
 			for(uint i=0; i<2; ++i)
 			{
 				GPS.message_buffers.hours[i] = 'x';
 				GPS.message_buffers.minutes[i] = 'x';
 				GPS.message_buffers.seconds[i] = 'x';
 			}
+			GPS.forLCD.hours.messageReadyFLAG = TRUE;
+			GPS.forLCD.minutes.messageReadyFLAG = TRUE;
+			GPS.forLCD.seconds.messageReadyFLAG = TRUE;
 		}
 
+		GPS.forLCD.clock.messageReadyFLAG = FALSE;
 		GPS.message_buffers.clock[2] = ':';
 		GPS.message_buffers.clock[5] = ':';
 		error = copy_str_to_buffer((char*)GPS.message_buffers.hours, (char*)GPS.message_buffers.clock, 0u, GPS.forLCD.hours.size);
 		error = copy_str_to_buffer((char*)GPS.message_buffers.minutes, (char*)GPS.message_buffers.clock, 3u, GPS.forLCD.minutes.size);
 		error = copy_str_to_buffer((char*)GPS.message_buffers.seconds, (char*)GPS.message_buffers.clock, 6u, GPS.forLCD.seconds.size);
+		GPS.forLCD.clock.messageReadyFLAG = TRUE;
 
 		if(NO_ERROR != error)
 		{
-			// TODO
+			my_error_handler(error);
 		}
 
 		if(TRUE == GPS.Fix)
 		{
+			GPS.forLCD.latitude.messageReadyFLAG = FALSE;
+			GPS.forLCD.latitudeIndicator.messageReadyFLAG = FALSE;
 			error = copy_str_to_buffer((char*)GPS.rawData.Latitude, (char*)GPS.message_buffers.latitude, 0u, GPS.forLCD.latitude.size);
 			error = copy_str_to_buffer((char*)GPS.rawData.LatitudeIndicator, (char*)GPS.message_buffers.latitudeIndicator, 0u, GPS.forLCD.latitudeIndicator.size);
+			GPS.forLCD.latitude.messageReadyFLAG = TRUE;
+			GPS.forLCD.latitudeIndicator.messageReadyFLAG = TRUE;
 
+			GPS.forLCD.longitude.messageReadyFLAG = FALSE;
+			GPS.forLCD.longitudeIndicator.messageReadyFLAG = FALSE;
 			error = copy_str_to_buffer((char*)GPS.rawData.Longitude, (char*)GPS.message_buffers.longitude, 0u, GPS.forLCD.longitude.size);
 			error = copy_str_to_buffer((char*)GPS.rawData.LongitudeIndicator, (char*)GPS.message_buffers.longitudeIndicator, 0u, GPS.forLCD.longitudeIndicator.size);
+			GPS.forLCD.longitude.messageReadyFLAG = TRUE;
+			GPS.forLCD.longitudeIndicator.messageReadyFLAG = TRUE;
 
 
-			GPS.forLCD.status.size = 5u;
+			GPS.forLCD.status.messageReadyFLAG = FALSE;
+			GPS.forLCD.status.size = 5u;	//5u - Because "Fixed" has 5 letters
 			error = copy_str_to_buffer("Fixed", (char*)GPS.message_buffers.fixMessage, 0u, GPS.forLCD.status.size);
+			GPS.forLCD.status.messageReadyFLAG = TRUE;
 
+			GPS.forLCD.satellitesUsed.messageReadyFLAG = FALSE;
 			error = copy_str_to_buffer((char*)GPS.rawData.SatellitesUsed, (char*)GPS.message_buffers.satellitesUsed, 0u, GPS.forLCD.satellitesUsed.size);
+			GPS.forLCD.satellitesUsed.messageReadyFLAG = TRUE;
 
+			GPS.forLCD.altitude.messageReadyFLAG = FALSE;
 			GPS.forLCD.altitude.size = strlen((char*)GPS.rawData.Altitude);
 			error = copy_str_to_buffer((char*)GPS.rawData.Altitude, (char*)GPS.message_buffers.altitude, 0u, GPS.forLCD.altitude.size);
+			GPS.forLCD.altitude.messageReadyFLAG = TRUE;
 
+			GPS.forLCD.speed.messageReadyFLAG = FALSE;
 			GPS.forLCD.speed.size = find_nearest_symbol('.', (char*)GPS.rawData.Speed, 0u);
 			error = copy_str_to_buffer((char*)GPS.rawData.Speed, (char*)GPS.message_buffers.speed, 0u, GPS.forLCD.speed.size);
+			GPS.forLCD.speed.messageReadyFLAG = TRUE;
 		}
 		else
 		{
+			GPS.forLCD.latitude.messageReadyFLAG = FALSE;
+			GPS.forLCD.latitudeIndicator.messageReadyFLAG = FALSE;
 			error = copy_str_to_buffer("xxxx.xxxxx", (char*)GPS.message_buffers.latitude, 0u, GPS.forLCD.latitude.size);
 			error = copy_str_to_buffer("X", (char*)GPS.message_buffers.latitudeIndicator, 0u, GPS.forLCD.latitudeIndicator.size);
+			GPS.forLCD.latitude.messageReadyFLAG = TRUE;
+			GPS.forLCD.latitudeIndicator.messageReadyFLAG = TRUE;
 
+			GPS.forLCD.longitude.messageReadyFLAG = FALSE;
+			GPS.forLCD.longitudeIndicator.messageReadyFLAG = FALSE;
 			error = copy_str_to_buffer("xxxxx.xxxxx", (char*)GPS.message_buffers.longitude, 0u, GPS.forLCD.longitude.size);
 			error = copy_str_to_buffer("X", (char*)GPS.message_buffers.longitudeIndicator, 0u, GPS.forLCD.longitudeIndicator.size);
+			GPS.forLCD.longitude.messageReadyFLAG = TRUE;
+			GPS.forLCD.longitudeIndicator.messageReadyFLAG = TRUE;
 
 
-			GPS.forLCD.status.size = 5u;
+			GPS.forLCD.status.messageReadyFLAG = FALSE;
+			GPS.forLCD.status.size = 5u;	//5u - Because "Fixed" has 5 letters
 			error = copy_str_to_buffer("NoFix", (char*)GPS.message_buffers.fixMessage, 0u, GPS.forLCD.status.size);
+			GPS.forLCD.status.messageReadyFLAG = TRUE;
 
+			GPS.forLCD.satellitesUsed.messageReadyFLAG = FALSE;
 			error = copy_str_to_buffer((char*)GPS.rawData.SatellitesUsed, (char*)GPS.message_buffers.satellitesUsed, 0u, GPS.forLCD.satellitesUsed.size);
+			GPS.forLCD.satellitesUsed.messageReadyFLAG = TRUE;
 
+			GPS.forLCD.altitude.messageReadyFLAG = FALSE;
 			GPS.forLCD.altitude.size = 5u;
 			error = copy_str_to_buffer("xxx.x", (char*)GPS.message_buffers.altitude, 0u, GPS.forLCD.altitude.size);
+			GPS.forLCD.altitude.messageReadyFLAG = TRUE;
 
+			GPS.forLCD.speed.messageReadyFLAG = FALSE;
 			GPS.forLCD.speed.size = 3u;
 			error = copy_str_to_buffer("xxx", (char*)GPS.message_buffers.speed, 0u, GPS.forLCD.speed.size);
+			GPS.forLCD.speed.messageReadyFLAG = TRUE;
 		}
 
 		if(NO_ERROR != error)

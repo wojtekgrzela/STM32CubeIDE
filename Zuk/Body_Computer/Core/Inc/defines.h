@@ -24,7 +24,7 @@
 /* TASKS & TIMERS FREQUENCIES */
 #define MY_LCD_TASK_TIME_PERIOD				(TickType_t)(200)	/* MINIMUM: 100, for the 4x20 LCD it is needed approximately 80-85ms to send all data */
 #define MY_GPS_TASK_TIME_PERIOD				(TickType_t)(1000)
-#define MY_EEPROM_TASK_TIME_PERIOD			(TickType_t)(100)	/* Would be good to decrease this number significantly, as it only executes when it has data from a Queue */
+#define MY_EEPROM_TASK_TIME_PERIOD			(TickType_t)(50)	/* Would be good to decrease this number significantly, as it only executes when it has data from a Queue */
 #define MY_DUMP_TO_EEPROM_TASK_TIME_PERIOD 	(TickType_t)(1000)
 #define MY_DUMP_TO_SDCARD_TASK_TIME_PERIOD	(TickType_t)(1000)
 #define MY_TASK_50_MS_TIME_PERIOD			(TickType_t)(50)
