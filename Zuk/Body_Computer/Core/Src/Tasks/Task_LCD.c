@@ -764,8 +764,8 @@ void StartTaskLCD(void const * argument)
 		{ .EEPROMParameters = &EEPROM_car,
 		.data = DiagnosticDataRead.data,
 		.size = MAX_DIAGNOSTIC_SNAPSHOT_SIZE,
-		.memAddress = 0,
-		.memAddressSize = 2 },
+		.memAddress = 0u,
+		.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE },
 	.diag_mess_from_queue =
 		{ .snapshotIdentificator = DIAGNOSTICS_OK,
 		.value = 0 } };
@@ -775,12 +775,12 @@ void StartTaskLCD(void const * argument)
 		{ .EEPROMParameters = &EEPROM_board,
 		.data = ErrorDataRead.data,
 		.size = MAX_ERROR_SNAPSHOT_SIZE,
-		.memAddress = 0,
-		.memAddressSize = 2	},
+		.memAddress = 0u,
+		.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE	},
 	.error_mess_from_queue = NO_ERROR };
 
-	(*DiagnosticDataRead.DiagnosticDataForEEPROM.isReadyPtr) = DATA_NOT_READY;
-	(*ErrorDataRead.ErrorDataForEEPROM.isReadyPtr) = DATA_NOT_READY;
+	INITIALIZE_EEPROM_data_struct(DiagnosticDataRead.DiagnosticDataForEEPROM);
+	INITIALIZE_EEPROM_data_struct(ErrorDataRead.ErrorDataForEEPROM);
 	/******************************************************/
 
 	/* Home screen applied - can be changed in settings from LCD */
@@ -2003,7 +2003,6 @@ static Error_Code ControlValueWithEncoder(const LCDBoard* const currentBoard, bo
 					if(0 != EncoderCounterDiff)
 					{
 						tempState ^= 0b1;	//Toggling the bit with encoder
-						EncoderCounterDiff = 0;	//Set to 0 after using the value
 					}
 
 					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
@@ -2232,6 +2231,7 @@ static Error_Code ControlValueWithEncoder(const LCDBoard* const currentBoard, bo
 		}
 	}
 
+	EncoderCounterDiff = 0;	//Set to 0 after using the value
 	return error;
 }
 

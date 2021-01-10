@@ -24,7 +24,7 @@
 #include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */     
+/* USER CODE BEGIN Includes */
 
 #include "../lcd_hd44780_i2c/lcd_hd44780_i2c.h"
 #include "../VariousFunctions/Functions.h"
@@ -387,7 +387,7 @@ void MX_FREERTOS_Init(void) {
   My_500ms_TaskHandle = osThreadCreate(osThread(My_500ms_Task), NULL);
 
   /* definition and creation of My_LCD_Task */
-  osThreadDef(My_LCD_Task, StartTaskLCD, osPriorityNormal, 0, 512);
+  osThreadDef(My_LCD_Task, StartTaskLCD, osPriorityNormal, 0, 1024);
   My_LCD_TaskHandle = osThreadCreate(osThread(My_LCD_Task), NULL);
 
   /* definition and creation of My_GPS_Task */
@@ -524,7 +524,7 @@ void StartTask1000ms(void const * argument)
 		tripMileageForLCD.messageReadyFLAG = FALSE;
 		snprintf((char*)tripMileageForLCD.messageHandler, 5, "%01" PRIu32 ".%01" PRIu32, (CAR_mileage.tripMileage/10), (CAR_mileage.tripMileage)%10);
 		tripMileageForLCD.size = strlen((char*)tripMileageForLCD.messageHandler);
-		tripMileageForLCD.messageReadyFLAG = FALSE;
+		tripMileageForLCD.messageReadyFLAG = TRUE;
 
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
@@ -894,15 +894,19 @@ void StartTaskDumpToEEPROM(void const * argument)
 		{ .EEPROMParameters = &EEPROM_car,
 		.data = DiagnosticDataToSend.data,
 		.size = MAX_DIAGNOSTIC_SNAPSHOT_SIZE,
-		.memAddress = 0,
-		.memAddressSize = 2 },
+		.memAddress = 0u,
+		.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE },
 	.diag_mess_from_queue =
 		{ .snapshotIdentificator = DIAGNOSTICS_OK,
 		.value = 0 } };
 
+	INITIALIZE_EEPROM_data_struct(DiagnosticDataToSend.DiagnosticDataForEEPROM);
+
 	ErrorDataToEEPROM_struct ErrorDataToSend =
 	{ .ErrorDataForEEPROM.EEPROMParameters = &EEPROM_board,
 	.error_mess_from_queue = NO_ERROR };
+
+	INITIALIZE_EEPROM_data_struct(ErrorDataToSend.ErrorDataForEEPROM);
 
 #ifdef RUNTIME_STATS_QUEUES
 	vQueueAddToRegistry(Queue_diagnostic_snapshot_dumpHandle, QUEUE_DIAGNOSTIC_DUMP_NAME);
@@ -916,6 +920,7 @@ void StartTaskDumpToEEPROM(void const * argument)
   {
 	  if(pdTRUE == xQueueReceive(Queue_diagnostic_snapshot_dumpHandle, &(DiagnosticDataToSend.diag_mess_from_queue), (TickType_t)0))
 	  {
+		  *(DiagnosticDataToSend.DiagnosticDataForEEPROM.isReadyPtr) = DATA_NOT_READY;
 		  DiagnosticDataToSend.longitudeIndicator = (TRUE == GPS.Fix) ? GPS.rawData.LongitudeIndicator[0] : 'X';
 		  DiagnosticDataToSend.latitudeIndicator = (TRUE == GPS.Fix) ? GPS.rawData.LatitudeIndicator[0] : 'X';
 
@@ -950,6 +955,7 @@ void StartTaskDumpToEEPROM(void const * argument)
 	  {
 		  if(pdTRUE == xQueueReceive(Queue_error_snapshot_dumpHandle, &(ErrorDataToSend.error_mess_from_queue), (TickType_t)0))
 		  {
+			  *(ErrorDataToSend.ErrorDataForEEPROM.isReadyPtr) = DATA_NOT_READY;
 			  error = WriteEEPROM(ErrorDataToSend.ErrorDataForEEPROM.EEPROMParameters, &(ErrorDataToSend.ErrorDataForEEPROM));
 			  if(NO_ERROR == error)
 			  {
