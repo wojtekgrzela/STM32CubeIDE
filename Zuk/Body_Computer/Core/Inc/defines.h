@@ -194,6 +194,7 @@
 
 #define MAX_WAIT_TIME_FOR_EEPROM	((uint32_t)(500U))
 #define ERROR_DONE_DISPLAY_TIME		((TickType_t)(2000U))
+#define HELLO_MESSAGE_DISPLAY_TIME	((TickType_t)(5000U))
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */

@@ -797,7 +797,21 @@ void StartTaskLCD(void const * argument)
 	}
 
 	// Print text at home position 0,0
-	if(TRUE != lcdPrintStr((uint8_t*)"  Welcome on board,", 19))
+	if(TRUE != lcdPrintStr((uint8_t*)"   Hi! My name is", 17u))
+	{
+		error = LCD__ERROR;
+		my_error_handler(error);
+	}
+
+	// Set cursor at zero position of line 2
+	if(TRUE != lcdSetCursorPosition(0, Row2))
+	{
+		error = LCD__ERROR;
+		my_error_handler(error);
+	}
+
+	// Print text at home position 1,0
+	if(TRUE != lcdPrintStr((uint8_t*)"       JARVIS", 13u))
 	{
 		error = LCD__ERROR;
 		my_error_handler(error);
@@ -810,8 +824,8 @@ void StartTaskLCD(void const * argument)
 		my_error_handler(error);
 	}
 
-	// Print text at cursor position
-	if(TRUE != lcdPrintStr((uint8_t*)"      Captain!", 14))
+	// Print text at cursor position 2,0
+	if(TRUE != lcdPrintStr((uint8_t*)" !Welcome on board!", 19))
 	{
 		error = LCD__ERROR;
 		my_error_handler(error);
@@ -819,7 +833,7 @@ void StartTaskLCD(void const * argument)
 
 	/************/
 	/* For the "hello" text to display for 3 seconds */
-	vTaskDelay(3000);
+	vTaskDelay(HELLO_MESSAGE_DISPLAY_TIME);
 	/************/
 
 	xLastWakeTime = xTaskGetTickCount();
