@@ -195,6 +195,677 @@ buzzerMainSettings_struct BUZZER_settings = {0};
 LCDMainSettings_struct LCD_MainSettings = {0};
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Structures for LCD (screens and layers) */
+static LCDBoard LCD_MainMenu =	/* Cannot be constant - can be modified by user (.layerPrevious) */
+		{ .name = "Main Menu",
+		.nameActualSize = sizeof("Main Menu")-1,
+		.layer = MainMenu_Layer,
+		.actionForEnter = GoInto_EnterAction,
+		.screenType = ScrollList_ScreenType,
+		.layerPrevious = Desktop_Layer };
+
+static LCDBoard LCD_YesNo =	/* Cannot be constant - can be modified by user (.layerPrevious) */
+		{ .name = "Are you sure?",
+		.nameActualSize = sizeof("Are you sure?")-1,
+		.layer = YesNo_Layer,
+		.actionForEnter = Done_EnterAction,
+		.screenType = YesNo_ScreenType,
+		.layerPrevious = MainMenu_Layer /* Should be last one opened */ };
+
+static LCDBoard LCD_Ctrl =		/* Cannot be constant - not yet decided //TODO */
+		{ .name = "Ctrl",
+		.nameActualSize = sizeof("Ctrl")-1,
+		.layer = Ctrl_Layer,
+		.actionForEnter = Ctrl_EnterAction,
+		.screenType = Ctrl_ScreenType,
+		.layerPrevious = MainMenu_Layer /* Should be last one opened */ };
+
+static LCDBoard LCD_Alarm =	/* Cannot be constant - not yet decided //TODO */
+		{ .name = "!!! ALARM !!!",
+		.nameActualSize = sizeof("!!! ALARM !!!")-1,
+		.layer = Alarm_Layer,
+		.actionForEnter = Alarm_EnterAction,
+		.screenType = Alarm_ScreenType,
+		.layerPrevious = MainMenu_Layer /* Should be last one opened */ };
+
+/* Lists of sub-menus and sub-sub-menus etc. */
+static const LCDBoard LCD_MainMenuList[ ] = {
+			{ .name = "Desktop",
+			.nameActualSize = sizeof("Desktop")-1,
+			.layer = Desktop_Layer,
+			.actionForEnter = None_EnterAction,
+			.screenType = OneScreen_ScreenType,
+			.layerPrevious = MainMenu_Layer },
+
+			{ .name = "GPS",
+			.nameActualSize = sizeof("GPS")-1,
+			.layer = GPS_Layer,
+			.actionForEnter = None_EnterAction,
+			.screenType = OneScreen_ScreenType,
+			.layerPrevious = MainMenu_Layer },
+
+			{ .name = "Car information",
+			.nameActualSize = sizeof("Car information")-1,
+			.layer = CarInfo_Layer,
+			.actionForEnter = None_EnterAction,
+			.screenType = OneScreen_ScreenType,
+			.layerPrevious = MainMenu_Layer },
+
+			{ .name = "Jarvis information",
+			.nameActualSize = sizeof("Jarvis information")-1,
+			.layer = JarvisInfo_Layer,
+			.actionForEnter = None_EnterAction,
+			.screenType = OneScreen_ScreenType,
+			.layerPrevious = MainMenu_Layer },
+
+			{ .name = "Last 3 diag. snaps.",
+			.nameActualSize = sizeof("Last 3 diag. snaps.")-1,
+			.layer = Last3Diag_Layer,
+			.actionForEnter = None_EnterAction,
+			.screenType = OneScreen_ScreenType,
+			.layerPrevious = MainMenu_Layer },
+
+			{ .name = "Last 3 error snaps.",
+			.nameActualSize = sizeof("Last 3 error snaps.")-1,
+			.layer = Last3Err_Layer,
+			.actionForEnter = None_EnterAction,
+			.screenType = OneScreen_ScreenType,
+			.layerPrevious = MainMenu_Layer },
+
+			{ .name = "Car settings",
+			.nameActualSize = sizeof("Car settings")-1,
+			.layer = CarSettings_Layer,
+			.actionForEnter = GoInto_EnterAction,
+			.screenType = ScrollList_ScreenType,
+			.layerPrevious = MainMenu_Layer },
+
+			{ .name = "Board settings",
+			.nameActualSize = sizeof("Board settings")-1,
+			.layer = BoardSettings_Layer,
+			.actionForEnter = GoInto_EnterAction,
+			.screenType = ScrollList_ScreenType,
+			.layerPrevious = MainMenu_Layer },
+	};
+static const uint8_t LCD_MainMenuList_SIZE = sizeof(LCD_MainMenuList)/sizeof(LCDBoard);
+
+static const LCDBoard LCD_CarSettingsList[ ] = {
+			{ .name = "Clear diag. snaps.",
+			.nameActualSize = sizeof("Clear diag. snaps.")-1,
+			.layer = ClearDiagnosticSnapshots,
+			.actionForEnter = YesNo_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = CarSettings_Layer },
+
+			{ .name = "Clear trip mileage",
+			.nameActualSize = sizeof("Clear trip mileage")-1,
+			.layer = ClearTripMileage,
+			.actionForEnter = YesNo_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = CarSettings_Layer },
+
+			{ .name = "Water T. sett.",
+			.nameActualSize = sizeof("Water T. sett.")-1,
+			.layer = WaterSettings_Layer,
+			.actionForEnter = GoInto_EnterAction,
+			.screenType = ScrollList_ScreenType,
+			.layerPrevious = CarSettings_Layer },
+
+			{ .name = "Oil temp. sett.",
+			.nameActualSize = sizeof("Oil temp. sett.")-1,
+			.layer = OilTempSettings_Layer,
+			.actionForEnter = GoInto_EnterAction,
+			.screenType = ScrollList_ScreenType,
+			.layerPrevious = CarSettings_Layer },
+
+			{ .name = "Oil press. sett.",
+			.nameActualSize = sizeof("Oil press. sett.")-1,
+			.layer = OilPressureSettings_Layer,
+			.actionForEnter = GoInto_EnterAction,
+			.screenType = ScrollList_ScreenType,
+			.layerPrevious = CarSettings_Layer },
+
+			{ .name = "Fuel settings",
+			.nameActualSize = sizeof("Fuel settings")-1,
+			.layer = FuelSettings_Layer,
+			.actionForEnter = GoInto_EnterAction,
+			.screenType = ScrollList_ScreenType,
+			.layerPrevious = CarSettings_Layer },
+
+			{ .name = "Main batt. sett.",
+			.nameActualSize = sizeof("Main batt. sett.")-1,
+			.layer = MainBatterySettings_Layer,
+			.actionForEnter = GoInto_EnterAction,
+			.screenType = ScrollList_ScreenType,
+			.layerPrevious = CarSettings_Layer },
+
+			{ .name = "Aux batt. sett.",
+			.nameActualSize = sizeof("Aux Batt. sett.")-1,
+			.layer = AuxBatterySettings_Layer,
+			.actionForEnter = GoInto_EnterAction,
+			.screenType = ScrollList_ScreenType,
+			.layerPrevious = CarSettings_Layer }
+	};
+static const uint8_t LCD_CarSettingsList_SIZE = sizeof(LCD_CarSettingsList)/sizeof(LCDBoard);
+
+static const LCDBoard LCD_BoardSettingsList[ ] = {
+			{ .name = "Clear err. snaps.",
+			.nameActualSize = sizeof("Clear err. snaps.")-1,
+			.layer = ClearErrorsSnapshots,
+			.actionForEnter = YesNo_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = BoardSettings_Layer },
+
+			{ .name = "Adj. time PL",
+			.nameActualSize = sizeof("Adj. time PL")-1,
+			.layer = AdjTimePoland,
+			.actionForEnter = WinterSummer_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = BoardSettings_Layer },
+
+			{ .name = "Adj. time zone",
+			.nameActualSize = sizeof("Adj. time zone")-1,
+			.layer = AdjTimeZone,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = BoardSettings_Layer },
+
+			{ .name = "Inter. V. sett.",
+			.nameActualSize = sizeof("Inter. V. sett.")-1,
+			.layer = InterVoltSettings_Layer,
+			.actionForEnter = GoInto_EnterAction,
+			.screenType = ScrollList_ScreenType,
+			.layerPrevious = BoardSettings_Layer },
+
+			{ .name = "Inter. T. sett.",
+			.nameActualSize = sizeof("Inter. T. sett.")-1,
+			.layer = InterTempSettings_Layer,
+			.actionForEnter = GoInto_EnterAction,
+			.screenType = ScrollList_ScreenType,
+			.layerPrevious = BoardSettings_Layer },
+
+			{ .name = "Buzzer settings",
+			.nameActualSize = sizeof("Buzzer settings")-1,
+			.layer = BuzzerSettings_Layer,
+			.actionForEnter = GoInto_EnterAction,
+			.screenType = ScrollList_ScreenType,
+			.layerPrevious = BoardSettings_Layer },
+
+			{ .name = "LCD settings",
+			.nameActualSize = sizeof("LCD settings")-1,
+			.layer = LCDSettings_Layer,
+			.actionForEnter = GoInto_EnterAction,
+			.screenType = ScrollList_ScreenType,
+			.layerPrevious = BoardSettings_Layer }
+	};
+static const uint8_t LCD_BoardSettingsList_SIZE = sizeof(LCD_BoardSettingsList)/sizeof(LCDBoard);
+
+static const LCDBoard LCD_Car_WaterTempSettingsList[ ] = {
+			{ .name = "Water H. T. warn.",
+			.nameActualSize = sizeof("Water H. T. warn.")-1,
+			.layer = WaterSettings_Layer,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = WaterSettings_Layer },
+
+			{ .name = "Water H. T. alarm",
+			.nameActualSize = sizeof("Water H. T. alarm")-1,
+			.layer = WaterSettings_Layer,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = WaterSettings_Layer },
+
+			{ .name = "Water H. T. FanOn",
+			.nameActualSize = sizeof("Water H. T. FanOn")-1,
+			.layer = WaterSettings_Layer,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = WaterSettings_Layer },
+
+			{ .name = "Water H. T. FanOff",
+			.nameActualSize = sizeof("Water H. T. FanOff")-1,
+			.layer = WaterSettings_Layer,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = WaterSettings_Layer },
+
+			{ .name = "Water T. warn.",
+			.nameActualSize = sizeof("Water T. warn.")-1,
+			.layer = WaterSettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = WaterSettings_Layer },
+
+			{ .name = "Water T. alarm",
+			.nameActualSize = sizeof("Water T. alarm")-1,
+			.layer = WaterSettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = WaterSettings_Layer },
+
+			{ .name = "Water T. Fan ctrl",
+			.nameActualSize = sizeof("Water T. Fan ctrl")-1,
+			.layer = WaterSettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = WaterSettings_Layer },
+
+			{ .name = "Wat. T. warn. Buzz.",
+			.nameActualSize = sizeof("Wat. T. warn. Buzz.")-1,
+			.layer = WaterSettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = WaterSettings_Layer },
+
+			{ .name = "Wat. T. alarm Buzz.",
+			.nameActualSize = sizeof("Wat. T. alarm Buzz.")-1,
+			.layer = WaterSettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = WaterSettings_Layer },
+
+			{ .name = "Wat. T. warn. snap.",
+			.nameActualSize = sizeof("Wat. T. warn. snap.")-1,
+			.layer = WaterSettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = WaterSettings_Layer },
+
+			{ .name = "Wat. T. alarm snap.",
+			.nameActualSize = sizeof("Wat. T. alarm snap.")-1,
+			.layer = WaterSettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = WaterSettings_Layer }
+	};
+static const uint8_t LCD_Car_WaterTempSettingsList_SIZE = sizeof(LCD_Car_WaterTempSettingsList)/sizeof(LCDBoard);
+
+static const LCDBoard LCD_Car_OilTempSettingsList[ ] = {
+			{ .name = "Oil H. T. warning",
+			.nameActualSize = sizeof("Oil H. T. warning")-1,
+			.layer = OilTempSettings_Layer,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = OilTempSettings_Layer },
+
+			{ .name = "Oil H. T. alarm",
+			.nameActualSize = sizeof("Oil H. T. alarm")-1,
+			.layer = OilTempSettings_Layer,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = OilTempSettings_Layer },
+
+			{ .name = "Oil T. warning",
+			.nameActualSize = sizeof("Oil T. warning")-1,
+			.layer = OilTempSettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = OilTempSettings_Layer },
+
+			{ .name = "Oil T. alarm",
+			.nameActualSize = sizeof("Oil T. alarm")-1,
+			.layer = OilTempSettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = OilTempSettings_Layer },
+
+			{ .name = "Oil T. warn. Buzz.",
+			.nameActualSize = sizeof("Oil T. warn. Buzz.")-1,
+			.layer = OilTempSettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = OilTempSettings_Layer },
+
+			{ .name = "Oil T. alarm Buzz.",
+			.nameActualSize = sizeof("Oil T. alarm Buzz.")-1,
+			.layer = OilTempSettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = OilTempSettings_Layer },
+
+			{ .name = "Oil T. warn. snap.",
+			.nameActualSize = sizeof("Oil T. warn. snap.")-1,
+			.layer = OilTempSettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = OilTempSettings_Layer },
+
+			{ .name = "Oil T. alarm snap.",
+			.nameActualSize = sizeof("Oil T. alarm snap.")-1,
+			.layer = OilTempSettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = OilTempSettings_Layer }
+	};
+static const uint8_t LCD_Car_OilTempSettingsList_SIZE = sizeof(LCD_Car_OilTempSettingsList)/sizeof(LCDBoard);
+
+static const LCDBoard LCD_Car_OilPressureSettingsList[ ] = {
+			{ .name = "Oil H. P. alarm",
+			.nameActualSize = sizeof("Oil H. P. alarm")-1,
+			.layer = OilPressureSettings_Layer,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = OilPressureSettings_Layer },
+
+			{ .name = "Oil L. P. alarm",
+			.nameActualSize = sizeof("Oil L. P. alarm")-1,
+			.layer = OilPressureSettings_Layer,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = OilPressureSettings_Layer },
+
+			{ .name = "Oil P. analog",
+			.nameActualSize = sizeof("Oil P. analog")-1,
+			.layer = OilPressureSettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = OilPressureSettings_Layer },
+
+			{ .name = "Oil H. P. alarm",
+			.nameActualSize = sizeof("Oil H. P. alarm")-1,
+			.layer = OilPressureSettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = OilPressureSettings_Layer },
+
+			{ .name = "Oil L. P. alarm",
+			.nameActualSize = sizeof("Oil L. P. alarm")-1,
+			.layer = OilPressureSettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = OilPressureSettings_Layer },
+
+			{ .name = "Oil P. alarm Buzz.",
+			.nameActualSize = sizeof("Oil P. alarm Buzz.")-1,
+			.layer = OilPressureSettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = OilPressureSettings_Layer },
+
+			{ .name = "Oil P. alarm snap.",
+			.nameActualSize = sizeof("Oil P. alarm snap.")-1,
+			.layer = OilPressureSettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = OilPressureSettings_Layer }
+	};
+static const uint8_t LCD_Car_OilPressureSettingsList_SIZE = sizeof(LCD_Car_OilPressureSettingsList)/sizeof(LCDBoard);
+
+static const LCDBoard LCD_Car_FuelSettingsList[ ] = {
+			{ .name = "Fuel Low warn. thr.",
+			.nameActualSize = sizeof("Fuel Low warn. thr.")-1,
+			.layer = FuelSettings_Layer,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = FuelSettings_Layer },
+
+			{ .name = "Fuel Low warn. ON/OFF",
+			.nameActualSize = sizeof("Fuel Low warn. ON/OFF")-1,
+			.layer = FuelSettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = FuelSettings_Layer },
+
+			{ .name = "Fuel Low Buzzer",
+			.nameActualSize = sizeof("Fuel Low Buzzer")-1,
+			.layer = FuelSettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = FuelSettings_Layer }
+	};
+static const uint8_t LCD_Car_FuelSettingsList_SIZE = sizeof(LCD_Car_FuelSettingsList)/sizeof(LCDBoard);
+
+static const LCDBoard LCD_Car_MainBatterySettingsList[ ] = {
+			{ .name = "Low V. thres.",
+			.nameActualSize = sizeof("Low V. thres.")-1,
+			.layer = MainBatterySettings_Layer,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = MainBatterySettings_Layer },
+
+			{ .name = "High V. thres.",
+			.nameActualSize = sizeof("High V. thres.")-1,
+			.layer = MainBatterySettings_Layer,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = MainBatterySettings_Layer },
+
+			{ .name = "Low V. alarm",
+			.nameActualSize = sizeof("Low V. alarm")-1,
+			.layer = MainBatterySettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = MainBatterySettings_Layer },
+
+			{ .name = "High V. alarm",
+			.nameActualSize = sizeof("High V. alarm")-1,
+			.layer = MainBatterySettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = MainBatterySettings_Layer },
+
+			{ .name = "Volt. alarm Buzz.",
+			.nameActualSize = sizeof("Volt. alarm Buzz.")-1,
+			.layer = MainBatterySettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = MainBatterySettings_Layer },
+
+			{ .name = "L. V. alarm snap.",
+			.nameActualSize = sizeof("L. V. alarm snap.")-1,
+			.layer = MainBatterySettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = MainBatterySettings_Layer },
+
+			{ .name = "H. V. alarm snap.",
+			.nameActualSize = sizeof("H. V. alarm snap.")-1,
+			.layer = MainBatterySettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = MainBatterySettings_Layer }
+	};
+static const uint8_t LCD_Car_MainBatterySettingsList_SIZE = sizeof(LCD_Car_MainBatterySettingsList)/sizeof(LCDBoard);
+
+static const LCDBoard LCD_Car_AuxBatterySettingsList[ ] = {
+			{ .name = "Low V. thres.",
+			.nameActualSize = sizeof("Low V. thres.")-1,
+			.layer = AuxBatterySettings_Layer,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = AuxBatterySettings_Layer },
+
+			{ .name = "High V. thres.",
+			.nameActualSize = sizeof("High V. thres.")-1,
+			.layer = AuxBatterySettings_Layer,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = AuxBatterySettings_Layer },
+
+			{ .name = "Low V. alarm",
+			.nameActualSize = sizeof("Low V. alarm")-1,
+			.layer = AuxBatterySettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = AuxBatterySettings_Layer },
+
+			{ .name = "High V. alarm",
+			.nameActualSize = sizeof("High V. alarm")-1,
+			.layer = AuxBatterySettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = AuxBatterySettings_Layer },
+
+			{ .name = "Volt. alarm Buzz.",
+			.nameActualSize = sizeof("Volt. alarm Buzz.")-1,
+			.layer = AuxBatterySettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = AuxBatterySettings_Layer },
+
+			{ .name = "L. V. alarm snap.",
+			.nameActualSize = sizeof("L. V. alarm snap.")-1,
+			.layer = AuxBatterySettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = AuxBatterySettings_Layer },
+
+			{ .name = "H. V. alarm snap.",
+			.nameActualSize = sizeof("H. V. alarm snap.")-1,
+			.layer = AuxBatterySettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = AuxBatterySettings_Layer }
+	};
+static const uint8_t LCD_Car_AuxBatterySettingsList_SIZE = sizeof(LCD_Car_AuxBatterySettingsList)/sizeof(LCDBoard);
+
+static const LCDBoard LCD_Board_InternalVoltSettingsList[ ] = {
+			{ .name = "5V Low thres.",
+			.nameActualSize = sizeof("5V Low thres.")-1,
+			.layer = InterVoltSettings_Layer,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = InterVoltSettings_Layer },
+
+			{ .name = "5V High thres.",
+			.nameActualSize = sizeof("5V High thres.")-1,
+			.layer = InterVoltSettings_Layer,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = InterVoltSettings_Layer },
+
+			{ .name = "3V3 Low thres.",
+			.nameActualSize = sizeof("3V3 Low thres.")-1,
+			.layer = InterVoltSettings_Layer,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = InterVoltSettings_Layer },
+
+			{ .name = "3V3 High thres.",
+			.nameActualSize = sizeof("3V3 High thres.")-1,
+			.layer = InterVoltSettings_Layer,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = InterVoltSettings_Layer },
+
+			{ .name = "VIn Low thres.",
+			.nameActualSize = sizeof("VIn Low thres.")-1,
+			.layer = InterVoltSettings_Layer,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = InterVoltSettings_Layer }
+	};
+static const uint8_t LCD_Board_InternalVoltSettingsList_SIZE = sizeof(LCD_Board_InternalVoltSettingsList)/sizeof(LCDBoard);
+
+static const LCDBoard LCD_Board_InternalTempSettingsList[ ] = {
+			{ .name = "3V3 DCDC T. thres.",
+			.nameActualSize = sizeof("3V3 DCDC T. thres.")-1,
+			.layer = InterTempSettings_Layer,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = InterTempSettings_Layer },
+
+			{ .name = "5V DCDC T. thres.",
+			.nameActualSize = sizeof("5V DCDC T. thres.")-1,
+			.layer = InterTempSettings_Layer,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = InterTempSettings_Layer }
+	};
+static const uint8_t LCD_Board_InternalTempSettingsList_SIZE = sizeof(LCD_Board_InternalTempSettingsList)/sizeof(LCDBoard);
+
+static const LCDBoard LCD_Board_BuzzerSettingsList[ ] = {
+			{ .name = "Buzzer Main",
+			.nameActualSize = sizeof("Buzzer Main")-1,
+			.layer = BuzzerSettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = BuzzerSettings_Layer },
+
+			{ .name = "Buzzer Main alarm",
+			.nameActualSize = sizeof("Buzzer Main alarm")-1,
+			.layer = BuzzerSettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = BuzzerSettings_Layer },
+
+			{ .name = "Buzzer Main button",
+			.nameActualSize = sizeof("Buzzer Main button")-1,
+			.layer = BuzzerSettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = BuzzerSettings_Layer },
+
+			{ .name = "Buzzer Short press",
+			.nameActualSize = sizeof("Buzzer Short press")-1,
+			.layer = BuzzerSettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = BuzzerSettings_Layer },
+
+			{ .name = "Buzzer Long press",
+			.nameActualSize = sizeof("Buzzer Long press")-1,
+			.layer = BuzzerSettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = BuzzerSettings_Layer }
+	};
+static const uint8_t LCD_Board_BuzzerSettingsList_SIZE = sizeof(LCD_Board_BuzzerSettingsList)/sizeof(LCDBoard);
+
+static const LCDBoard LCD_Board_LCDSettingsList[ ] = {
+			{ .name = "Backlight level",
+			.nameActualSize = sizeof("Backlight level")-1,
+			.layer = LCDSettings_Layer,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = LCDSettings_Layer },
+
+			{ .name = "Sec to off light",
+			.nameActualSize = sizeof("Sec to off light")-1,
+			.layer = LCDSettings_Layer,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = LCDSettings_Layer },
+
+			{ .name = "Auto off from",
+			.nameActualSize = sizeof("Auto off from")-1,
+			.layer = LCDSettings_Layer,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = LCDSettings_Layer },
+
+			{ .name = "Auto off to",
+			.nameActualSize = sizeof("Auto off to")-1,
+			.layer = LCDSettings_Layer,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = LCDSettings_Layer },
+
+			{ .name = "Home screen",
+			.nameActualSize = sizeof("Home screen")-1,
+			.layer = LCDSettings_Layer,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = LCDSettings_Layer },
+
+			{ .name = "Auto home return",
+			.nameActualSize = sizeof("Auto home return")-1,
+			.layer = LCDSettings_Layer,
+			.actionForEnter = Ctrl_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = LCDSettings_Layer },
+
+			{ .name = "Auto light off",
+			.nameActualSize = sizeof("Auto light off")-1,
+			.layer = LCDSettings_Layer,
+			.actionForEnter = OnOff_EnterAction,
+			.screenType = No_ScreenType,
+			.layerPrevious = LCDSettings_Layer },
+	};
+static const uint8_t LCD_Board_LCDSettingsList_SIZE = sizeof(LCD_Board_LCDSettingsList)/sizeof(LCDBoard);
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+
 
 /* USER CODE END Variables */
 osThreadId My_1000ms_TaskHandle;
@@ -318,14 +989,14 @@ void vApplicationGetIdleTaskMemory(StaticTask_t **ppxIdleTaskTCBBuffer,
 /* USER CODE BEGIN GET_TIMER_TASK_MEMORY */
 static StaticTask_t xTimerTaskTCBBuffer;
 static StackType_t xTimerStack[configTIMER_TASK_STACK_DEPTH];
-  
-void vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer, StackType_t **ppxTimerTaskStackBuffer, uint32_t *pulTimerTaskStackSize )  
+
+void vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer, StackType_t **ppxTimerTaskStackBuffer, uint32_t *pulTimerTaskStackSize )
 {
   *ppxTimerTaskTCBBuffer = &xTimerTaskTCBBuffer;
   *ppxTimerTaskStackBuffer = &xTimerStack[0];
   *pulTimerTaskStackSize = configTIMER_TASK_STACK_DEPTH;
   /* place for user code */
-}                   
+}
 /* USER CODE END GET_TIMER_TASK_MEMORY */
 
 /**
@@ -608,672 +1279,8 @@ void StartTaskLCD(void const * argument)
 	.error_mess_from_queue = NO_ERROR };
 	/******************************************************/
 
-	LCDBoard LCD_MainMenu =
-			{ .name = "Main Menu",
-			.nameActualSize = sizeof("Main Menu")-1,
-			.layer = MainMenu_Layer,
-			.actionForEnter = GoInto_EnterAction,
-			.screenType = ScrollList_ScreenType,
-			.layerPrevious = HOME_SCREEN };
-
-	LCDBoard LCD_YesNo =
-			{ .name = "Are you sure?",
-			.nameActualSize = sizeof("Are you sure?")-1,
-			.layer = YesNo_Layer,
-			.actionForEnter = Done_EnterAction,
-			.screenType = YesNo_ScreenType,
-			.layerPrevious = MainMenu_Layer /* Should be last one opened */ };
-
-	LCDBoard LCD_Ctrl =
-			{ .name = "Ctrl",
-			.nameActualSize = sizeof("Ctrl")-1,
-			.layer = Ctrl_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = Ctrl_ScreenType,
-			.layerPrevious = MainMenu_Layer /* Should be last one opened */ };
-
-	LCDBoard LCD_Alarm =
-			{ .name = "!!! ALARM !!!",
-			.nameActualSize = sizeof("!!! ALARM !!!")-1,
-			.layer = Alarm_Layer,
-			.actionForEnter = Alarm_EnterAction,
-			.screenType = Alarm_ScreenType,
-			.layerPrevious = MainMenu_Layer /* Should be last one opened */ };
-
-
-	LCDBoard LCD_MainMenuList[ ] = {
-			{ .name = "Desktop",
-			.nameActualSize = sizeof("Desktop")-1,
-			.layer = Desktop_Layer,
-			.actionForEnter = None_EnterAction,
-			.screenType = OneScreen_ScreenType,
-			.layerPrevious = MainMenu_Layer },
-
-			{ .name = "GPS",
-			.nameActualSize = sizeof("GPS")-1,
-			.layer = GPS_Layer,
-			.actionForEnter = None_EnterAction,
-			.screenType = OneScreen_ScreenType,
-			.layerPrevious = MainMenu_Layer },
-
-			{ .name = "Car information",
-			.nameActualSize = sizeof("Car information")-1,
-			.layer = CarInfo_Layer,
-			.actionForEnter = None_EnterAction,
-			.screenType = OneScreen_ScreenType,
-			.layerPrevious = MainMenu_Layer },
-
-			{ .name = "Jarvis information",
-			.nameActualSize = sizeof("Jarvis information")-1,
-			.layer = JarvisInfo_Layer,
-			.actionForEnter = None_EnterAction,
-			.screenType = OneScreen_ScreenType,
-			.layerPrevious = MainMenu_Layer },
-
-			{ .name = "Last 3 diag. snaps.",
-			.nameActualSize = sizeof("Last 3 diag. snaps.")-1,
-			.layer = Last3Diag_Layer,
-			.actionForEnter = None_EnterAction,
-			.screenType = OneScreen_ScreenType,
-			.layerPrevious = MainMenu_Layer },
-
-			{ .name = "Last 3 error snaps.",
-			.nameActualSize = sizeof("Last 3 error snaps.")-1,
-			.layer = Last3Err_Layer,
-			.actionForEnter = None_EnterAction,
-			.screenType = OneScreen_ScreenType,
-			.layerPrevious = MainMenu_Layer },
-
-			{ .name = "Car settings",
-			.nameActualSize = sizeof("Car settings")-1,
-			.layer = CarSettings_Layer,
-			.actionForEnter = GoInto_EnterAction,
-			.screenType = ScrollList_ScreenType,
-			.layerPrevious = MainMenu_Layer },
-
-			{ .name = "Board settings",
-			.nameActualSize = sizeof("Board settings")-1,
-			.layer = BoardSettings_Layer,
-			.actionForEnter = GoInto_EnterAction,
-			.screenType = ScrollList_ScreenType,
-			.layerPrevious = MainMenu_Layer },
-	};
-	uint8_t LCD_MainMenuList_SIZE = sizeof(LCD_MainMenuList)/sizeof(LCDBoard);
-
-	LCDBoard LCD_CarSettingsList[ ] = {
-			{ .name = "Clear diag. snaps.",
-			.nameActualSize = sizeof("Clear diag. snaps.")-1,
-			.layer = ClearDiagnosticSnapshots,
-			.actionForEnter = YesNo_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = CarSettings_Layer },
-
-			{ .name = "Clear trip mileage",
-			.nameActualSize = sizeof("Clear trip mileage")-1,
-			.layer = ClearTripMileage,
-			.actionForEnter = YesNo_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = CarSettings_Layer },
-
-			{ .name = "Water T. sett.",
-			.nameActualSize = sizeof("Water T. sett.")-1,
-			.layer = WaterSettings_Layer,
-			.actionForEnter = GoInto_EnterAction,
-			.screenType = ScrollList_ScreenType,
-			.layerPrevious = CarSettings_Layer },
-
-			{ .name = "Oil temp. sett.",
-			.nameActualSize = sizeof("Oil temp. sett.")-1,
-			.layer = OilTempSettings_Layer,
-			.actionForEnter = GoInto_EnterAction,
-			.screenType = ScrollList_ScreenType,
-			.layerPrevious = CarSettings_Layer },
-
-			{ .name = "Oil press. sett.",
-			.nameActualSize = sizeof("Oil press. sett.")-1,
-			.layer = OilPressureSettings_Layer,
-			.actionForEnter = GoInto_EnterAction,
-			.screenType = ScrollList_ScreenType,
-			.layerPrevious = CarSettings_Layer },
-
-			{ .name = "Fuel settings",
-			.nameActualSize = sizeof("Fuel settings")-1,
-			.layer = FuelSettings_Layer,
-			.actionForEnter = GoInto_EnterAction,
-			.screenType = ScrollList_ScreenType,
-			.layerPrevious = CarSettings_Layer },
-
-			{ .name = "Main batt. sett.",
-			.nameActualSize = sizeof("Main batt. sett.")-1,
-			.layer = MainBatterySettings_Layer,
-			.actionForEnter = GoInto_EnterAction,
-			.screenType = ScrollList_ScreenType,
-			.layerPrevious = CarSettings_Layer },
-
-			{ .name = "Aux batt. sett.",
-			.nameActualSize = sizeof("Aux Batt. sett.")-1,
-			.layer = AuxBatterySettings_Layer,
-			.actionForEnter = GoInto_EnterAction,
-			.screenType = ScrollList_ScreenType,
-			.layerPrevious = CarSettings_Layer }
-	};
-	uint8_t LCD_CarSettingsList_SIZE = sizeof(LCD_CarSettingsList)/sizeof(LCDBoard);
-
-	LCDBoard LCD_BoardSettingsList[ ] = {
-			{ .name = "Clear err. snaps.",
-			.nameActualSize = sizeof("Clear err. snaps.")-1,
-			.layer = ClearErrorsSnapshots,
-			.actionForEnter = YesNo_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = BoardSettings_Layer },
-
-			{ .name = "Adj. time PL",
-			.nameActualSize = sizeof("Adj. time PL")-1,
-			.layer = AdjTimePoland,
-			.actionForEnter = WinterSummer_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = BoardSettings_Layer },
-
-			{ .name = "Adj. time zone",
-			.nameActualSize = sizeof("Adj. time zone")-1,
-			.layer = AdjTimeZone,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = BoardSettings_Layer },
-
-			{ .name = "Inter. V. sett.",
-			.nameActualSize = sizeof("Inter. V. sett.")-1,
-			.layer = InterVoltSettings_Layer,
-			.actionForEnter = GoInto_EnterAction,
-			.screenType = ScrollList_ScreenType,
-			.layerPrevious = BoardSettings_Layer },
-
-			{ .name = "Inter. T. sett.",
-			.nameActualSize = sizeof("Inter. T. sett.")-1,
-			.layer = InterTempSettings_Layer,
-			.actionForEnter = GoInto_EnterAction,
-			.screenType = ScrollList_ScreenType,
-			.layerPrevious = BoardSettings_Layer },
-
-			{ .name = "Buzzer settings",
-			.nameActualSize = sizeof("Buzzer settings")-1,
-			.layer = BuzzerSettings_Layer,
-			.actionForEnter = GoInto_EnterAction,
-			.screenType = ScrollList_ScreenType,
-			.layerPrevious = BoardSettings_Layer },
-
-			{ .name = "LCD settings",
-			.nameActualSize = sizeof("LCD settings")-1,
-			.layer = LCDSettings_Layer,
-			.actionForEnter = GoInto_EnterAction,
-			.screenType = ScrollList_ScreenType,
-			.layerPrevious = BoardSettings_Layer }
-	};
-	uint8_t LCD_BoardSettingsList_SIZE = sizeof(LCD_BoardSettingsList)/sizeof(LCDBoard);
-
-	LCDBoard LCD_Car_WaterTempSettingsList[ ] = {
-			{ .name = "Water H. T. warn.",
-			.nameActualSize = sizeof("Water H. T. warn.")-1,
-			.layer = WaterSettings_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = WaterSettings_Layer },
-
-			{ .name = "Water H. T. alarm",
-			.nameActualSize = sizeof("Water H. T. alarm")-1,
-			.layer = WaterSettings_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = WaterSettings_Layer },
-
-			{ .name = "Water H. T. FanOn",
-			.nameActualSize = sizeof("Water H. T. FanOn")-1,
-			.layer = WaterSettings_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = WaterSettings_Layer },
-
-			{ .name = "Water H. T. FanOff",
-			.nameActualSize = sizeof("Water H. T. FanOff")-1,
-			.layer = WaterSettings_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = WaterSettings_Layer },
-
-			{ .name = "Water T. warn.",
-			.nameActualSize = sizeof("Water T. warn.")-1,
-			.layer = WaterSettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = WaterSettings_Layer },
-
-			{ .name = "Water T. alarm",
-			.nameActualSize = sizeof("Water T. alarm")-1,
-			.layer = WaterSettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = WaterSettings_Layer },
-
-			{ .name = "Water T. Fan ctrl",
-			.nameActualSize = sizeof("Water T. Fan ctrl")-1,
-			.layer = WaterSettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = WaterSettings_Layer },
-
-			{ .name = "Wat. T. warn. Buzz.",
-			.nameActualSize = sizeof("Wat. T. warn. Buzz.")-1,
-			.layer = WaterSettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = WaterSettings_Layer },
-
-			{ .name = "Wat. T. alarm Buzz.",
-			.nameActualSize = sizeof("Wat. T. alarm Buzz.")-1,
-			.layer = WaterSettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = WaterSettings_Layer },
-
-			{ .name = "Wat. T. warn. snap.",
-			.nameActualSize = sizeof("Wat. T. warn. snap.")-1,
-			.layer = WaterSettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = WaterSettings_Layer },
-
-			{ .name = "Wat. T. alarm snap.",
-			.nameActualSize = sizeof("Wat. T. alarm snap.")-1,
-			.layer = WaterSettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = WaterSettings_Layer }
-	};
-	uint8_t LCD_Car_WaterTempSettingsList_SIZE = sizeof(LCD_Car_WaterTempSettingsList)/sizeof(LCDBoard);
-
-	LCDBoard LCD_Car_OilTempSettingsList[ ] = {
-			{ .name = "Oil H. T. warning",
-			.nameActualSize = sizeof("Oil H. T. warning")-1,
-			.layer = OilTempSettings_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilTempSettings_Layer },
-
-			{ .name = "Oil H. T. alarm",
-			.nameActualSize = sizeof("Oil H. T. alarm")-1,
-			.layer = OilTempSettings_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilTempSettings_Layer },
-
-			{ .name = "Oil T. warning",
-			.nameActualSize = sizeof("Oil T. warning")-1,
-			.layer = OilTempSettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilTempSettings_Layer },
-
-			{ .name = "Oil T. alarm",
-			.nameActualSize = sizeof("Oil T. alarm")-1,
-			.layer = OilTempSettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilTempSettings_Layer },
-
-			{ .name = "Oil T. warn. Buzz.",
-			.nameActualSize = sizeof("Oil T. warn. Buzz.")-1,
-			.layer = OilTempSettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilTempSettings_Layer },
-
-			{ .name = "Oil T. alarm Buzz.",
-			.nameActualSize = sizeof("Oil T. alarm Buzz.")-1,
-			.layer = OilTempSettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilTempSettings_Layer },
-
-			{ .name = "Oil T. warn. snap.",
-			.nameActualSize = sizeof("Oil T. warn. snap.")-1,
-			.layer = OilTempSettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilTempSettings_Layer },
-
-			{ .name = "Oil T. alarm snap.",
-			.nameActualSize = sizeof("Oil T. alarm snap.")-1,
-			.layer = OilTempSettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilTempSettings_Layer }
-	};
-	uint8_t LCD_Car_OilTempSettingsList_SIZE = sizeof(LCD_Car_OilTempSettingsList)/sizeof(LCDBoard);
-
-	LCDBoard LCD_Car_OilPressureSettingsList[ ] = {
-			{ .name = "Oil H. P. alarm",
-			.nameActualSize = sizeof("Oil H. P. alarm")-1,
-			.layer = OilPressureSettings_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilPressureSettings_Layer },
-
-			{ .name = "Oil L. P. alarm",
-			.nameActualSize = sizeof("Oil L. P. alarm")-1,
-			.layer = OilPressureSettings_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilPressureSettings_Layer },
-
-			{ .name = "Oil P. analog",
-			.nameActualSize = sizeof("Oil P. analog")-1,
-			.layer = OilPressureSettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilPressureSettings_Layer },
-
-			{ .name = "Oil H. P. alarm",
-			.nameActualSize = sizeof("Oil H. P. alarm")-1,
-			.layer = OilPressureSettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilPressureSettings_Layer },
-
-			{ .name = "Oil L. P. alarm",
-			.nameActualSize = sizeof("Oil L. P. alarm")-1,
-			.layer = OilPressureSettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilPressureSettings_Layer },
-
-			{ .name = "Oil P. alarm Buzz.",
-			.nameActualSize = sizeof("Oil P. alarm Buzz.")-1,
-			.layer = OilPressureSettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilPressureSettings_Layer },
-
-			{ .name = "Oil P. alarm snap.",
-			.nameActualSize = sizeof("Oil P. alarm snap.")-1,
-			.layer = OilPressureSettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilPressureSettings_Layer }
-	};
-	uint8_t LCD_Car_OilPressureSettingsList_SIZE = sizeof(LCD_Car_OilPressureSettingsList)/sizeof(LCDBoard);
-
-	LCDBoard LCD_Car_FuelSettingsList[ ] = {
-			{ .name = "Fuel Low warn. thr.",
-			.nameActualSize = sizeof("Fuel Low warn. thr.")-1,
-			.layer = FuelSettings_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = FuelSettings_Layer },
-
-			{ .name = "Fuel Low warn. ON/OFF",
-			.nameActualSize = sizeof("Fuel Low warn. ON/OFF")-1,
-			.layer = FuelSettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = FuelSettings_Layer },
-
-			{ .name = "Fuel Low Buzzer",
-			.nameActualSize = sizeof("Fuel Low Buzzer")-1,
-			.layer = FuelSettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = FuelSettings_Layer }
-	};
-	uint8_t LCD_Car_FuelSettingsList_SIZE = sizeof(LCD_Car_FuelSettingsList)/sizeof(LCDBoard);
-
-	LCDBoard LCD_Car_MainBatterySettingsList[ ] = {
-			{ .name = "Low V. thres.",
-			.nameActualSize = sizeof("Low V. thres.")-1,
-			.layer = MainBatterySettings_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = MainBatterySettings_Layer },
-
-			{ .name = "High V. thres.",
-			.nameActualSize = sizeof("High V. thres.")-1,
-			.layer = MainBatterySettings_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = MainBatterySettings_Layer },
-
-			{ .name = "Low V. alarm",
-			.nameActualSize = sizeof("Low V. alarm")-1,
-			.layer = MainBatterySettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = MainBatterySettings_Layer },
-
-			{ .name = "High V. alarm",
-			.nameActualSize = sizeof("High V. alarm")-1,
-			.layer = MainBatterySettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = MainBatterySettings_Layer },
-
-			{ .name = "Volt. alarm Buzz.",
-			.nameActualSize = sizeof("Volt. alarm Buzz.")-1,
-			.layer = MainBatterySettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = MainBatterySettings_Layer },
-
-			{ .name = "L. V. alarm snap.",
-			.nameActualSize = sizeof("L. V. alarm snap.")-1,
-			.layer = MainBatterySettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = MainBatterySettings_Layer },
-
-			{ .name = "H. V. alarm snap.",
-			.nameActualSize = sizeof("H. V. alarm snap.")-1,
-			.layer = MainBatterySettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = MainBatterySettings_Layer }
-	};
-	uint8_t LCD_Car_MainBatterySettingsList_SIZE = sizeof(LCD_Car_MainBatterySettingsList)/sizeof(LCDBoard);
-
-	LCDBoard LCD_Car_AuxBatterySettingsList[ ] = {
-			{ .name = "Low V. thres.",
-			.nameActualSize = sizeof("Low V. thres.")-1,
-			.layer = AuxBatterySettings_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = AuxBatterySettings_Layer },
-
-			{ .name = "High V. thres.",
-			.nameActualSize = sizeof("High V. thres.")-1,
-			.layer = AuxBatterySettings_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = AuxBatterySettings_Layer },
-
-			{ .name = "Low V. alarm",
-			.nameActualSize = sizeof("Low V. alarm")-1,
-			.layer = AuxBatterySettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = AuxBatterySettings_Layer },
-
-			{ .name = "High V. alarm",
-			.nameActualSize = sizeof("High V. alarm")-1,
-			.layer = AuxBatterySettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = AuxBatterySettings_Layer },
-
-			{ .name = "Volt. alarm Buzz.",
-			.nameActualSize = sizeof("Volt. alarm Buzz.")-1,
-			.layer = AuxBatterySettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = AuxBatterySettings_Layer },
-
-			{ .name = "L. V. alarm snap.",
-			.nameActualSize = sizeof("L. V. alarm snap.")-1,
-			.layer = AuxBatterySettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = AuxBatterySettings_Layer },
-
-			{ .name = "H. V. alarm snap.",
-			.nameActualSize = sizeof("H. V. alarm snap.")-1,
-			.layer = AuxBatterySettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = AuxBatterySettings_Layer }
-	};
-	uint8_t LCD_Car_AuxBatterySettingsList_SIZE = sizeof(LCD_Car_AuxBatterySettingsList)/sizeof(LCDBoard);
-
-	LCDBoard LCD_Board_InternalVoltSettingsList[ ] = {
-			{ .name = "5V Low thres.",
-			.nameActualSize = sizeof("5V Low thres.")-1,
-			.layer = InterVoltSettings_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = InterVoltSettings_Layer },
-
-			{ .name = "5V High thres.",
-			.nameActualSize = sizeof("5V High thres.")-1,
-			.layer = InterVoltSettings_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = InterVoltSettings_Layer },
-
-			{ .name = "3V3 Low thres.",
-			.nameActualSize = sizeof("3V3 Low thres.")-1,
-			.layer = InterVoltSettings_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = InterVoltSettings_Layer },
-
-			{ .name = "3V3 High thres.",
-			.nameActualSize = sizeof("3V3 High thres.")-1,
-			.layer = InterVoltSettings_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = InterVoltSettings_Layer },
-
-			{ .name = "VIn Low thres.",
-			.nameActualSize = sizeof("VIn Low thres.")-1,
-			.layer = InterVoltSettings_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = InterVoltSettings_Layer }
-	};
-	uint8_t LCD_Board_InternalVoltSettingsList_SIZE = sizeof(LCD_Board_InternalVoltSettingsList)/sizeof(LCDBoard);
-
-	LCDBoard LCD_Board_InternalTempSettingsList[ ] = {
-			{ .name = "3V3 DCDC T. thres.",
-			.nameActualSize = sizeof("3V3 DCDC T. thres.")-1,
-			.layer = InterTempSettings_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = InterTempSettings_Layer },
-
-			{ .name = "5V DCDC T. thres.",
-			.nameActualSize = sizeof("5V DCDC T. thres.")-1,
-			.layer = InterTempSettings_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = InterTempSettings_Layer }
-	};
-	uint8_t LCD_Board_InternalTempSettingsList_SIZE = sizeof(LCD_Board_InternalTempSettingsList)/sizeof(LCDBoard);
-
-	LCDBoard LCD_Board_BuzzerSettingsList[ ] = {
-			{ .name = "Buzzer Main",
-			.nameActualSize = sizeof("Buzzer Main")-1,
-			.layer = BuzzerSettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = BuzzerSettings_Layer },
-
-			{ .name = "Buzzer Main alarm",
-			.nameActualSize = sizeof("Buzzer Main alarm")-1,
-			.layer = BuzzerSettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = BuzzerSettings_Layer },
-
-			{ .name = "Buzzer Main button",
-			.nameActualSize = sizeof("Buzzer Main button")-1,
-			.layer = BuzzerSettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = BuzzerSettings_Layer },
-
-			{ .name = "Buzzer Short press",
-			.nameActualSize = sizeof("Buzzer Short press")-1,
-			.layer = BuzzerSettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = BuzzerSettings_Layer },
-
-			{ .name = "Buzzer Long press",
-			.nameActualSize = sizeof("Buzzer Long press")-1,
-			.layer = BuzzerSettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = BuzzerSettings_Layer }
-	};
-	uint8_t LCD_Board_BuzzerSettingsList_SIZE = sizeof(LCD_Board_BuzzerSettingsList)/sizeof(LCDBoard);
-
-	LCDBoard LCD_Board_LCDSettingsList[ ] = {
-			{ .name = "Backlight level",
-			.nameActualSize = sizeof("Backlight level")-1,
-			.layer = LCDSettings_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = LCDSettings_Layer },
-
-			{ .name = "Sec to off light",
-			.nameActualSize = sizeof("Sec to off light")-1,
-			.layer = LCDSettings_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = LCDSettings_Layer },
-
-			{ .name = "Auto off from",
-			.nameActualSize = sizeof("Auto off from")-1,
-			.layer = LCDSettings_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = LCDSettings_Layer },
-
-			{ .name = "Auto off to",
-			.nameActualSize = sizeof("Auto off to")-1,
-			.layer = LCDSettings_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = LCDSettings_Layer },
-
-			{ .name = "Home screen",
-			.nameActualSize = sizeof("Home screen")-1,
-			.layer = LCDSettings_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = LCDSettings_Layer },
-
-			{ .name = "Auto home return",
-			.nameActualSize = sizeof("Auto home return")-1,
-			.layer = LCDSettings_Layer,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = LCDSettings_Layer },
-
-			{ .name = "Auto light off",
-			.nameActualSize = sizeof("Auto light off")-1,
-			.layer = LCDSettings_Layer,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = LCDSettings_Layer },
-	};
-	uint8_t LCD_Board_LCDSettingsList_SIZE = sizeof(LCD_Board_LCDSettingsList)/sizeof(LCDBoard);
+	/* Home screen applied - can be changed in settings from LCD */
+	LCD_MainMenu.layerPrevious = HOME_SCREEN;
 
 	/* Buffer of Rows*Columns size for whole display (80 bytes for 4x20) */
 	uint8_t LCD_buffer[LCD.noOfRowsLCD][LCD.noOfColumnsLCD];
@@ -2045,7 +2052,7 @@ void StartTaskLCD(void const * argument)
 							EEPROMData.size = UINT32_T_SIZE;
 
 							EEPROMData.memAddress = TRIP_MILEAGE_START_ADDRESS;	//TODO - improve to write in the place we should as there is a table of addresses where the mileage is written!!
-							EEPROMData.data = &(CAR_mileage.tripMileage);
+							EEPROMData.data = &(CAR_mileage.data[4]);
 							xQueueSend(Queue_EEPROM_writeHandle, &EEPROMData, (TickType_t)100U/*100ms wait time if the queue is full*/);
 
 							vTaskDelay((TickType_t)MAX_WAIT_TIME_FOR_EEPROM);	/* wait for xx ms for EEPROM to be able to process that */
@@ -2813,7 +2820,7 @@ void StartTask250ms(void const * argument)
 #endif
 
 #ifdef OIL_PRESSURE_BINARY_SENSOR
-		if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIO_PORT_OIL_PRESSURE_SENSOR, GPIO_PORT_OIL_PRESSURE_SENSOR))
+		if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIO_PORT_OIL_PRESSURE_SENSOR, GPIO_PIN_OIL_PRESSURE_SENSOR))
 		{
 			oilPressureValueBinary = OK;
 			oilPressureValueBinaryForLCD.messageReadyFLAG = FALSE;

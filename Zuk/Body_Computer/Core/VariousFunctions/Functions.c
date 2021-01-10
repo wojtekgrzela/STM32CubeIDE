@@ -300,7 +300,7 @@ int16_t find_nearest_symbol(const char symbol, const char *const str,
  * 			function to pass the info of the currently chosen submenu
  * @retval error: the error code
  */
-Error_Code scroll_list(LCDBoard* boardList, uint8_t boardListSize, LCDBoard* currentBoard, uint8_t BufferForLCD[NO_OF_ROWS_IN_LCD][NO_OF_COLUMNS_IN_LCD], int8_t* ENCDiffptr, int32_t* externalIterator)
+Error_Code scroll_list(const LCDBoard* const boardList, uint8_t boardListSize, const LCDBoard* const currentBoard, uint8_t BufferForLCD[NO_OF_ROWS_IN_LCD][NO_OF_COLUMNS_IN_LCD], int8_t* ENCDiffptr, int32_t* externalIterator)
 {
 	Error_Code error = NO_ERROR;
 	uint8_t doneFLAG = FALSE;
@@ -378,7 +378,7 @@ Error_Code scroll_list(LCDBoard* boardList, uint8_t boardListSize, LCDBoard* cur
  * @param boardListSize: the length of the list
  * @retval error: the error code
  */
-Error_Code shortButtonPressDetected_LCD(LCDBoard* currentBoard, LCDBoard* boardList, Enum_Layer* layerSwitchVariable, int32_t* submenuIterator)
+Error_Code shortButtonPressDetected_LCD(const LCDBoard* const currentBoard, const LCDBoard* const boardList, Enum_Layer* layerSwitchVariable, int32_t* submenuIterator)
 {
 	Error_Code error = NO_ERROR;
 
@@ -442,7 +442,7 @@ Error_Code shortButtonPressDetected_LCD(LCDBoard* currentBoard, LCDBoard* boardL
  * @param boardListSize: the length of the list
  * @retval error: the error code
  */
-Error_Code longButtonPressDetected_LCD(LCDBoard* currentBoard, Enum_Layer* layerSwitchVariable, int32_t* submenuIterator)
+Error_Code longButtonPressDetected_LCD(const LCDBoard* const currentBoard, Enum_Layer* layerSwitchVariable, int32_t* submenuIterator)
 {
 	Error_Code error = NO_ERROR;
 

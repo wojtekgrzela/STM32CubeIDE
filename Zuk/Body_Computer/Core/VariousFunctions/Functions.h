@@ -52,7 +52,7 @@ uint8_t compare_two_strings(const char *const str1/*The short one*/,
 int16_t find_nearest_symbol(const char symbol, const char *const str,
 		const uint8_t start /*start position in string to look for the symbol*/);
 
-Error_Code scroll_list(LCDBoard* boardList, uint8_t boardListSize, LCDBoard* currentBoard, uint8_t BufferForLCD[NO_OF_ROWS_IN_LCD][NO_OF_COLUMNS_IN_LCD], int8_t* ENCDiffptr, int32_t* externalIterator);
-Error_Code shortButtonPressDetected_LCD(LCDBoard* currentBoard, LCDBoard* boardList, Enum_Layer* layerSwitchVariable, int32_t* submenuIterator);
-Error_Code longButtonPressDetected_LCD(LCDBoard* currentBoard, Enum_Layer* layerSwitchVariable, int32_t* submenuIterator);
+Error_Code scroll_list(const LCDBoard* const boardList, uint8_t boardListSize, const LCDBoard* const currentBoard, uint8_t BufferForLCD[NO_OF_ROWS_IN_LCD][NO_OF_COLUMNS_IN_LCD], int8_t* ENCDiffptr, int32_t* externalIterator);
+Error_Code shortButtonPressDetected_LCD(const LCDBoard* const currentBoard, const LCDBoard* const boardList, Enum_Layer* layerSwitchVariable, int32_t* submenuIterator);
+Error_Code longButtonPressDetected_LCD(const LCDBoard* const currentBoard, Enum_Layer* layerSwitchVariable, int32_t* submenuIterator);
 #endif /* INC_FUNCTIONS_H_ */
