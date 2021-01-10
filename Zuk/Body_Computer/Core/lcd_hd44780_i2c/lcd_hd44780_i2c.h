@@ -43,10 +43,10 @@ extern "C" {
 /* MY STRUCTURES */
 typedef struct
 {
-	uint8_t noOfRowsLCD;		/* 1 or 2 or 4 for standard LCDs */
-	uint8_t noOfColumnsLCD;		/* 8 or 16 or 20 for standard LCDs */
+	const uint8_t noOfRowsLCD;		/* 1 or 2 or 4 for standard LCDs */
+	const uint8_t noOfColumnsLCD;		/* 8 or 16 or 20 for standard LCDs */
 
-	uint8_t addressLCD;			/* Address on I2C line */
+	const uint8_t addressLCD;			/* Address on I2C line */
 } LCD_parameters_struct;
 
 

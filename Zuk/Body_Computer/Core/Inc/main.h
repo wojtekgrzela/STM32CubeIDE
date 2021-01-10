@@ -48,6 +48,10 @@ extern "C" {
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef uint8_t boolean;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 typedef enum
@@ -92,7 +96,7 @@ typedef enum
 			WaterTempWarningBuzzerOn		=	0x738,
 			WaterTempAlarmBuzzerOn			=	0x739,
 			WaterTempWarningSnapshotOn		=	0x73A,
-			WaterTempAlarmSpashotOn			=	0x73B,
+			WaterTempAlarmSnapshotOn		=	0x73B,
 
 			/* CarSettings_Layer -> OilTempSettings_Layer */
 			OilHighTempWarningThreshold		=	0x741,
@@ -298,13 +302,13 @@ typedef struct
 		uint8_t allSettings;
 		struct
 		{
-			uint8_t waterTempWarningOn			:1;
-			uint8_t waterTempAlarmOn			:1;
-			uint8_t waterFanControlOn			:1;
-			uint8_t waterTempWarningBuzzerOn	:1;
-			uint8_t waterTempAlarmBuzzerOn		:1;
-			uint8_t waterTempWarningSnapshotOn 	:1;
-			uint8_t waterTempAlarmSnapshotOn	:1;
+			boolean waterTempWarningOn			:1;
+			boolean waterTempAlarmOn			:1;
+			boolean waterFanControlOn			:1;
+			boolean waterTempWarningBuzzerOn	:1;
+			boolean waterTempAlarmBuzzerOn		:1;
+			boolean waterTempWarningSnapshotOn 	:1;
+			boolean waterTempAlarmSnapshotOn	:1;
 			/* 1 more free bits here */
 		};
 	};
@@ -322,12 +326,12 @@ typedef struct
 		uint8_t allSettings;
 		struct
 		{
-			uint8_t oilTempWarningOn			:1;
-			uint8_t oilTempAlarmOn				:1;
-			uint8_t oilTempWarningBuzzerOn		:1;
-			uint8_t oilTempAlarmBuzzerOn		:1;
-			uint8_t oilTempWarningSnapshotOn	:1;
-			uint8_t oilTempAlarmSnapshotOn		:1;
+			boolean oilTempWarningOn			:1;
+			boolean oilTempAlarmOn				:1;
+			boolean oilTempWarningBuzzerOn		:1;
+			boolean oilTempAlarmBuzzerOn		:1;
+			boolean oilTempWarningSnapshotOn	:1;
+			boolean oilTempAlarmSnapshotOn		:1;
 			/* 2 more free bits here */
 		};
 	};
@@ -345,12 +349,12 @@ typedef struct
 		uint8_t allSettings;
 		struct
 		{
-			uint8_t lowVoltageAlarmOn				:1;
-			uint8_t highVoltageAlarmOn				:1;
-			uint8_t lowVoltageAlarmBuzzerOn			:1;
-			uint8_t highVoltageAlarmBuzzerOn		:1;
-			uint8_t lowVoltageAlarmSnapshotOn		:1;
-			uint8_t highVoltageAlarmSnapshotOn		:1;
+			boolean lowVoltageAlarmOn				:1;
+			boolean highVoltageAlarmOn				:1;
+			boolean lowVoltageAlarmBuzzerOn			:1;
+			boolean highVoltageAlarmBuzzerOn		:1;
+			boolean lowVoltageAlarmSnapshotOn		:1;
+			boolean highVoltageAlarmSnapshotOn		:1;
 			/* 2 more free bits here */
 		};
 	};
@@ -367,8 +371,8 @@ typedef struct
 		uint8_t allSettings;
 		struct
 		{
-			uint8_t lowFuelLevelWarningOn			:1;
-			uint8_t lowFuelLevelWarningBuzzerOn		:1;
+			boolean lowFuelLevelWarningOn			:1;
+			boolean lowFuelLevelWarningBuzzerOn		:1;
 		};
 	};
 }fuelSettings_struct;
@@ -385,11 +389,11 @@ typedef struct
 		uint8_t allSettings;
 		struct
 		{
-			uint8_t oilPressureAnalogMeasurement	:1;
-			uint8_t oilHighPressureAlarmOn			:1;
-			uint8_t oilLowPressureAlarmOn			:1;
-			uint8_t oilPressureAlarmBuzzerOn		:1;
-			uint8_t oilPressureAlarmSnapshotOn		:1;
+			boolean oilPressureAnalogMeasurement	:1;
+			boolean oilHighPressureAlarmOn			:1;
+			boolean oilLowPressureAlarmOn			:1;
+			boolean oilPressureAlarmBuzzerOn		:1;
+			boolean oilPressureAlarmSnapshotOn		:1;
 			/* 3 more free bits here */
 		};
 	};

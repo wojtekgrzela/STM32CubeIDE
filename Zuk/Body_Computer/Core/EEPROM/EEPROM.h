@@ -14,6 +14,12 @@
 #include "../ErrorCodes/ErrorCodes.h"
 
 
+#define DATA_READY		(TRUE)
+#define DATA_NOT_READY	(FALSE)
+#define DATA_COPIED		(TRUE)
+#define DATA_NOT_COPIED	(FALSE)
+
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 typedef struct
 {
@@ -31,7 +37,10 @@ typedef struct
 	uint16_t memAddressSize;
 	uint16_t memAddress;
 	uint16_t size;
-	uint8_t* isReady;
+	boolean isReady;
+	boolean dataIsCopied;
+	boolean* isReadyPtr;
+	boolean* dataIsCopiedPtr;
 	uint8_t* data;
 	EEPROM_parameters_struct *EEPROMParameters;
 }EEPROM_data_struct;
@@ -88,12 +97,16 @@ typedef struct
 }ErrorDataToEEPROM_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-extern const uint8_t EEPROM_dataReady;
-extern const uint8_t EEPROM_dataNotReady;
+#define CREATE_EEPROM_data_struct(X) EEPROM_data_struct X = {0};\
+									X.isReadyPtr = &(X.isReady);\
+									X.dataIsCopiedPtr = &(X.dataIsCopied);\
+									*(X.isReadyPtr) = DATA_NOT_READY;\
+									*(X.dataIsCopiedPtr) = DATA_NOT_COPIED;
 
-#define DATA_READY		((uint8_t*)(&EEPROM_dataReady))
-#define DATA_NOT_READY	((uint8_t*)(&EEPROM_dataNotReady))
-
+#define INITIALIZE_EEPROM_data_struct(X) X.isReadyPtr = &(X.isReady);\
+									X.dataIsCopiedPtr = &(X.dataIsCopied);\
+									*(X.isReadyPtr) = DATA_NOT_READY;\
+									*(X.dataIsCopiedPtr) = DATA_NOT_COPIED;
 
 Error_Code LockEEPROM(EEPROM_parameters_struct *const EEPROM);
 Error_Code UnlockEEPROM(EEPROM_parameters_struct *const EEPROM);

@@ -10,6 +10,7 @@
 
 
 extern volatile ENCButton_struct ENC_button;
+extern int8_t EncoderCounterDiff;
 
 /**
  * A function that copies the given string (source) to the buffer (destiny)
@@ -381,6 +382,7 @@ Error_Code scroll_list(const LCDBoard* const boardList, uint8_t boardListSize, c
 Error_Code shortButtonPressDetected_LCD(const LCDBoard* const currentBoard, const LCDBoard* const boardList, Enum_Layer* layerSwitchVariable, int32_t* submenuIterator)
 {
 	Error_Code error = NO_ERROR;
+	EncoderCounterDiff = 0;
 
 	switch(currentBoard->actionForEnter)
 	{
@@ -448,6 +450,7 @@ Error_Code longButtonPressDetected_LCD(const LCDBoard* const currentBoard, Enum_
 
 	ENC_button.longPressDetected = FALSE;
 	ENC_button.shortPressDetected = FALSE;
+	EncoderCounterDiff = 0;
 	*layerSwitchVariable = currentBoard->layerPrevious;
 	*submenuIterator = -1;
 

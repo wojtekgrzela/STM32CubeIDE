@@ -89,16 +89,16 @@
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Symbols */
-#define TRUE									((uint8_t)(1))
-#define True									((uint8_t)(1))
-#define FALSE									((uint8_t)(0))
-#define False									((uint8_t)(0))
-#define NO										((uint8_t)(0))
-#define No										((uint8_t)(0))
-#define NOK										((uint8_t)(0))
-#define YES										((uint8_t)(1))
-#define Yes										((uint8_t)(1))
-#define OK										((uint8_t)(1))
+#define TRUE									((boolean)(1))
+#define True									((boolean)(1))
+#define FALSE									((boolean)(0))
+#define False									((boolean)(0))
+#define NO										((boolean)(0))
+#define No										((boolean)(0))
+#define NOK										((boolean)(0))
+#define YES										((boolean)(1))
+#define Yes										((boolean)(1))
+#define OK										((boolean)(1))
 #define DEGREE_SYMBOL_LCD						((uint8_t)(0b11011111))
 #define SPACE_IN_ASCII							((uint8_t)(0x20))
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -193,6 +193,7 @@
 #define NO_OF_COLUMNS_IN_LCD		((uint8_t)(20u))
 
 #define MAX_WAIT_TIME_FOR_EEPROM	((uint32_t)(500U))
+#define ERROR_DONE_DISPLAY_TIME		((TickType_t)(2000U))
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -202,15 +203,16 @@
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Sizes of variables and types in bytes */
-#define UINT8_T_SIZE			((uint8_t)(1))
-#define INT8_T_SIZE				((uint8_t)(1))
-#define UINT16_T_SIZE			((uint8_t)(2))
-#define INT16_T_SIZE			((uint8_t)(2))
-#define UINT32_T_SIZE			((uint8_t)(4))
-#define INT32_T_SIZE			((uint8_t)(4))
-#define UINT64_T_SIZE			((uint8_t)(8))
-#define INT64_T_SIZE			((uint8_t)(8))
-#define FLOAT_SIZE				((uint8_t)(4))
+#define UINT8_T_SIZE			((uint8_t)(1u))
+#define INT8_T_SIZE				((uint8_t)(1u))
+#define UINT16_T_SIZE			((uint8_t)(2u))
+#define INT16_T_SIZE			((uint8_t)(2u))
+#define UINT32_T_SIZE			((uint8_t)(4u))
+#define INT32_T_SIZE			((uint8_t)(4u))
+#define UINT64_T_SIZE			((uint8_t)(8u))
+#define INT64_T_SIZE			((uint8_t)(8u))
+#define FLOAT_SIZE				((uint8_t)(4u))
+#define BOOLEAN_SIZE			((uint8_t)(1u))
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 

@@ -20,12 +20,18 @@
 Error_Code EraseWholeEEPROM(EEPROM_parameters_struct * EEPROMParameters)
 {
 	Error_Code error = NO_ERROR;
-	uint8_t data[64] = {0};
-	EEPROM_data_struct EEPROMData = {.EEPROMParameters = EEPROMParameters, .data = data, .memAddress = 0, .memAddressSize = 2, .size = 64};
+	uint8_t data[EEPROM_PAGE_SIZE] = {0u};
 
-	for(uint16_t i=0; i<512; ++i)
+	CREATE_EEPROM_data_struct(EEPROMData);
+	EEPROMData.EEPROMParameters = EEPROMParameters;
+	EEPROMData.data = data;
+	EEPROMData.memAddress = 0u;
+	EEPROMData.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE;
+	EEPROMData.size = EEPROM_PAGE_SIZE;
+
+	for(uint16_t i=0u; i<512u; ++i)
 	{
-		EEPROMData.memAddress += 64*i;
+		EEPROMData.memAddress += EEPROM_PAGE_SIZE*i;
 		error = WriteEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
 		if(NO_ERROR != error)
 		{
@@ -49,15 +55,15 @@ Error_Code EraseWholeEEPROM(EEPROM_parameters_struct * EEPROMParameters)
 Error_Code InitVariablesFromEEPROMCar(void)
 {
 	Error_Code error = NO_ERROR;
-	EEPROM_data_struct EEPROMData;
+	CREATE_EEPROM_data_struct(EEPROMData);
 	EEPROMData.EEPROMParameters = &EEPROM_car;
-	EEPROMData.memAddressSize = 2u;
+	EEPROMData.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE;
 
 	data32bit_union data_union = {0};
 
-	uint32_t tempTotalMileage = 0;
-	uint32_t tempTripMileage = 0;
-	uint8_t tempIndex = 0;
+	uint32_t tempTotalMileage = 0U;
+	uint32_t tempTripMileage = 0U;
+	uint8_t tempIndex = 0u;
 
 	/** Diagnostic Snapshot EEPROM Index **/
 	if(NO_ERROR == error)
@@ -271,9 +277,9 @@ Error_Code InitVariablesFromEEPROMCar(void)
 Error_Code InitVariablesFromEEPROMBoard(void)
 {
 	Error_Code error = NO_ERROR;
-	EEPROM_data_struct EEPROMData;
+	CREATE_EEPROM_data_struct(EEPROMData);
 	EEPROMData.EEPROMParameters = &EEPROM_board;
-	EEPROMData.memAddressSize = 2u;
+	EEPROMData.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE;
 
 	data32bit_union data_union = {0};
 
