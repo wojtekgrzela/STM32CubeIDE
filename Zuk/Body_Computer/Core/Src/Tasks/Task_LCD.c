@@ -1202,9 +1202,9 @@ void StartTaskLCD(void const * argument)
 				break;
 			}
 
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
 			/* Car settings list : */
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
 
 			case /* CarSettings_Layer -> */ClearDiagnosticSnapshots:
 			{
@@ -1272,9 +1272,9 @@ void StartTaskLCD(void const * argument)
 				break;
 			}
 
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-			/* Water settings list : */
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+			/* CarSettings_Layer -> WaterSettings_Layer: */
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
 
 			case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterHighTempWarningThreshold:
 			{
@@ -1474,10 +1474,10 @@ void StartTaskLCD(void const * argument)
 				}
 				break;
 			}
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
 
 
-
-			case OilTempSettings_Layer:
+			case /* CarSettings_Layer -> */OilTempSettings_Layer:
 			{
 				error = copy_str_to_buffer("7.4.", (char*)LCD_buffer[Row1], 0, 4);
 				error = copy_str_to_buffer(LCD_CarSettingsList[3].name, (char*)LCD_buffer[Row1], 4, LCD_CarSettingsList[3].nameActualSize);
@@ -1490,7 +1490,159 @@ void StartTaskLCD(void const * argument)
 				}
 				break;
 			}
-			case OilPressureSettings_Layer:
+
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+			/* CarSettings_Layer -> OilTempSettings_Layer: */
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+
+			case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilHighTempWarningThreshold:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_OilTempSettingsList[0]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_OilTempSettingsList[0]), LCD_Car_OilTempSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_OilTempSettingsList[0], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilHighTempAlarmThreshold:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_OilTempSettingsList[1]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_OilTempSettingsList[1]), LCD_Car_OilTempSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_OilTempSettingsList[1], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilTempWarningOn:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_OilTempSettingsList[2]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_OilTempSettingsList[2]), LCD_Car_OilTempSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_OilTempSettingsList[2], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilTempAlarmOn:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_OilTempSettingsList[3]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_OilTempSettingsList[3]), LCD_Car_OilTempSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_OilTempSettingsList[3], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilTempWarningBuzzerOn:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_OilTempSettingsList[4]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_OilTempSettingsList[4]), LCD_Car_OilTempSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_OilTempSettingsList[4], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilTempAlarmBuzzerOn:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_OilTempSettingsList[5]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_OilTempSettingsList[5]), LCD_Car_OilTempSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_OilTempSettingsList[5], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilTempWarningSnapshotOn:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_OilTempSettingsList[6]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_OilTempSettingsList[6]), LCD_Car_OilTempSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_OilTempSettingsList[6], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilTempAlarmSpashotOn:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_OilTempSettingsList[7]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_OilTempSettingsList[7]), LCD_Car_OilTempSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_OilTempSettingsList[7], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+
+
+			case /* CarSettings_Layer -> */OilPressureSettings_Layer:
 			{
 				error = copy_str_to_buffer("7.5.", (char*)LCD_buffer[Row1], 0, 4);
 				error = copy_str_to_buffer(LCD_CarSettingsList[4].name, (char*)LCD_buffer[Row1], 4, LCD_CarSettingsList[4].nameActualSize);
@@ -1503,7 +1655,141 @@ void StartTaskLCD(void const * argument)
 				}
 				break;
 			}
-			case FuelSettings_Layer:
+
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+			/* CarSettings_Layer -> OilPressureSettings_Layer: */
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+
+			case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilHighPressureAlarmThreshold:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_OilPressureSettingsList[0]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_OilPressureSettingsList[0]), LCD_Car_OilPressureSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_OilPressureSettingsList[0], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilLowPressureAlarmThreshold:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_OilPressureSettingsList[1]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_OilPressureSettingsList[1]), LCD_Car_OilPressureSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_OilPressureSettingsList[1], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilPressureAnalogMeasurement:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_OilPressureSettingsList[2]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_OilPressureSettingsList[2]), LCD_Car_OilPressureSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_OilPressureSettingsList[2], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilHighPressureAlarmOn:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_OilPressureSettingsList[3]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_OilPressureSettingsList[3]), LCD_Car_OilPressureSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_OilPressureSettingsList[3], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilLowPressureAlarmOn:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_OilPressureSettingsList[4]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_OilPressureSettingsList[4]), LCD_Car_OilPressureSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_OilPressureSettingsList[4], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilPressureAlarmBuzzerOn:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_OilPressureSettingsList[5]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_OilPressureSettingsList[5]), LCD_Car_OilPressureSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_OilPressureSettingsList[5], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilPressureAlarmSnapshotOn:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_OilPressureSettingsList[6]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_OilPressureSettingsList[6]), LCD_Car_OilPressureSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_OilPressureSettingsList[6], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+
+
+			case /* CarSettings_Layer -> */FuelSettings_Layer:
 			{
 				error = copy_str_to_buffer("7.6.", (char*)LCD_buffer[Row1], 0, 4);
 				error = copy_str_to_buffer(LCD_CarSettingsList[5].name, (char*)LCD_buffer[Row1], 4, LCD_CarSettingsList[5].nameActualSize);
@@ -1516,7 +1802,69 @@ void StartTaskLCD(void const * argument)
 				}
 				break;
 			}
-			case MainBatterySettings_Layer:
+
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+			/* CarSettings_Layer -> FuelSettings_Layer: */
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+
+			case /* CarSettings_Layer -> FuelSettings_Layer -> */FuelLowLevelWarningThreshold:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_FuelSettingsList[0]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_FuelSettingsList[0]), LCD_Car_FuelSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_FuelSettingsList[0], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> FuelSettings_Layer -> */FuelLowLevelWarningOn:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_FuelSettingsList[1]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_FuelSettingsList[1]), LCD_Car_FuelSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_FuelSettingsList[1], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> FuelSettings_Layer -> */FuelLowLevelWarningBuzzerOn:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_FuelSettingsList[2]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_FuelSettingsList[2]), LCD_Car_FuelSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_FuelSettingsList[2], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+
+
+			case /* CarSettings_Layer -> */MainBatterySettings_Layer:
 			{
 				error = copy_str_to_buffer("7.7.", (char*)LCD_buffer[Row1], 0, 4);
 				error = copy_str_to_buffer(LCD_CarSettingsList[6].name, (char*)LCD_buffer[Row1], 4, LCD_CarSettingsList[6].nameActualSize);
@@ -1529,7 +1877,141 @@ void StartTaskLCD(void const * argument)
 				}
 				break;
 			}
-			case AuxBatterySettings_Layer:
+
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+			/* CarSettings_Layer -> MainBatterySettings_Layer: */
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+
+			case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryLowVoltageAlarmThreshold:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_MainBatterySettingsList[0]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_MainBatterySettingsList[0]), LCD_Car_MainBatterySettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_MainBatterySettingsList[0], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryHighVoltageAlarmThreshold:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_MainBatterySettingsList[1]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_MainBatterySettingsList[1]), LCD_Car_MainBatterySettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_MainBatterySettingsList[1], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryLowVoltageAlarmOn:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_MainBatterySettingsList[2]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_MainBatterySettingsList[2]), LCD_Car_MainBatterySettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_MainBatterySettingsList[2], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryHighVoltageAlarmOn:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_MainBatterySettingsList[3]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_MainBatterySettingsList[3]), LCD_Car_MainBatterySettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_MainBatterySettingsList[3], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryAlarmBuzzerOn:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_MainBatterySettingsList[4]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_MainBatterySettingsList[4]), LCD_Car_MainBatterySettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_MainBatterySettingsList[4], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryLowVoltageSnapshotOn:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_MainBatterySettingsList[5]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_MainBatterySettingsList[5]), LCD_Car_MainBatterySettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_MainBatterySettingsList[5], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryHighVoltageSnapshotOn:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_MainBatterySettingsList[6]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_MainBatterySettingsList[6]), LCD_Car_MainBatterySettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_MainBatterySettingsList[6], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+
+
+			case /* CarSettings_Layer -> */AuxBatterySettings_Layer:
 			{
 				error = copy_str_to_buffer("7.8.", (char*)LCD_buffer[Row1], 0, 4);
 				error = copy_str_to_buffer(LCD_CarSettingsList[7].name, (char*)LCD_buffer[Row1], 4, LCD_CarSettingsList[7].nameActualSize);
@@ -1543,7 +2025,137 @@ void StartTaskLCD(void const * argument)
 				break;
 			}
 
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+			/* CarSettings_Layer -> AuxBatterySettings_Layer: */
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+
+			case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryLowVoltageAlarmThreshold:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_AuxBatterySettingsList[0]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_AuxBatterySettingsList[0]), LCD_Car_AuxBatterySettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_AuxBatterySettingsList[0], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryHighVoltageAlarmThreshold:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_AuxBatterySettingsList[1]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_AuxBatterySettingsList[1]), LCD_Car_AuxBatterySettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_AuxBatterySettingsList[1], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryLowVoltageAlarmOn:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_AuxBatterySettingsList[2]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_AuxBatterySettingsList[2]), LCD_Car_AuxBatterySettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_AuxBatterySettingsList[2], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryHighVoltageAlarmOn:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_AuxBatterySettingsList[3]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_AuxBatterySettingsList[3]), LCD_Car_AuxBatterySettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_AuxBatterySettingsList[3], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryAlarmBuzzerOn:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_AuxBatterySettingsList[4]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_AuxBatterySettingsList[4]), LCD_Car_AuxBatterySettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_AuxBatterySettingsList[4], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryLowVoltageSnapshotOn:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_AuxBatterySettingsList[6]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_AuxBatterySettingsList[6]), LCD_Car_AuxBatterySettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_AuxBatterySettingsList[6], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryHighVoltageSnapshotOn:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Car_AuxBatterySettingsList[7]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Car_AuxBatterySettingsList[7]), LCD_Car_AuxBatterySettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Car_AuxBatterySettingsList[7], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
 
 			case BoardSettings_Layer:
 			{
@@ -1564,11 +2176,11 @@ void StartTaskLCD(void const * argument)
 				break;
 			}
 
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
 			/* Board settings list : */
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
 
-			case ClearErrorsSnapshots:
+			case /* BoardSettings_Layer -> */ClearErrorsSnapshots:
 			{
 				char tempBuff[4u] = {' '};
 				error = copy_str_to_buffer("No. error snaps:", (char*)LCD_buffer[Row1], 0u, 16u);
@@ -1598,23 +2210,25 @@ void StartTaskLCD(void const * argument)
 				}
 				break;
 			}
-			case AdjTimePoland:
+			case /* BoardSettings_Layer -> */AdjTimePoland:
 			{
+				// TODO dorobic kontrole
 				if(ENC_button.longPressDetected)
 				{
 					error = longButtonPressDetected_LCD(&LCD_BoardSettingsList[0], &currentLayer, &submenuIterator);
 				}
 				break;
 			}
-			case AdjTimeZone:
+			case /* BoardSettings_Layer -> */AdjTimeZone:
 			{
+				// TODO dorobic kontrole
 				if(ENC_button.longPressDetected)
 				{
 					error = longButtonPressDetected_LCD(&LCD_BoardSettingsList[0], &currentLayer, &submenuIterator);
 				}
 				break;
 			}
-			case InterVoltSettings_Layer:
+			case /* BoardSettings_Layer -> */InterVoltSettings_Layer:
 			{
 				error = copy_str_to_buffer("8.4.", (char*)LCD_buffer[Row1], 0, 4);
 				error = copy_str_to_buffer(LCD_BoardSettingsList[3].name, (char*)LCD_buffer[Row1], 4, LCD_BoardSettingsList[3].nameActualSize);
@@ -1627,7 +2241,17 @@ void StartTaskLCD(void const * argument)
 				}
 				break;
 			}
-			case InterTempSettings_Layer:
+
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+			/* Board settings list : */
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+
+			//tutaj case'y do interVoltSettingsLayer
+
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+
+
+			case /* BoardSettings_Layer -> */InterTempSettings_Layer:
 			{
 				error = copy_str_to_buffer("8.5.", (char*)LCD_buffer[Row1], 0, 4);
 				error = copy_str_to_buffer(LCD_BoardSettingsList[4].name, (char*)LCD_buffer[Row1], 4, LCD_BoardSettingsList[4].nameActualSize);
@@ -1640,7 +2264,7 @@ void StartTaskLCD(void const * argument)
 				}
 				break;
 			}
-			case BuzzerSettings_Layer:
+			case /* BoardSettings_Layer -> */BuzzerSettings_Layer:
 			{
 				error = copy_str_to_buffer("8.6.", (char*)LCD_buffer[Row1], 0, 4);
 				error = copy_str_to_buffer(LCD_BoardSettingsList[5].name, (char*)LCD_buffer[Row1], 4, LCD_BoardSettingsList[5].nameActualSize);
@@ -1653,7 +2277,7 @@ void StartTaskLCD(void const * argument)
 				}
 				break;
 			}
-			case LCDSettings_Layer:
+			case /* BoardSettings_Layer -> */LCDSettings_Layer:
 			{
 				error = copy_str_to_buffer("8.7.", (char*)LCD_buffer[Row1], 0, 2);
 				error = copy_str_to_buffer(LCD_BoardSettingsList[6].name, (char*)LCD_buffer[Row1], 4, LCD_BoardSettingsList[6].nameActualSize);
