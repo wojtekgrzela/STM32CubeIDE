@@ -8,6 +8,7 @@
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Includes */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "FreeRTOS.h"
 #include "task.h"
 #include "main.h"
@@ -22,7 +23,16 @@
 
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Defines */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Extern variables */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 extern I2C_HandleTypeDef hi2c2;
 extern osMessageQId Queue_EEPROM_readHandle;
 extern osMessageQId Queue_EEPROM_writeHandle;
@@ -56,6 +66,8 @@ extern waterTempSettings_struct CAR_waterTemp;
 
 
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Local variables */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Buffer of Rows*Columns size for whole display (80 bytes for 4x20) */
 uint8_t LCD_buffer[NO_OF_ROWS_IN_LCD][NO_OF_COLUMNS_IN_LCD];
