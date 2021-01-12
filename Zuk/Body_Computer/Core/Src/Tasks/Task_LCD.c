@@ -62,6 +62,9 @@ extern LCD_message totalMileageForLCD;
 extern LCD_message tripMileageForLCD;
 
 extern waterTempSettings_struct CAR_waterTemp;
+extern oilTempSettings_struct CAR_oilTemp;
+extern oilPressureSettings_struct CAR_oilPressure;
+extern fuelSettings_struct CAR_fuel;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -2243,11 +2246,99 @@ void StartTaskLCD(void const * argument)
 			}
 
 			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-			/* Board settings list : */
+			/* BoardSettings_Layer -> InterVoltSettings_Layer: */
 			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
 
-			//tutaj case'y do interVoltSettingsLayer
+			case /* BoardSettings_Layer -> InterVoltSettings_Layer -> */Supply5VLowThreshold:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Board_InternalVoltSettingsList[0]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
 
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Board_InternalVoltSettingsList[0]), LCD_Board_InternalVoltSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Board_InternalVoltSettingsList[0], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* BoardSettings_Layer -> InterVoltSettings_Layer -> */Supply5VHighThreshold:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Board_InternalVoltSettingsList[1]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Board_InternalVoltSettingsList[1]), LCD_Board_InternalVoltSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Board_InternalVoltSettingsList[1], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* BoardSettings_Layer -> InterVoltSettings_Layer -> */Supply3V3LowThreshold:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Board_InternalVoltSettingsList[2]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Board_InternalVoltSettingsList[2]), LCD_Board_InternalVoltSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Board_InternalVoltSettingsList[2], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* BoardSettings_Layer -> InterVoltSettings_Layer -> */Supply3V3HighThreshold:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Board_InternalVoltSettingsList[3]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Board_InternalVoltSettingsList[3]), LCD_Board_InternalVoltSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Board_InternalVoltSettingsList[3], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* BoardSettings_Layer -> InterVoltSettings_Layer -> */SupplyVinLowThreshold:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Board_InternalVoltSettingsList[4]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Board_InternalVoltSettingsList[4]), LCD_Board_InternalVoltSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Board_InternalVoltSettingsList[4], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
 			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
 
 
@@ -2264,6 +2355,50 @@ void StartTaskLCD(void const * argument)
 				}
 				break;
 			}
+
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+			/* BoardSettings_Layer -> InterTempSettings_Layer: */
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+
+			case /* BoardSettings_Layer -> InterTempSettings_Layer -> */DCDC3V3HighTempThreshold:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Board_InternalTempSettingsList[0]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Board_InternalTempSettingsList[0]), LCD_Board_InternalTempSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Board_InternalTempSettingsList[0], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* BoardSettings_Layer -> InterTempSettings_Layer -> */DCDC5VHighTempThreshold:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Board_InternalTempSettingsList[1]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Board_InternalTempSettingsList[1]), LCD_Board_InternalTempSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Board_InternalTempSettingsList[1], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+
+
 			case /* BoardSettings_Layer -> */BuzzerSettings_Layer:
 			{
 				error = copy_str_to_buffer("8.6.", (char*)LCD_buffer[Row1], 0, 4);
@@ -2277,6 +2412,104 @@ void StartTaskLCD(void const * argument)
 				}
 				break;
 			}
+
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+			/* BoardSettings_Layer -> BuzzerSettings_Layer: */
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+
+			case /* BoardSettings_Layer -> BuzzerSettings_Layer -> */BuzzerMainSwitch:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Board_BuzzerSettingsList[0]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Board_BuzzerSettingsList[0]), LCD_Board_BuzzerSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Board_BuzzerSettingsList[0], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* BoardSettings_Layer -> BuzzerSettings_Layer -> */BuzzerMainAlarmsSwitch:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Board_BuzzerSettingsList[1]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Board_BuzzerSettingsList[1]), LCD_Board_BuzzerSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Board_BuzzerSettingsList[1], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* BoardSettings_Layer -> BuzzerSettings_Layer -> */BuzzerMainButtonsSwitch:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Board_BuzzerSettingsList[2]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Board_BuzzerSettingsList[2]), LCD_Board_BuzzerSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Board_BuzzerSettingsList[2], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* BoardSettings_Layer -> BuzzerSettings_Layer -> */BuzzerWhenShortPress:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Board_BuzzerSettingsList[3]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Board_BuzzerSettingsList[3]), LCD_Board_BuzzerSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Board_BuzzerSettingsList[3], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* BoardSettings_Layer -> BuzzerSettings_Layer -> */BuzzerWhenLongPress:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Board_BuzzerSettingsList[4]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Board_BuzzerSettingsList[4]), LCD_Board_BuzzerSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Board_BuzzerSettingsList[4], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+
+
 			case /* BoardSettings_Layer -> */LCDSettings_Layer:
 			{
 				error = copy_str_to_buffer("8.7.", (char*)LCD_buffer[Row1], 0, 2);
@@ -2291,8 +2524,142 @@ void StartTaskLCD(void const * argument)
 				break;
 			}
 
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+			/* BoardSettings_Layer -> LCDSettings_Layer: */
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+
+			case /* BoardSettings_Layer -> LCDSettings_Layer -> */BacklightBrightnessLevel:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Board_LCDSettingsList[0]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Board_LCDSettingsList[0]), LCD_Board_LCDSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Board_LCDSettingsList[0], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* BoardSettings_Layer -> LCDSettings_Layer -> */SecondsToTurnOffBacklight:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Board_LCDSettingsList[1]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Board_LCDSettingsList[1]), LCD_Board_LCDSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Board_LCDSettingsList[1], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* BoardSettings_Layer -> LCDSettings_Layer -> */AutoBacklightOffStartHour:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Board_LCDSettingsList[24]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Board_LCDSettingsList[2]), LCD_Board_LCDSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Board_LCDSettingsList[2], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* BoardSettings_Layer -> LCDSettings_Layer -> */AutoBacklightOffEndHour:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Board_LCDSettingsList[3]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Board_LCDSettingsList[3]), LCD_Board_LCDSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Board_LCDSettingsList[3], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* BoardSettings_Layer -> LCDSettings_Layer -> */HomeScreen:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Board_LCDSettingsList[4]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Board_LCDSettingsList[4]), LCD_Board_LCDSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Board_LCDSettingsList[4], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* BoardSettings_Layer -> LCDSettings_Layer -> */AutoHomeReturnTime:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Board_LCDSettingsList[5]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Board_LCDSettingsList[5]), LCD_Board_LCDSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Board_LCDSettingsList[5], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			case /* BoardSettings_Layer -> LCDSettings_Layer -> */AutoBacklightOff:
+			{
+				static boolean doneOnce = FALSE;
+				error = ControlValueWithEncoder(&(LCD_Board_LCDSettingsList[6]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
+
+				if(ENC_button.shortPressDetected)
+				{
+					doneOnce = FALSE;
+					error = shortButtonPressDetected_LCD(&(LCD_Board_LCDSettingsList[6]), LCD_Board_LCDSettingsList, &currentLayer, &submenuIterator);
+				}
+
+				if(ENC_button.longPressDetected)
+				{
+					doneOnce = FALSE;
+					error = longButtonPressDetected_LCD(&LCD_Board_LCDSettingsList[6], &currentLayer, &submenuIterator);
+				}
+				break;
+			}
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+
+
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
 			/* Actions layers */
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
 
 			case YesNo_Layer:
 			{
@@ -2302,7 +2669,7 @@ void StartTaskLCD(void const * argument)
 
 				switch(LCD_YesNo.layerPrevious)
 				{
-					case ClearDiagnosticSnapshots:
+					case /* CarSettings_Layer -> */ClearDiagnosticSnapshots:
 					{
 						if(ENC_button.shortPressDetected)
 						{
@@ -2338,8 +2705,8 @@ void StartTaskLCD(void const * argument)
 						}
 
 						break;
-					}//case ClearDiagnosticSnapshots:
-					case ClearTripMileage:
+					}//case /* CarSettings_Layer -> */ClearDiagnosticSnapshots:
+					case /* CarSettings_Layer -> */ClearTripMileage:
 					{
 						if(ENC_button.shortPressDetected)
 						{
@@ -2370,8 +2737,8 @@ void StartTaskLCD(void const * argument)
 						}
 
 						break;
-					}//case ClearTripMileage:
-					case ClearErrorsSnapshots:
+					}//case /* CarSettings_Layer -> */ClearTripMileage:
+					case /* BoardSettings_Layer -> */ClearErrorsSnapshots:
 					{
 						if(ENC_button.shortPressDetected)
 						{
@@ -2407,7 +2774,7 @@ void StartTaskLCD(void const * argument)
 						}
 
 						break;
-					}//case ClearErrorsSnapshots:
+					}//case /* BoardSettings_Layer -> */ClearErrorsSnapshots:
 					default:
 					{
 						error = LCD__LAYER_CHOICE_FAILURE;
@@ -2419,7 +2786,8 @@ void StartTaskLCD(void const * argument)
 					error = longButtonPressDetected_LCD(&LCD_BoardSettingsList[0], &currentLayer, &submenuIterator);
 				}
 				break;
-			}
+			}//case YesNo_Layer:
+			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
 			case Alarm_Layer:
 			case Ctrl_Layer:
 			default:
@@ -2561,7 +2929,7 @@ static Error_Code ControlValueWithEncoder(const LCDBoard* const currentBoard, bo
 				case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterHighTempAlarmThreshold:
 				{
 					error = copy_str_to_buffer("Water High Temp.", (char*)LCD_buffer[Row1], 2u, 16u);
-					error = copy_str_to_buffer("Alarm Threshold", (char*)LCD_buffer[Row2], 1u, 15u);
+					error = copy_str_to_buffer("Alarm Threshold", (char*)LCD_buffer[Row2], 2u, 15u);
 
 					if(FALSE == *doneOnce)
 					{
@@ -2588,7 +2956,7 @@ static Error_Code ControlValueWithEncoder(const LCDBoard* const currentBoard, bo
 				case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterHighTempFanOnThreshold:
 				{
 					error = copy_str_to_buffer("Water High Temp.", (char*)LCD_buffer[Row1], 2u, 16u);
-					error = copy_str_to_buffer("Fan On Threshold", (char*)LCD_buffer[Row2], 1u, 16u);
+					error = copy_str_to_buffer("Fan On Threshold", (char*)LCD_buffer[Row2], 2u, 16u);
 
 					if(FALSE == *doneOnce)
 					{
@@ -2615,7 +2983,7 @@ static Error_Code ControlValueWithEncoder(const LCDBoard* const currentBoard, bo
 				case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterHighTempFanOffThreshold:
 				{
 					error = copy_str_to_buffer("Water High Temp.", (char*)LCD_buffer[Row1], 2u, 16u);
-					error = copy_str_to_buffer("Fan On Threshold", (char*)LCD_buffer[Row2], 1u, 16u);
+					error = copy_str_to_buffer("Fan Off Threshold", (char*)LCD_buffer[Row2], 1u, 17u);
 
 					if(FALSE == *doneOnce)
 					{
@@ -2672,7 +3040,7 @@ static Error_Code ControlValueWithEncoder(const LCDBoard* const currentBoard, bo
 				case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterTempAlarmOn:
 				{
 					error = copy_str_to_buffer("Water High Temp.", (char*)LCD_buffer[Row1], 2u, 16u);
-					error = copy_str_to_buffer("Alarm On/Off", (char*)LCD_buffer[Row2], 5u, 12u);
+					error = copy_str_to_buffer("Alarm On/Off", (char*)LCD_buffer[Row2], 4u, 12u);
 
 					if(FALSE == *doneOnce)
 					{
@@ -2702,7 +3070,7 @@ static Error_Code ControlValueWithEncoder(const LCDBoard* const currentBoard, bo
 				case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterFanControlOn:
 				{
 					error = copy_str_to_buffer("Water High Temp.", (char*)LCD_buffer[Row1], 2u, 16u);
-					error = copy_str_to_buffer("Alarm On/Off", (char*)LCD_buffer[Row2], 5u, 12u);
+					error = copy_str_to_buffer("Fan Control On/Off", (char*)LCD_buffer[Row2], 1u, 18u);
 
 					if(FALSE == *doneOnce)
 					{
@@ -2732,7 +3100,7 @@ static Error_Code ControlValueWithEncoder(const LCDBoard* const currentBoard, bo
 				case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterTempWarningBuzzerOn:
 				{
 					error = copy_str_to_buffer("Water High Temp.", (char*)LCD_buffer[Row1], 2u, 16u);
-					error = copy_str_to_buffer("Alarm On/Off", (char*)LCD_buffer[Row2], 5u, 12u);
+					error = copy_str_to_buffer("Warning Buzzer", (char*)LCD_buffer[Row2], 3u, 14u);
 
 					if(FALSE == *doneOnce)
 					{
@@ -2762,7 +3130,7 @@ static Error_Code ControlValueWithEncoder(const LCDBoard* const currentBoard, bo
 				case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterTempAlarmBuzzerOn:
 				{
 					error = copy_str_to_buffer("Water High Temp.", (char*)LCD_buffer[Row1], 2u, 16u);
-					error = copy_str_to_buffer("Alarm On/Off", (char*)LCD_buffer[Row2], 5u, 12u);
+					error = copy_str_to_buffer("Alarm Buzzer", (char*)LCD_buffer[Row2], 4u, 12u);
 
 					if(FALSE == *doneOnce)
 					{
@@ -2792,7 +3160,7 @@ static Error_Code ControlValueWithEncoder(const LCDBoard* const currentBoard, bo
 				case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterTempWarningSnapshotOn:
 				{
 					error = copy_str_to_buffer("Water High Temp.", (char*)LCD_buffer[Row1], 2u, 16u);
-					error = copy_str_to_buffer("Alarm On/Off", (char*)LCD_buffer[Row2], 5u, 12u);
+					error = copy_str_to_buffer("Warning Snapshot", (char*)LCD_buffer[Row2], 2u, 16u);
 
 					if(FALSE == *doneOnce)
 					{
@@ -2822,7 +3190,7 @@ static Error_Code ControlValueWithEncoder(const LCDBoard* const currentBoard, bo
 				case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterTempAlarmSnapshotOn:
 				{
 					error = copy_str_to_buffer("Water High Temp.", (char*)LCD_buffer[Row1], 2u, 16u);
-					error = copy_str_to_buffer("Alarm On/Off", (char*)LCD_buffer[Row2], 5u, 12u);
+					error = copy_str_to_buffer("Alarm Snapshot", (char*)LCD_buffer[Row2], 3u, 14u);
 
 					if(FALSE == *doneOnce)
 					{
@@ -2857,6 +3225,591 @@ static Error_Code ControlValueWithEncoder(const LCDBoard* const currentBoard, bo
 			}//switch(currentBoard->layer)
 			break;
 		}//case WaterSettings_Layer:
+		/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+
+		case OilTempSettings_Layer:
+		{
+			static carTemperature_type tempSetting = 0;
+			static boolean tempState = 0;
+			EEPROMData.EEPROMParameters = &EEPROM_car;
+			EEPROMData.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE;
+
+			switch(currentBoard->layer)
+			{
+				case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilHighTempWarningThreshold:
+				{
+					error = copy_str_to_buffer("Oil High Temperature", (char*)LCD_buffer[Row1], 0u, 20u);
+					error = copy_str_to_buffer("Warning Threshold", (char*)LCD_buffer[Row2], 1u, 17u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempSetting = CAR_oilTemp.oilHighTempWarningThreshold;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					tempSetting += EncoderCounterDiff;	//Changing the value with encoder
+					snprintf(tempSettingBuffer, 7u, "%d %cC", (uint8_t)tempSetting, DEGREE_SYMBOL_LCD);
+					error = copy_str_to_buffer(tempSettingBuffer, (char*)LCD_buffer[Row3], 7u, strlen(tempSettingBuffer));
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_oilTemp.oilHighTempWarningThreshold = tempSetting;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = OIL_HIGH_TEMP_WARNING_THRESHOLD_ADDRESS;
+						EEPROMData.data = &(CAR_oilTemp.oilHighTempWarningThreshold);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilHighTempAlarmThreshold:
+				{
+					error = copy_str_to_buffer("Oil High Temperature", (char*)LCD_buffer[Row1], 0u, 20u);
+					error = copy_str_to_buffer("Alarm Threshold", (char*)LCD_buffer[Row2], 2u, 15u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempSetting = CAR_oilTemp.oilHighTempAlarmThreshold;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					tempSetting += EncoderCounterDiff;	//Changing the value with encoder
+					snprintf(tempSettingBuffer, 7u, "%d %cC", (uint8_t)tempSetting, DEGREE_SYMBOL_LCD);
+					error = copy_str_to_buffer(tempSettingBuffer, (char*)LCD_buffer[Row3], 7u, strlen(tempSettingBuffer));
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_oilTemp.oilHighTempAlarmThreshold = tempSetting;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = OIL_HIGH_TEMP_ALARM_THRESHOLD_ADDRESS;
+						EEPROMData.data = &(CAR_oilTemp.oilHighTempAlarmThreshold);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilTempWarningOn:
+				{
+					error = copy_str_to_buffer("Oil High Temperature", (char*)LCD_buffer[Row1], 0u, 20u);
+					error = copy_str_to_buffer("Warning On/Off", (char*)LCD_buffer[Row2], 3u, 14u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempState = CAR_oilTemp.oilTempWarningOn;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					if(0 != EncoderCounterDiff)
+					{
+						tempState ^= 0b1;	//Toggling the bit with encoder
+					}
+
+					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_oilTemp.oilTempWarningOn = tempState;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = OIL_TEMP_ALL_SETTINGS_ADDRESS;
+						EEPROMData.data = &(CAR_oilTemp.allSettings);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilTempAlarmOn:
+				{
+					error = copy_str_to_buffer("Oil High Temperature", (char*)LCD_buffer[Row1], 0u, 20u);
+					error = copy_str_to_buffer("Alarm On/Off", (char*)LCD_buffer[Row2], 4u, 12u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempState = CAR_oilTemp.oilTempAlarmOn;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					if(0 != EncoderCounterDiff)
+					{
+						tempState ^= 0b1;	//Toggling the bit with encoder
+					}
+
+					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_oilTemp.oilTempAlarmOn = tempState;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = OIL_TEMP_ALL_SETTINGS_ADDRESS;
+						EEPROMData.data = &(CAR_oilTemp.allSettings);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilTempWarningBuzzerOn:
+				{
+					error = copy_str_to_buffer("Oil High Temperature", (char*)LCD_buffer[Row1], 0u, 20u);
+					error = copy_str_to_buffer("Warning Buzzer", (char*)LCD_buffer[Row2], 3u, 14u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempState = CAR_oilTemp.oilTempWarningBuzzerOn;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					if(0 != EncoderCounterDiff)
+					{
+						tempState ^= 0b1;	//Toggling the bit with encoder
+					}
+
+					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_oilTemp.oilTempWarningBuzzerOn = tempState;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = OIL_TEMP_ALL_SETTINGS_ADDRESS;
+						EEPROMData.data = &(CAR_oilTemp.allSettings);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilTempAlarmBuzzerOn:
+				{
+					error = copy_str_to_buffer("Oil High Temperature", (char*)LCD_buffer[Row1], 0u, 20u);
+					error = copy_str_to_buffer("Alarm Buzzer", (char*)LCD_buffer[Row2], 4u, 12u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempState = CAR_oilTemp.oilTempAlarmBuzzerOn;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					if(0 != EncoderCounterDiff)
+					{
+						tempState ^= 0b1;	//Toggling the bit with encoder
+					}
+
+					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_oilTemp.oilTempAlarmBuzzerOn = tempState;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = OIL_TEMP_ALL_SETTINGS_ADDRESS;
+						EEPROMData.data = &(CAR_oilTemp.allSettings);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilTempWarningSnapshotOn:
+				{
+					error = copy_str_to_buffer("Oil High Temperature", (char*)LCD_buffer[Row1], 0u, 20u);
+					error = copy_str_to_buffer("Warning Snapshot", (char*)LCD_buffer[Row2], 2u, 16u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempState = CAR_oilTemp.oilTempWarningSnapshotOn;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					if(0 != EncoderCounterDiff)
+					{
+						tempState ^= 0b1;	//Toggling the bit with encoder
+					}
+
+					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_oilTemp.oilTempWarningSnapshotOn = tempState;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = OIL_TEMP_ALL_SETTINGS_ADDRESS;
+						EEPROMData.data = &(CAR_oilTemp.allSettings);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilTempAlarmSpashotOn:
+				{
+					error = copy_str_to_buffer("Oil High Temperature", (char*)LCD_buffer[Row1], 0u, 20u);
+					error = copy_str_to_buffer("Alarm Snapshot", (char*)LCD_buffer[Row2], 3u, 14u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempState = CAR_oilTemp.oilTempAlarmSnapshotOn;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					if(0 != EncoderCounterDiff)
+					{
+						tempState ^= 0b1;	//Toggling the bit with encoder
+					}
+
+					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_oilTemp.oilTempAlarmSnapshotOn = tempState;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = OIL_TEMP_ALL_SETTINGS_ADDRESS;
+						EEPROMData.data = &(CAR_oilTemp.allSettings);
+					}
+
+					break;
+				}
+				default:
+				{
+					error = LCD__LAYER_CHOICE_FAILURE;
+					break;
+				}
+			}//switch(currentBoard->layer)
+			break;
+		}//case OilTempSettings_Layer:
+		/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+
+		case OilPressureSettings_Layer:
+		{
+			static carOilPressure_type tempSetting = 0;
+			static boolean tempState = 0;
+			EEPROMData.EEPROMParameters = &EEPROM_car;
+			EEPROMData.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE;
+
+			switch(currentBoard->layer)
+			{
+				case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilHighPressureAlarmThreshold:
+				{
+					error = copy_str_to_buffer("Oil High Pressure", (char*)LCD_buffer[Row1], 1u, 17u);
+					error = copy_str_to_buffer("Alarm Threshold", (char*)LCD_buffer[Row2], 2u, 15u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempSetting = CAR_oilPressure.oilHighPressureAlarmThreshold;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					tempSetting += EncoderCounterDiff;	//Changing the value with encoder
+					snprintf(tempSettingBuffer, 8u, "%d psi", (uint8_t)tempSetting);
+					error = copy_str_to_buffer(tempSettingBuffer, (char*)LCD_buffer[Row3], 7u, strlen(tempSettingBuffer));
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_oilPressure.oilHighPressureAlarmThreshold = tempSetting;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = OIL_HIGH_PRESSURE_ALARM_THRESHOLD_ADDRESS;
+						EEPROMData.data = &(CAR_oilPressure.oilHighPressureAlarmThreshold);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilLowPressureAlarmThreshold:
+				{
+					error = copy_str_to_buffer("Oil Low Pressure", (char*)LCD_buffer[Row1], 2u, 16u);
+					error = copy_str_to_buffer("Alarm Threshold", (char*)LCD_buffer[Row2], 2u, 15u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempSetting = CAR_oilPressure.oilLowPressureAlarmThreshold;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					tempSetting += EncoderCounterDiff;	//Changing the value with encoder
+					snprintf(tempSettingBuffer, 8u, "%d psi", (uint8_t)tempSetting);
+					error = copy_str_to_buffer(tempSettingBuffer, (char*)LCD_buffer[Row3], 7u, strlen(tempSettingBuffer));
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_oilPressure.oilLowPressureAlarmThreshold = tempSetting;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = OIL_LOW_PRESSURE_ALARM_THRESHOLD_ADDRESS;
+						EEPROMData.data = &(CAR_oilPressure.oilLowPressureAlarmThreshold);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilPressureAnalogMeasurement:
+				{
+					error = copy_str_to_buffer("Oil Pressure", (char*)LCD_buffer[Row1], 4u, 12u);
+					error = copy_str_to_buffer("Analog Measurement", (char*)LCD_buffer[Row2], 1u, 18u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempState = CAR_oilPressure.oilPressureAnalogMeasurement;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					if(0 != EncoderCounterDiff)
+					{
+						tempState ^= 0b1;	//Toggling the bit with encoder
+					}
+
+					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_oilPressure.oilPressureAnalogMeasurement = tempState;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = OIL_PRESSURE_ALL_SETTINGS_ADDRESS;
+						EEPROMData.data = &(CAR_oilPressure.allSettings);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilHighPressureAlarmOn:
+				{
+					error = copy_str_to_buffer("Oil High Pressure", (char*)LCD_buffer[Row1], 1u, 17u);
+					error = copy_str_to_buffer("Alarm On/Off", (char*)LCD_buffer[Row2], 4u, 12u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempState = CAR_oilPressure.oilHighPressureAlarmOn;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					if(0 != EncoderCounterDiff)
+					{
+						tempState ^= 0b1;	//Toggling the bit with encoder
+					}
+
+					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_oilPressure.oilHighPressureAlarmOn = tempState;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = OIL_PRESSURE_ALL_SETTINGS_ADDRESS;
+						EEPROMData.data = &(CAR_oilPressure.allSettings);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilLowPressureAlarmOn:
+				{
+					error = copy_str_to_buffer("Oil Low Pressure", (char*)LCD_buffer[Row1], 2u, 16u);
+					error = copy_str_to_buffer("Alarm On/Off", (char*)LCD_buffer[Row2], 4u, 12u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempState = CAR_oilPressure.oilLowPressureAlarmOn;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					if(0 != EncoderCounterDiff)
+					{
+						tempState ^= 0b1;	//Toggling the bit with encoder
+					}
+
+					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_oilPressure.oilLowPressureAlarmOn = tempState;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = OIL_PRESSURE_ALL_SETTINGS_ADDRESS;
+						EEPROMData.data = &(CAR_oilPressure.allSettings);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilPressureAlarmBuzzerOn:
+				{
+					error = copy_str_to_buffer("Oil Pressure", (char*)LCD_buffer[Row1], 4u, 12u);
+					error = copy_str_to_buffer("Alarm Buzzer", (char*)LCD_buffer[Row2], 4u, 12u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempState = CAR_oilPressure.oilPressureAlarmBuzzerOn;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					if(0 != EncoderCounterDiff)
+					{
+						tempState ^= 0b1;	//Toggling the bit with encoder
+					}
+
+					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_oilPressure.oilPressureAlarmBuzzerOn = tempState;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = OIL_PRESSURE_ALL_SETTINGS_ADDRESS;
+						EEPROMData.data = &(CAR_oilPressure.allSettings);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilPressureAlarmSnapshotOn:
+				{
+					error = copy_str_to_buffer("Oil Pressure", (char*)LCD_buffer[Row1], 4u, 12u);
+					error = copy_str_to_buffer("Alarm Snapshot", (char*)LCD_buffer[Row2], 3u, 14u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempState = CAR_oilPressure.oilPressureAlarmSnapshotOn;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					if(0 != EncoderCounterDiff)
+					{
+						tempState ^= 0b1;	//Toggling the bit with encoder
+					}
+
+					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_oilPressure.oilPressureAlarmSnapshotOn = tempState;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = OIL_PRESSURE_ALL_SETTINGS_ADDRESS;
+						EEPROMData.data = &(CAR_oilPressure.allSettings);
+					}
+
+					break;
+				}
+				default:
+				{
+					error = LCD__LAYER_CHOICE_FAILURE;
+					break;
+				}
+			}//switch(currentBoard->layer)
+			break;
+		}//case OilPressureSettings_Layer:
+		/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+
+
+		case FuelSettings_Layer:
+		{
+			static cafFuelLevel_type tempSetting = 0;
+			static boolean tempState = 0;
+			EEPROMData.EEPROMParameters = &EEPROM_car;
+			EEPROMData.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE;
+
+			switch(currentBoard->layer)
+			{
+				case /* CarSettings_Layer -> FuelSettings_Layer -> */FuelLowLevelWarningThreshold:
+				{
+					error = copy_str_to_buffer("Low Fuel Level", (char*)LCD_buffer[Row1], 3u, 14u);
+					error = copy_str_to_buffer("Warning Threshold", (char*)LCD_buffer[Row2], 1u, 17u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempSetting = CAR_fuel.fuelLowLevelWarningThreshold;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					tempSetting += EncoderCounterDiff;	//Changing the value with encoder
+					snprintf(tempSettingBuffer, 11u, "%d liters", (uint8_t)tempSetting);
+					error = copy_str_to_buffer(tempSettingBuffer, (char*)LCD_buffer[Row3], 6u, strlen(tempSettingBuffer));
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_fuel.fuelLowLevelWarningThreshold = tempSetting;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = FUEL_LOW_LEVEL_WARNING_THRESHOLD_ADDRESS;
+						EEPROMData.data = &(CAR_fuel.fuelLowLevelWarningThreshold);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> FuelSettings_Layer -> */FuelLowLevelWarningOn:
+				{
+					error = copy_str_to_buffer("Low Fuel Level", (char*)LCD_buffer[Row1], 3u, 14u);
+					error = copy_str_to_buffer("Warning On/Off", (char*)LCD_buffer[Row2], 3u, 14u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempState = CAR_fuel.lowFuelLevelWarningOn;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					if(0 != EncoderCounterDiff)
+					{
+						tempState ^= 0b1;	//Toggling the bit with encoder
+					}
+
+					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_fuel.lowFuelLevelWarningOn = tempState;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = FUEL_ALL_SETTINGS_ADDRESS;
+						EEPROMData.data = &(CAR_fuel.allSettings);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> FuelSettings_Layer -> */FuelLowLevelWarningBuzzerOn:
+				{
+					error = copy_str_to_buffer("Low Fuel Level", (char*)LCD_buffer[Row1], 3u, 14u);
+					error = copy_str_to_buffer("Warning Buzzer", (char*)LCD_buffer[Row2], 3u, 14u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempState = CAR_fuel.lowFuelLevelWarningBuzzerOn;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					if(0 != EncoderCounterDiff)
+					{
+						tempState ^= 0b1;	//Toggling the bit with encoder
+					}
+
+					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_fuel.lowFuelLevelWarningBuzzerOn = tempState;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = FUEL_ALL_SETTINGS_ADDRESS;
+						EEPROMData.data = &(CAR_fuel.allSettings);
+					}
+
+					break;
+				}
+				default:
+				{
+					error = LCD__LAYER_CHOICE_FAILURE;
+					break;
+				}
+			}//switch(currentBoard->layer)
+			break;
+		}//case FuelSettings_Layer:
+		/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+
 
 		default:
 		{
