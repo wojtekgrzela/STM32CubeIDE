@@ -351,8 +351,7 @@ typedef struct
 		{
 			boolean lowVoltageAlarmOn				:1;
 			boolean highVoltageAlarmOn				:1;
-			boolean lowVoltageAlarmBuzzerOn			:1;
-			boolean highVoltageAlarmBuzzerOn		:1;
+			boolean VoltageAlarmBuzzerOn			:1;
 			boolean lowVoltageAlarmSnapshotOn		:1;
 			boolean highVoltageAlarmSnapshotOn		:1;
 			/* 2 more free bits here */

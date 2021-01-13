@@ -65,6 +65,8 @@ extern waterTempSettings_struct CAR_waterTemp;
 extern oilTempSettings_struct CAR_oilTemp;
 extern oilPressureSettings_struct CAR_oilPressure;
 extern fuelSettings_struct CAR_fuel;
+extern batterySettings_struct CAR_mainBattery;
+extern batterySettings_struct CAR_auxiliaryBattery;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -3809,6 +3811,530 @@ static Error_Code ControlValueWithEncoder(const LCDBoard* const currentBoard, bo
 			break;
 		}//case FuelSettings_Layer:
 		/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+
+		case MainBatterySettings_Layer:
+		{
+			static carVoltage_type tempSetting = 0;
+			static boolean tempState = 0;
+			static data32bit_union union32bitVar = {0};
+			EEPROMData.EEPROMParameters = &EEPROM_car;
+			EEPROMData.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE;
+
+			switch(currentBoard->layer)
+			{
+				case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryLowVoltageAlarmThreshold:
+				{
+					error = copy_str_to_buffer("Main Battery Low Vol", (char*)LCD_buffer[Row1], 0u, 20u);
+					error = copy_str_to_buffer("Alarm Threshold", (char*)LCD_buffer[Row2], 2u, 15u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempSetting = CAR_mainBattery.batteryLowVoltageAlarmThreshold;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					tempSetting += (carVoltage_type)EncoderCounterDiff / 10.0f;	//Changing the value with encoder
+					if(0.0f/*lowest sensible voltage*/ >= tempSetting)
+					{
+						tempSetting = 0.0f;
+					}
+					else
+					{
+						if(30.0f/*highest sensible voltage*/ <= tempSetting)
+						{
+							tempSetting = 30.0f;
+						}
+						else
+						{
+							/* Do nothing */
+						}
+					}
+
+					snprintf(tempSettingBuffer, 8u, "%02d.%02d V", (uint8_t)tempSetting, (uint8_t)(tempSetting*100)%100);
+					error = copy_str_to_buffer(tempSettingBuffer, (char*)LCD_buffer[Row3], 7u, strlen(tempSettingBuffer));
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_mainBattery.batteryLowVoltageAlarmThreshold = tempSetting;
+
+						union32bitVar.f32bit = CAR_mainBattery.batteryLowVoltageAlarmThreshold;
+
+						EEPROMData.size = FLOAT_SIZE;
+						EEPROMData.memAddress = MAIN_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS;
+						EEPROMData.data = &(union32bitVar.u8bit[0]);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryHighVoltageAlarmThreshold:
+				{
+					error = copy_str_to_buffer("Main Battery high V", (char*)LCD_buffer[Row1], 0u, 19u);
+					error = copy_str_to_buffer("Alarm Threshold", (char*)LCD_buffer[Row2], 2u, 15u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempSetting = CAR_mainBattery.batteryHighVoltageAlarmThreshold;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					tempSetting += (carVoltage_type)EncoderCounterDiff / 10.0f;	//Changing the value with encoder
+					if(0.0f/*lowest sensible voltage*/ >= tempSetting)
+					{
+						tempSetting = 0.0f;
+					}
+					else
+					{
+						if(30.0f/*highest sensible voltage*/ <= tempSetting)
+						{
+							tempSetting = 30.0f;
+						}
+						else
+						{
+							/* Do nothing */
+						}
+					}
+
+					snprintf(tempSettingBuffer, 8u, "%02d.%02d V", (uint8_t)tempSetting, (uint8_t)(tempSetting*100)%100);
+					error = copy_str_to_buffer(tempSettingBuffer, (char*)LCD_buffer[Row3], 7u, strlen(tempSettingBuffer));
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_mainBattery.batteryHighVoltageAlarmThreshold = tempSetting;
+
+						union32bitVar.f32bit = CAR_mainBattery.batteryHighVoltageAlarmThreshold;
+
+						EEPROMData.size = FLOAT_SIZE;
+						EEPROMData.memAddress = MAIN_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS;
+						EEPROMData.data = &(union32bitVar.u8bit[0]);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryLowVoltageAlarmOn:
+				{
+					error = copy_str_to_buffer("Main Battery low Vol", (char*)LCD_buffer[Row1], 0u, 20u);
+					error = copy_str_to_buffer("Alarm On/Off", (char*)LCD_buffer[Row2], 4u, 12u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempState = CAR_mainBattery.lowVoltageAlarmOn;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					if(0 != EncoderCounterDiff)
+					{
+						tempState ^= 0b1;	//Toggling the bit with encoder
+					}
+
+					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_mainBattery.lowVoltageAlarmOn = tempState;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = MAIN_BATTERY_ALL_SETTINGS_ADDRESS;
+						EEPROMData.data = &(CAR_mainBattery.allSettings);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryHighVoltageAlarmOn:
+				{
+					error = copy_str_to_buffer("Main Battery high V", (char*)LCD_buffer[Row1], 0u, 19u);
+					error = copy_str_to_buffer("Alarm On/Off", (char*)LCD_buffer[Row2], 4u, 12u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempState = CAR_mainBattery.highVoltageAlarmOn;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					if(0 != EncoderCounterDiff)
+					{
+						tempState ^= 0b1;	//Toggling the bit with encoder
+					}
+
+					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_mainBattery.highVoltageAlarmOn = tempState;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = MAIN_BATTERY_ALL_SETTINGS_ADDRESS;
+						EEPROMData.data = &(CAR_mainBattery.allSettings);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryAlarmBuzzerOn:
+				{
+					error = copy_str_to_buffer("Main Battery Voltage", (char*)LCD_buffer[Row1], 0u, 20u);
+					error = copy_str_to_buffer("Alarm Buzzer On/Off", (char*)LCD_buffer[Row2], 0u, 19u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempState = CAR_mainBattery.VoltageAlarmBuzzerOn;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					if(0 != EncoderCounterDiff)
+					{
+						tempState ^= 0b1;	//Toggling the bit with encoder
+					}
+
+					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_mainBattery.VoltageAlarmBuzzerOn = tempState;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = MAIN_BATTERY_ALL_SETTINGS_ADDRESS;
+						EEPROMData.data = &(CAR_mainBattery.allSettings);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryLowVoltageSnapshotOn:
+				{
+					error = copy_str_to_buffer("Main Battery low Vol", (char*)LCD_buffer[Row1], 0u, 20u);
+					error = copy_str_to_buffer("Alarm Snapshot", (char*)LCD_buffer[Row2], 3u, 14u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempState = CAR_mainBattery.lowVoltageAlarmSnapshotOn;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					if(0 != EncoderCounterDiff)
+					{
+						tempState ^= 0b1;	//Toggling the bit with encoder
+					}
+
+					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_mainBattery.lowVoltageAlarmSnapshotOn = tempState;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = MAIN_BATTERY_ALL_SETTINGS_ADDRESS;
+						EEPROMData.data = &(CAR_mainBattery.allSettings);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryHighVoltageSnapshotOn:
+				{
+					error = copy_str_to_buffer("Main Battery high V", (char*)LCD_buffer[Row1], 0u, 19u);
+					error = copy_str_to_buffer("Alarm Snapshot", (char*)LCD_buffer[Row2], 3u, 14u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempState = CAR_mainBattery.highVoltageAlarmSnapshotOn;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					if(0 != EncoderCounterDiff)
+					{
+						tempState ^= 0b1;	//Toggling the bit with encoder
+					}
+
+					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_mainBattery.highVoltageAlarmSnapshotOn = tempState;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = MAIN_BATTERY_ALL_SETTINGS_ADDRESS;
+						EEPROMData.data = &(CAR_mainBattery.allSettings);
+					}
+
+					break;
+				}
+				default:
+				{
+					error = LCD__LAYER_CHOICE_FAILURE;
+					break;
+				}
+			}//switch(currentBoard->layer)
+			break;
+		}//case MainBatterySettings_Layer:
+		/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+
+
+		case AuxBatterySettings_Layer:
+		{
+			static carVoltage_type tempSetting = 0;
+			static boolean tempState = 0;
+			static data32bit_union union32bitVar = {0};
+			EEPROMData.EEPROMParameters = &EEPROM_car;
+			EEPROMData.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE;
+
+			switch(currentBoard->layer)
+			{
+				case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryLowVoltageAlarmThreshold:
+				{
+					error = copy_str_to_buffer("Aux Battery Low Vol", (char*)LCD_buffer[Row1], 0u, 19u);
+					error = copy_str_to_buffer("Alarm Threshold", (char*)LCD_buffer[Row2], 2u, 15u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempSetting = CAR_auxiliaryBattery.batteryLowVoltageAlarmThreshold;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					tempSetting += (carVoltage_type)EncoderCounterDiff / 10.0f;	//Changing the value with encoder
+					if(0.0f/*lowest sensible voltage*/ >= tempSetting)
+					{
+						tempSetting = 0.0f;
+					}
+					else
+					{
+						if(30.0f/*highest sensible voltage*/ <= tempSetting)
+						{
+							tempSetting = 30.0f;
+						}
+						else
+						{
+							/* Do nothing */
+						}
+					}
+
+					snprintf(tempSettingBuffer, 8u, "%02d.%02d V", (uint8_t)tempSetting, (uint8_t)(tempSetting*100)%100);
+					error = copy_str_to_buffer(tempSettingBuffer, (char*)LCD_buffer[Row3], 7u, strlen(tempSettingBuffer));
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_auxiliaryBattery.batteryLowVoltageAlarmThreshold = tempSetting;
+
+						union32bitVar.f32bit = CAR_auxiliaryBattery.batteryLowVoltageAlarmThreshold;
+
+						EEPROMData.size = FLOAT_SIZE;
+						EEPROMData.memAddress = AUXILIARY_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS;
+						EEPROMData.data = &(union32bitVar.u8bit[0]);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryHighVoltageAlarmThreshold:
+				{
+					error = copy_str_to_buffer("Aux Battery high Vol", (char*)LCD_buffer[Row1], 0u, 20u);
+					error = copy_str_to_buffer("Alarm Threshold", (char*)LCD_buffer[Row2], 2u, 15u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempSetting = CAR_auxiliaryBattery.batteryHighVoltageAlarmThreshold;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					tempSetting += (carVoltage_type)EncoderCounterDiff / 10.0f;	//Changing the value with encoder
+					if(0.0f/*lowest sensible voltage*/ >= tempSetting)
+					{
+						tempSetting = 0.0f;
+					}
+					else
+					{
+						if(30.0f/*highest sensible voltage*/ <= tempSetting)
+						{
+							tempSetting = 30.0f;
+						}
+						else
+						{
+							/* Do nothing */
+						}
+					}
+
+					snprintf(tempSettingBuffer, 8u, "%02d.%02d V", (uint8_t)tempSetting, (uint8_t)(tempSetting*100)%100);
+					error = copy_str_to_buffer(tempSettingBuffer, (char*)LCD_buffer[Row3], 7u, strlen(tempSettingBuffer));
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_auxiliaryBattery.batteryHighVoltageAlarmThreshold = tempSetting;
+
+						union32bitVar.f32bit = CAR_auxiliaryBattery.batteryHighVoltageAlarmThreshold;
+
+						EEPROMData.size = FLOAT_SIZE;
+						EEPROMData.memAddress = AUXILIARY_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS;
+						EEPROMData.data = &(union32bitVar.u8bit[0]);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryLowVoltageAlarmOn:
+				{
+					error = copy_str_to_buffer("Aux Battery low Vol", (char*)LCD_buffer[Row1], 0u, 19u);
+					error = copy_str_to_buffer("Alarm On/Off", (char*)LCD_buffer[Row2], 4u, 12u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempState = CAR_auxiliaryBattery.lowVoltageAlarmOn;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					if(0 != EncoderCounterDiff)
+					{
+						tempState ^= 0b1;	//Toggling the bit with encoder
+					}
+
+					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_auxiliaryBattery.lowVoltageAlarmOn = tempState;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS;
+						EEPROMData.data = &(CAR_auxiliaryBattery.allSettings);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryHighVoltageAlarmOn:
+				{
+					error = copy_str_to_buffer("Aux Battery high Vol", (char*)LCD_buffer[Row1], 0u, 20u);
+					error = copy_str_to_buffer("Alarm On/Off", (char*)LCD_buffer[Row2], 4u, 12u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempState = CAR_auxiliaryBattery.highVoltageAlarmOn;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					if(0 != EncoderCounterDiff)
+					{
+						tempState ^= 0b1;	//Toggling the bit with encoder
+					}
+
+					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_auxiliaryBattery.highVoltageAlarmOn = tempState;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS;
+						EEPROMData.data = &(CAR_auxiliaryBattery.allSettings);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryAlarmBuzzerOn:
+				{
+					error = copy_str_to_buffer("Aux Battery Voltage", (char*)LCD_buffer[Row1], 0u, 19u);
+					error = copy_str_to_buffer("Alarm Buzzer On/Off", (char*)LCD_buffer[Row2], 0u, 19u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempState = CAR_auxiliaryBattery.VoltageAlarmBuzzerOn;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					if(0 != EncoderCounterDiff)
+					{
+						tempState ^= 0b1;	//Toggling the bit with encoder
+					}
+
+					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_auxiliaryBattery.VoltageAlarmBuzzerOn = tempState;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS;
+						EEPROMData.data = &(CAR_auxiliaryBattery.allSettings);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryLowVoltageSnapshotOn:
+				{
+					error = copy_str_to_buffer("Aux Battery low Vol", (char*)LCD_buffer[Row1], 0u, 19u);
+					error = copy_str_to_buffer("Alarm Snapshot", (char*)LCD_buffer[Row2], 3u, 14u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempState = CAR_auxiliaryBattery.lowVoltageAlarmSnapshotOn;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					if(0 != EncoderCounterDiff)
+					{
+						tempState ^= 0b1;	//Toggling the bit with encoder
+					}
+
+					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_auxiliaryBattery.lowVoltageAlarmSnapshotOn = tempState;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS;
+						EEPROMData.data = &(CAR_auxiliaryBattery.allSettings);
+					}
+
+					break;
+				}
+				case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryHighVoltageSnapshotOn:
+				{
+					error = copy_str_to_buffer("Aux Battery high Vol", (char*)LCD_buffer[Row1], 0u, 20u);
+					error = copy_str_to_buffer("Alarm Snapshot", (char*)LCD_buffer[Row2], 3u, 14u);
+
+					if(FALSE == *doneOnce)
+					{
+						tempState = CAR_auxiliaryBattery.highVoltageAlarmSnapshotOn;	//Read the actual value on entry
+						*doneOnce = TRUE;
+					}
+
+					if(0 != EncoderCounterDiff)
+					{
+						tempState ^= 0b1;	//Toggling the bit with encoder
+					}
+
+					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
+
+					if(ENC_button.shortPressDetected)
+					{
+						writeToEEPROM = TRUE;
+						CAR_auxiliaryBattery.highVoltageAlarmSnapshotOn = tempState;
+
+						EEPROMData.size = UINT8_T_SIZE;
+						EEPROMData.memAddress = AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS;
+						EEPROMData.data = &(CAR_auxiliaryBattery.allSettings);
+					}
+
+					break;
+				}
+				default:
+				{
+					error = LCD__LAYER_CHOICE_FAILURE;
+					break;
+				}
+			}//switch(currentBoard->layer)
+			break;
+		}//case AuxBatterySettings_Layer:
+		/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+
+
+
 
 
 		default:
