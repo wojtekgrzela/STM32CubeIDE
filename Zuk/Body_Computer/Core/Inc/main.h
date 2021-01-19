@@ -123,18 +123,20 @@ typedef enum
 			MainBatteryHighVoltageAlarmThreshold	=	0x772,
 			MainBatteryLowVoltageAlarmOn			=	0x773,
 			MainBatteryHighVoltageAlarmOn			=	0x774,
-			MainBatteryAlarmBuzzerOn				=	0x775,
-			MainBatteryLowVoltageSnapshotOn			=	0x776,
-			MainBatteryHighVoltageSnapshotOn		=	0x777,
+			MainBatteryLowVoltageAlarmBuzzerOn		=	0x775,
+			MainBatteryHighVoltageAlarmBuzzerOn		=	0x776,
+			MainBatteryLowVoltageSnapshotOn			=	0x777,
+			MainBatteryHighVoltageSnapshotOn		=	0x778,
 
 			/* CarSettings_Layer -> AuxBatterySettings_Layer */
 			AuxBatteryLowVoltageAlarmThreshold		=	0x781,
 			AuxBatteryHighVoltageAlarmThreshold		=	0x782,
 			AuxBatteryLowVoltageAlarmOn				=	0x783,
 			AuxBatteryHighVoltageAlarmOn			=	0x784,
-			AuxBatteryAlarmBuzzerOn					=	0x785,
-			AuxBatteryLowVoltageSnapshotOn			=	0x786,
-			AuxBatteryHighVoltageSnapshotOn			=	0x787,
+			AuxBatteryLowVoltageAlarmBuzzerOn		=	0x785,
+			AuxBatteryHighVoltageAlarmBuzzerOn		=	0x786,
+			AuxBatteryLowVoltageSnapshotOn			=	0x787,
+			AuxBatteryHighVoltageSnapshotOn			=	0x788,
 
 			/* JarvisSettings_Layer -> InterVoltSettings_Layer */
 			Supply5VLowThreshold		=	0x841,
@@ -169,7 +171,7 @@ typedef enum
 			AutoHomeReturnTime			=	0x876,
 			AutoBacklightOff			=	0x877,
 
-	YesNo_Layer				=	0xF000,
+	AreYouSure_Layer		=	0xF000,
 	Ctrl_Layer				=	0xF100,
 
 	Alarm_Layer				=	0xFFFF
@@ -382,7 +384,8 @@ typedef struct
 		{
 			boolean lowVoltageAlarmOn				:1;
 			boolean highVoltageAlarmOn				:1;
-			boolean VoltageAlarmBuzzerOn			:1;
+			boolean lowVoltageAlarmBuzzerOn			:1;
+			boolean highVoltageAlarmBuzzerOn		:1;
 			boolean lowVoltageAlarmSnapshotOn		:1;
 			boolean highVoltageAlarmSnapshotOn		:1;
 			/* 2 more free bits here */

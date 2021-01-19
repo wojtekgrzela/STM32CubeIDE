@@ -25,12 +25,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Defines */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#define ENTER_AreYouSure_MAX_NO_OF_SENT_DATA_PACKETS	2u
 #define NUMBER_OF_SCROLLED_LINES	3u
 #define LINE1						0u
 #define LINE2						1u
 #define LINE3						2u
 #define STRING_BAR					"bar"
 #define STRING_LITERS				"liters"
+#define STRING_V					"V"
 
 typedef struct LCD_board
 {
@@ -51,7 +53,7 @@ typedef struct LCD_board
 	/* Info about the board */
 	Enum_Layer const thisLayer;
 	void (*RunningFunction)(struct LCD_board* currentBoard);
-	void (*EnterFunction)(struct LCD_board** currentBoard);
+	void (*EnterFunction)(void);
 
 	/* Controlling value */
 	void* value_ptr;
@@ -126,8 +128,11 @@ extern boardVoltagesSettings_struct BOARD_voltage;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Functions prototypes */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-static void ENTER_GoInto(struct LCD_board** currentBoard);
-static void ENTER_SaveToEEPROM(struct LCD_board** currentBoard);
+static void ENTER_GoInto(void);
+static void ENTER_SaveToEEPROM(void);
+static void ENTER_ClearDiagnosticSnapshots(void);
+static void ENTER_ClearErrorSnapshots(void);
+static void ENTER_AreYouSure(void);
 
 static void RUNNING_ScrollList(struct LCD_board* currentBoard);
 static void RUNNING_DesktopLayer(struct LCD_board* currentBoard);
@@ -136,9 +141,11 @@ static void RUNNING_CarInfoLayer(struct LCD_board* currentBoard);
 static void RUNNING_JarvisInfoLayer(struct LCD_board* currentBoard);
 static void RUNNING_Last3Snaps(struct LCD_board* currentBoard);
 static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard);
+static void RUNNING_AreYouSure(struct LCD_board* currentBoard);
 
 static void ScrollForward(LCD_board* displayTable[NUMBER_OF_SCROLLED_LINES], int8_t diff);
 static void ScrollBack(LCD_board* displayTable[NUMBER_OF_SCROLLED_LINES], int8_t diff);
+static void EEPROMWaitForWriteCheck(EEPROM_data_struct* EEPROMData);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -160,6 +167,18 @@ static boolean enterAction_save = FALSE;
 
 
 /* LCD boards with its parameters and pointers to others */
+static LCD_board LCD_AreYouSure = {.name="<Are You Sure?>",
+						.firstRow 			= NULL,
+						.secondRow 			= NULL,
+						.thisLayer 			= AreYouSure_Layer,
+						.RunningFunction 	= RUNNING_AreYouSure,
+						.EnterFunction 		= ENTER_AreYouSure,
+						.value_ptr 			= NULL,
+						.valueType 			= _void_type_,
+						.valueStepSize 		= StepNotApplicable,
+						.unit 				= NULL,
+						.EEPROM_memAddress	= NO_ADDRESS };
+
 static LCD_board LCD_MainMenu = {.name="<Main Menu>",
 						.firstRow 			= NULL,
 						.secondRow 			= NULL,
@@ -275,7 +294,7 @@ static LCD_board LCD_ClearDiagSnaps = {.name="Clear Diag Snaps.",
 						.secondRow 			= NULL,
 						.thisLayer 			= ClearDiagnosticSnapshots,
 						.RunningFunction 	= NULL,
-						.EnterFunction 		= NULL,
+						.EnterFunction 		= ENTER_ClearDiagnosticSnapshots,
 						.value_ptr 			= NULL,
 						.valueType 			= _void_type_,
 						.valueStepSize 		= StepNotApplicable,
@@ -373,7 +392,7 @@ static LCD_board LCD_ClearErrorSnap = {.name="Clear Error Snaps",
 						.secondRow 			= NULL,
 						.thisLayer 			= ClearErrorsSnapshots,
 						.RunningFunction 	= NULL,
-						.EnterFunction 		= NULL,
+						.EnterFunction 		= ENTER_ClearErrorSnapshots,
 						.value_ptr 			= NULL,
 						.valueType 			= _void_type_,
 						.valueStepSize 		= StepNotApplicable,
@@ -857,6 +876,230 @@ static LCD_board LCD_FuelLowLevelWarningBuzzerOnOff = {.name="Lvl Buzzer On/Off"
 						.EEPROMParameters	= &EEPROM_car,
 						.EEPROM_memAddress	= FUEL_ALL_SETTINGS_ADDRESS };
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Main Battery Settings Boards */
+static LCD_board LCD_MainBatteryLowVoltageAlarmThreshold = {.name="Low Vol. Alarm Thr.",
+						.firstRow 			= "Main Battery Voltage",
+						.secondRow 			= "Low Alarm Threshold",
+						.thisLayer 			= MainBatteryLowVoltageAlarmThreshold,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_mainBattery.batteryLowVoltageAlarmThreshold),
+						.valueType 			= _carVoltage_type_,
+						.valueStepSize 		= StepByOneHundred,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= MAIN_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS };
+
+static LCD_board LCD_MainBatteryHighVoltageAlarmThreshold = {.name="High Vol. Alarm Thr",
+						.firstRow 			= "Main Battery Voltage",
+						.secondRow 			= "High Alarm Threshold",
+						.thisLayer 			= MainBatteryHighVoltageAlarmThreshold,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_mainBattery.batteryHighVoltageAlarmThreshold),
+						.valueType 			= _carVoltage_type_,
+						.valueStepSize 		= StepByOneHundred,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= MAIN_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS };
+
+static LCD_board LCD_MainBatteryLowVoltageAlarmOnOff = {.name="Low V. Alarm On/Off",
+						.firstRow 			= "Main Battery Voltage",
+						.secondRow 			= "Low Alarm On/Off",
+						.thisLayer 			= MainBatteryLowVoltageAlarmOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_mainBattery.allSettings),
+						.settingsMask		= 0b00000001,	/* first bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= MAIN_BATTERY_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_MainBatteryHighVoltageAlarmOnOff = {.name="High V Alarm On/Off",
+						.firstRow 			= "Main Battery Voltage",
+						.secondRow 			= "High Alarm On/Off",
+						.thisLayer 			= MainBatteryHighVoltageAlarmOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_mainBattery.allSettings),
+						.settingsMask		= 0b00000010,	/* second bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= MAIN_BATTERY_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_MainBatteryLowVoltageAlarmBuzzerOnOff = {.name="Low V. Alarm Buzzer",
+						.firstRow 			= "Main Battery Low Vol",
+						.secondRow 			= "Alarm Buzzer On/Off",
+						.thisLayer 			= MainBatteryLowVoltageAlarmBuzzerOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_mainBattery.allSettings),
+						.settingsMask		= 0b00000100,	/* third bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= MAIN_BATTERY_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_MainBatteryHighVoltageAlarmBuzzerOnOff = {.name="High V Alarm Buzzer",
+						.firstRow 			= "Main Battery High V",
+						.secondRow 			= "Alarm Buzzer On/Off",
+						.thisLayer 			= MainBatteryHighVoltageAlarmBuzzerOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_mainBattery.allSettings),
+						.settingsMask		= 0b00001000,	/* fourth bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= MAIN_BATTERY_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_MainBatteryLowVoltageSnapshotOnOff = {.name="Low Volt Alarm Snap",
+						.firstRow 			= "Main Battery Low V.",
+						.secondRow 			= "Alarm Snap. On/Off",
+						.thisLayer 			= MainBatteryLowVoltageSnapshotOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_mainBattery.allSettings),
+						.settingsMask		= 0b00010000,	/* fifth bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= MAIN_BATTERY_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_MainBatteryHighVoltageSnapshotOnOff = {.name="High Vol Alarm Snap",
+						.firstRow 			= "Main Battery High V.",
+						.secondRow 			= "Alarm Snap. On/Off",
+						.thisLayer 			= MainBatteryHighVoltageSnapshotOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_mainBattery.allSettings),
+						.settingsMask		= 0b00100000,	/* sixth bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= MAIN_BATTERY_ALL_SETTINGS_ADDRESS };
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Auxiliary Battery Settings Boards */
+static LCD_board LCD_AuxBatteryLowVoltageAlarmThreshold = {.name="Low Vol. Alarm Thr.",
+						.firstRow 			= "Aux Battery Voltage",
+						.secondRow 			= "Low Alarm Threshold",
+						.thisLayer 			= AuxBatteryLowVoltageAlarmThreshold,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_auxiliaryBattery.batteryLowVoltageAlarmThreshold),
+						.valueType 			= _carVoltage_type_,
+						.valueStepSize 		= StepByOneHundred,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= AUXILIARY_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS };
+
+static LCD_board LCD_AuxBatteryHighVoltageAlarmThreshold = {.name="High Vol. Alarm Thr",
+						.firstRow 			= "Aux Battery Voltage",
+						.secondRow 			= "High Alarm Threshold",
+						.thisLayer 			= AuxBatteryHighVoltageAlarmThreshold,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_auxiliaryBattery.batteryHighVoltageAlarmThreshold),
+						.valueType 			= _carVoltage_type_,
+						.valueStepSize 		= StepByOneHundred,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= AUXILIARY_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS };
+
+static LCD_board LCD_AuxBatteryLowVoltageAlarmOnOff = {.name="Low V. Alarm On/Off",
+						.firstRow 			= "Aux Battery Voltage",
+						.secondRow 			= "Low Alarm On/Off",
+						.thisLayer 			= AuxBatteryLowVoltageAlarmOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_auxiliaryBattery.allSettings),
+						.settingsMask		= 0b00000001,	/* first bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_AuxBatteryHighVoltageAlarmOnOff = {.name="High V Alarm On/Off",
+						.firstRow 			= "Aux Battery Voltage",
+						.secondRow 			= "High Alarm On/Off",
+						.thisLayer 			= AuxBatteryHighVoltageAlarmOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_auxiliaryBattery.allSettings),
+						.settingsMask		= 0b00000010,	/* second bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_AuxBatteryLowVoltageAlarmBuzzerOnOff = {.name="Low V. Alarm Buzzer",
+						.firstRow 			= "Aux Battery Low Vol",
+						.secondRow 			= "Alarm Buzzer On/Off",
+						.thisLayer 			= AuxBatteryLowVoltageAlarmBuzzerOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_auxiliaryBattery.allSettings),
+						.settingsMask		= 0b00000100,	/* third bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_AuxBatteryHighVoltageAlarmBuzzerOnOff = {.name="High V Alarm Buzzer",
+						.firstRow 			= "Aux Battery High V",
+						.secondRow 			= "Alarm Buzzer On/Off",
+						.thisLayer 			= AuxBatteryHighVoltageAlarmBuzzerOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_auxiliaryBattery.allSettings),
+						.settingsMask		= 0b00001000,	/* fourth bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_AuxBatteryLowVoltageSnapshotOnOff = {.name="Low Volt Alarm Snap",
+						.firstRow 			= "Aux Battery Low V.",
+						.secondRow 			= "Alarm Snap. On/Off",
+						.thisLayer 			= AuxBatteryLowVoltageSnapshotOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_auxiliaryBattery.allSettings),
+						.settingsMask		= 0b00010000,	/* fifth bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_AuxBatteryHighVoltageSnapshotOnOff = {.name="High Vol Alarm Snap",
+						.firstRow 			= "Aux Battery High V.",
+						.secondRow 			= "Alarm Snap. On/Off",
+						.thisLayer 			= AuxBatteryHighVoltageSnapshotOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_auxiliaryBattery.allSettings),
+						.settingsMask		= 0b00100000,	/* sixth bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS };
+
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -874,18 +1117,23 @@ void StartTaskLCD(void const * argument)
 
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 	/* Add units to the proper boards */
-	LCD_WaterHighTempWarningThreshold.unit		= (char*)degreeSymbolCharacter;
-	LCD_WaterHighTempAlarmThreshold.unit 		= (char*)degreeSymbolCharacter;
-	LCD_WaterHighTempFanOnThreshold.unit 		= (char*)degreeSymbolCharacter;
-	LCD_WaterHighTempFanOffThreshold.unit 		= (char*)degreeSymbolCharacter;
+	LCD_WaterHighTempWarningThreshold.unit			= (char*)degreeSymbolCharacter;
+	LCD_WaterHighTempAlarmThreshold.unit 			= (char*)degreeSymbolCharacter;
+	LCD_WaterHighTempFanOnThreshold.unit 			= (char*)degreeSymbolCharacter;
+	LCD_WaterHighTempFanOffThreshold.unit 			= (char*)degreeSymbolCharacter;
 
-	LCD_OilHighTempWarningThreshold.unit		= (char*)degreeSymbolCharacter;
-	LCD_OilHighTempAlarmThreshold.unit			= (char*)degreeSymbolCharacter;
+	LCD_OilHighTempWarningThreshold.unit			= (char*)degreeSymbolCharacter;
+	LCD_OilHighTempAlarmThreshold.unit				= (char*)degreeSymbolCharacter;
 
-	LCD_OilHighPressureAlarmThreshold.unit		= STRING_BAR;
-	LCD_OilLowPressureAlarmThreshold.unit		= STRING_BAR;
+	LCD_OilHighPressureAlarmThreshold.unit			= STRING_BAR;
+	LCD_OilLowPressureAlarmThreshold.unit			= STRING_BAR;
 
-	LCD_FuelLowLevelWarningThreshold.unit		= STRING_LITERS;
+	LCD_FuelLowLevelWarningThreshold.unit			= STRING_LITERS;
+
+	LCD_MainBatteryLowVoltageAlarmThreshold.unit	= STRING_V;
+	LCD_MainBatteryHighVoltageAlarmThreshold.unit	= STRING_V;
+	LCD_AuxBatteryLowVoltageAlarmThreshold.unit		= STRING_V;
+	LCD_AuxBatteryHighVoltageAlarmThreshold.unit	= STRING_V;
 
 
 	/* Prepare LCD boards to be used - calculate sizes (See Macro definition) */
@@ -949,9 +1197,23 @@ void StartTaskLCD(void const * argument)
 	PREPARE_LCD_board(LCD_FuelLowLevelWarningOnOff);
 	PREPARE_LCD_board(LCD_FuelLowLevelWarningBuzzerOnOff);
 
-//	PREPARE_LCD_board();
-//	PREPARE_LCD_board();
-//	PREPARE_LCD_board();
+	PREPARE_LCD_board(LCD_MainBatteryLowVoltageAlarmThreshold);
+	PREPARE_LCD_board(LCD_MainBatteryHighVoltageAlarmThreshold);
+	PREPARE_LCD_board(LCD_MainBatteryLowVoltageAlarmOnOff);
+	PREPARE_LCD_board(LCD_MainBatteryHighVoltageAlarmOnOff);
+	PREPARE_LCD_board(LCD_MainBatteryLowVoltageAlarmBuzzerOnOff);
+	PREPARE_LCD_board(LCD_MainBatteryHighVoltageAlarmBuzzerOnOff);
+	PREPARE_LCD_board(LCD_MainBatteryLowVoltageSnapshotOnOff);
+	PREPARE_LCD_board(LCD_MainBatteryHighVoltageSnapshotOnOff);
+
+	PREPARE_LCD_board(LCD_AuxBatteryLowVoltageAlarmThreshold);
+	PREPARE_LCD_board(LCD_AuxBatteryHighVoltageAlarmThreshold);
+	PREPARE_LCD_board(LCD_AuxBatteryLowVoltageAlarmOnOff);
+	PREPARE_LCD_board(LCD_AuxBatteryHighVoltageAlarmOnOff);
+	PREPARE_LCD_board(LCD_AuxBatteryLowVoltageAlarmBuzzerOnOff);
+	PREPARE_LCD_board(LCD_AuxBatteryHighVoltageAlarmBuzzerOnOff);
+	PREPARE_LCD_board(LCD_AuxBatteryLowVoltageSnapshotOnOff);
+	PREPARE_LCD_board(LCD_AuxBatteryHighVoltageSnapshotOnOff);
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -1115,6 +1377,54 @@ void StartTaskLCD(void const * argument)
 	LCD_FuelLowLevelWarningBuzzerOnOff.previousLayer_ptr	= &LCD_FuelLowLevelWarningOnOff;
 	LCD_FuelLowLevelWarningBuzzerOnOff.upperLayer_ptr		= &LCD_FuelSettings;
 
+	/* CarSettings_Layer -> MainBatterySettings_Layer */
+	LCD_MainBatteryLowVoltageAlarmThreshold.upperLayer_ptr		= &LCD_MainBattSettings;
+	LCD_MainBatteryLowVoltageAlarmThreshold.nextLayer_ptr		= &LCD_MainBatteryHighVoltageAlarmThreshold;
+	LCD_MainBatteryHighVoltageAlarmThreshold.previousLayer_ptr	= &LCD_MainBatteryLowVoltageAlarmThreshold;
+	LCD_MainBatteryHighVoltageAlarmThreshold.upperLayer_ptr		= &LCD_MainBattSettings;
+	LCD_MainBatteryHighVoltageAlarmThreshold.nextLayer_ptr		= &LCD_MainBatteryLowVoltageAlarmOnOff;
+	LCD_MainBatteryLowVoltageAlarmOnOff.previousLayer_ptr		= &LCD_MainBatteryHighVoltageAlarmThreshold;
+	LCD_MainBatteryLowVoltageAlarmOnOff.upperLayer_ptr			= &LCD_MainBattSettings;
+	LCD_MainBatteryLowVoltageAlarmOnOff.nextLayer_ptr			= &LCD_MainBatteryHighVoltageAlarmOnOff;
+	LCD_MainBatteryHighVoltageAlarmOnOff.previousLayer_ptr		= &LCD_MainBatteryLowVoltageAlarmOnOff;
+	LCD_MainBatteryHighVoltageAlarmOnOff.upperLayer_ptr			= &LCD_MainBattSettings;
+	LCD_MainBatteryHighVoltageAlarmOnOff.nextLayer_ptr			= &LCD_MainBatteryLowVoltageAlarmBuzzerOnOff;
+	LCD_MainBatteryLowVoltageAlarmBuzzerOnOff.previousLayer_ptr	= &LCD_MainBatteryHighVoltageAlarmOnOff;
+	LCD_MainBatteryLowVoltageAlarmBuzzerOnOff.upperLayer_ptr	= &LCD_MainBattSettings;
+	LCD_MainBatteryLowVoltageAlarmBuzzerOnOff.nextLayer_ptr		= &LCD_MainBatteryHighVoltageAlarmBuzzerOnOff;
+	LCD_MainBatteryHighVoltageAlarmBuzzerOnOff.previousLayer_ptr= &LCD_MainBatteryLowVoltageAlarmBuzzerOnOff;
+	LCD_MainBatteryHighVoltageAlarmBuzzerOnOff.upperLayer_ptr	= &LCD_MainBattSettings;
+	LCD_MainBatteryHighVoltageAlarmBuzzerOnOff.nextLayer_ptr	= &LCD_MainBatteryLowVoltageSnapshotOnOff;
+	LCD_MainBatteryLowVoltageSnapshotOnOff.previousLayer_ptr	= &LCD_MainBatteryHighVoltageAlarmBuzzerOnOff;
+	LCD_MainBatteryLowVoltageSnapshotOnOff.upperLayer_ptr		= &LCD_MainBattSettings;
+	LCD_MainBatteryLowVoltageSnapshotOnOff.nextLayer_ptr		= &LCD_MainBatteryHighVoltageSnapshotOnOff;
+	LCD_MainBatteryHighVoltageSnapshotOnOff.previousLayer_ptr	= &LCD_MainBatteryLowVoltageSnapshotOnOff;
+	LCD_MainBatteryHighVoltageSnapshotOnOff.upperLayer_ptr		= &LCD_MainBattSettings;
+
+	/* CarSettings_Layer -> AuxBatterySettings_Layer */
+	LCD_AuxBatteryLowVoltageAlarmThreshold.upperLayer_ptr		= &LCD_AuxBattSettings;
+	LCD_AuxBatteryLowVoltageAlarmThreshold.nextLayer_ptr		= &LCD_AuxBatteryHighVoltageAlarmThreshold;
+	LCD_AuxBatteryHighVoltageAlarmThreshold.previousLayer_ptr	= &LCD_AuxBatteryLowVoltageAlarmThreshold;
+	LCD_AuxBatteryHighVoltageAlarmThreshold.upperLayer_ptr		= &LCD_AuxBattSettings;
+	LCD_AuxBatteryHighVoltageAlarmThreshold.nextLayer_ptr		= &LCD_AuxBatteryLowVoltageAlarmOnOff;
+	LCD_AuxBatteryLowVoltageAlarmOnOff.previousLayer_ptr		= &LCD_AuxBatteryHighVoltageAlarmThreshold;
+	LCD_AuxBatteryLowVoltageAlarmOnOff.upperLayer_ptr			= &LCD_AuxBattSettings;
+	LCD_AuxBatteryLowVoltageAlarmOnOff.nextLayer_ptr			= &LCD_AuxBatteryHighVoltageAlarmOnOff;
+	LCD_AuxBatteryHighVoltageAlarmOnOff.previousLayer_ptr		= &LCD_AuxBatteryLowVoltageAlarmOnOff;
+	LCD_AuxBatteryHighVoltageAlarmOnOff.upperLayer_ptr			= &LCD_AuxBattSettings;
+	LCD_AuxBatteryHighVoltageAlarmOnOff.nextLayer_ptr			= &LCD_AuxBatteryLowVoltageAlarmBuzzerOnOff;
+	LCD_AuxBatteryLowVoltageAlarmBuzzerOnOff.previousLayer_ptr	= &LCD_AuxBatteryHighVoltageAlarmOnOff;
+	LCD_AuxBatteryLowVoltageAlarmBuzzerOnOff.upperLayer_ptr		= &LCD_AuxBattSettings;
+	LCD_AuxBatteryLowVoltageAlarmBuzzerOnOff.nextLayer_ptr		= &LCD_AuxBatteryHighVoltageAlarmBuzzerOnOff;
+	LCD_AuxBatteryHighVoltageAlarmBuzzerOnOff.previousLayer_ptr	= &LCD_AuxBatteryLowVoltageAlarmBuzzerOnOff;
+	LCD_AuxBatteryHighVoltageAlarmBuzzerOnOff.upperLayer_ptr	= &LCD_AuxBattSettings;
+	LCD_AuxBatteryHighVoltageAlarmBuzzerOnOff.nextLayer_ptr		= &LCD_AuxBatteryLowVoltageSnapshotOnOff;
+	LCD_AuxBatteryLowVoltageSnapshotOnOff.previousLayer_ptr		= &LCD_AuxBatteryHighVoltageAlarmBuzzerOnOff;
+	LCD_AuxBatteryLowVoltageSnapshotOnOff.upperLayer_ptr		= &LCD_AuxBattSettings;
+	LCD_AuxBatteryLowVoltageSnapshotOnOff.nextLayer_ptr			= &LCD_AuxBatteryHighVoltageSnapshotOnOff;
+	LCD_AuxBatteryHighVoltageSnapshotOnOff.previousLayer_ptr	= &LCD_AuxBatteryLowVoltageSnapshotOnOff;
+	LCD_AuxBatteryHighVoltageSnapshotOnOff.upperLayer_ptr		= &LCD_AuxBattSettings;
+
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -1190,7 +1500,7 @@ void StartTaskLCD(void const * argument)
 		if(TRUE == ENC_button.shortPressDetected)
 		{
 			if(currentBoard->EnterFunction)
-				currentBoard->EnterFunction(&currentBoard);	/* Execute Enter function pointed by current board (if one exists) */
+				currentBoard->EnterFunction();	/* Execute Enter function pointed by current board (if one exists) */
 			ENC_button.shortPressDetected = FALSE;
 			ENC_button.longPressDetected = FALSE;
 			scrollList_doneOnce = FALSE;	/* Clean the doneOnce Flag for the ScrollList Function */
@@ -1264,16 +1574,85 @@ void StartTaskLCD(void const * argument)
 
 
 
-static void ENTER_GoInto(struct LCD_board** currentBoard)
+static void ENTER_GoInto(void)
 {
-	if(scrollList_currentlyPointedBoard) *currentBoard = scrollList_currentlyPointedBoard;
+	if(scrollList_currentlyPointedBoard) currentBoard = scrollList_currentlyPointedBoard;
 }
 
 
 
-static void ENTER_SaveToEEPROM(struct LCD_board** currentBoard)
+static void ENTER_SaveToEEPROM(void)
 {
 	enterAction_save = TRUE;
+}
+
+
+
+static void ENTER_ClearDiagnosticSnapshots(void)
+{
+	LCD_AreYouSure.previousLayer_ptr = &LCD_ClearDiagSnaps;
+	currentBoard = &LCD_AreYouSure;
+}
+
+
+
+static void ENTER_ClearErrorSnapshots(void)
+{
+
+	LCD_AreYouSure.previousLayer_ptr = &LCD_ClearErrorSnap;
+	currentBoard = &LCD_AreYouSure;
+}
+
+
+
+static void ENTER_AreYouSure(void)
+{
+	uint8_t numberOfPacketsToSend = 0u;
+	data32bit_union dataToSend[ENTER_AreYouSure_MAX_NO_OF_SENT_DATA_PACKETS] = {0};
+	uint16_t dataSize[ENTER_AreYouSure_MAX_NO_OF_SENT_DATA_PACKETS] = {0};
+	uint16_t dataAddress[ENTER_AreYouSure_MAX_NO_OF_SENT_DATA_PACKETS] = {0};
+
+	static CREATE_EEPROM_data_struct(EEPROMData);
+	EEPROMData.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE;
+
+	switch(LCD_AreYouSure.previousLayer_ptr->thisLayer)
+	{
+		case ClearDiagnosticSnapshots:
+		{
+			CAR_EEPROM_counters.diagnosticSnapshotEEPROMIndex = 0u;
+			CAR_EEPROM_counters.didTheNumberOfDiagnosticSnapshotsOverflowed = FALSE;
+			dataToSend[0].u8bit[0] = CAR_EEPROM_counters.diagnosticSnapshotEEPROMIndex;
+			dataToSend[1].u8bit[0] = CAR_EEPROM_counters.didTheNumberOfDiagnosticSnapshotsOverflowed;
+
+			EEPROMData.EEPROMParameters = &EEPROM_car;
+			dataSize[0] = sizeof(CAR_EEPROM_counters.diagnosticSnapshotEEPROMIndex);
+			dataSize[1] = sizeof(CAR_EEPROM_counters.didTheNumberOfDiagnosticSnapshotsOverflowed);
+			dataAddress[0] = TOTAL_SNAPSHOTS_NUMBER_ADDRESS;
+			dataAddress[1] = NUMBER_OF_DIAGNOSTIC_SNAPSHOTS_OVERFLOWED_ADDRESS;
+			numberOfPacketsToSend = 2u;
+			break;
+		}
+		case ClearErrorsSnapshots:
+		{
+			break;
+		}
+		default:
+		{
+			break;
+		}
+	}//switch(LCD_AreYouSure.previousLayer_ptr->thisLayer)
+
+	for(uint8_t i = 0; i < numberOfPacketsToSend; ++i)
+	{
+		EEPROMData.size = dataSize[i];
+		EEPROMData.memAddress = dataAddress[i];
+		EEPROMData.data = dataToSend[i].u8bit;
+
+		xQueueSend(Queue_EEPROM_writeHandle, &EEPROMData, (TickType_t)100U/*100ms wait time if the queue is full*/);
+
+		EEPROMWaitForWriteCheck(&EEPROMData);
+	}
+
 }
 
 
@@ -1573,9 +1952,6 @@ static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard)
 
 	if(TRUE == enterAction_save)
 	{
-		uint16_t i = 0u;
-		boolean EEPROMerrorFlag = FALSE;
-
 		if(currentBoard->EEPROMParameters)
 			EEPROMData.EEPROMParameters = currentBoard->EEPROMParameters;
 		else
@@ -1589,32 +1965,22 @@ static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard)
 
 		xQueueSend(Queue_EEPROM_writeHandle, &EEPROMData, (TickType_t)100U/*100ms wait time if the queue is full*/);
 
-		while(DATA_READY != (*EEPROMData.isReadyPtr))
-		{
-			++i;
-			vTaskDelay((TickType_t)1);	/* wait for 1 ms for EEPROM to process that */
-			if(MAX_WAIT_TIME_FOR_EEPROM < i)
-			{
-				EEPROMerrorFlag = TRUE;
-				break;
-			}
-		}
+		EEPROMWaitForWriteCheck(&EEPROMData);
 
-		if(TRUE == EEPROMerrorFlag)
-		{
-			EEPROMData.data = NULL;
-			error = copy_str_to_buffer("ERROR!", (char*)LCD_buffer[Row4], 7u, 6u);
-		}
-		else
-		{
-			error = copy_str_to_buffer("DONE!", (char*)LCD_buffer[Row4], 7u, 5u);
-		}
-
-		vTaskDelay((TickType_t)ERROR_DONE_DISPLAY_TIME);
 		enterAction_save = FALSE;
 	}
+}
 
 
+
+static void RUNNING_AreYouSure(struct LCD_board* currentBoard)
+{
+	Error_Code error = NO_ERROR;
+
+	error = copy_str_to_buffer(currentBoard->name, (char*)LCD_buffer[Row1], (uint8_t)((20-currentBoard->nameSize)/2), currentBoard->nameSize);
+	error = copy_str_to_buffer("Enter to proceed", (char*)LCD_buffer[Row1], 0u, 16u);
+
+	if(NO_ERROR != error) my_error_handler(error);
 }
 
 
@@ -1674,6 +2040,37 @@ static void ScrollBack(LCD_board* displayTable[NUMBER_OF_SCROLLED_LINES], int8_t
 }
 
 
+
+static void EEPROMWaitForWriteCheck(EEPROM_data_struct* EEPROMData)
+{
+	uint16_t i = 0u;
+	boolean EEPROMerrorFlag = FALSE;
+
+	while(DATA_READY != (*EEPROMData->isReadyPtr))
+	{
+		++i;
+		vTaskDelay((TickType_t)1);	/* wait for 1 ms for EEPROM to process that */
+		if(MAX_WAIT_TIME_FOR_EEPROM < i)
+		{
+			EEPROMerrorFlag = TRUE;
+			break;
+		}
+	}
+
+	if(TRUE == EEPROMerrorFlag)
+	{
+		EEPROMData->data = NULL;
+		(void)copy_str_to_buffer("ERROR!", (char*)LCD_buffer[Row4], 7u, 6u);
+
+		my_error_handler(EEPROM__FAILED_TO_WRITE_IN_LCD_TASK);
+	}
+	else
+	{
+		(void)copy_str_to_buffer("DONE!", (char*)LCD_buffer[Row4], 7u, 5u);
+	}
+
+	vTaskDelay((TickType_t)ERROR_DONE_DISPLAY_TIME);
+}
 
 
 
