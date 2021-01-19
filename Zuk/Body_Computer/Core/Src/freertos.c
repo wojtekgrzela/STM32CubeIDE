@@ -83,18 +83,18 @@ volatile uint16_t ADC3Measures[NO_OF_ADC3_MEASURES] = { 0 };
 /* For GPS data, buffering, messages for LCD */
 GPS_data_struct GPS =
 { .TimeZoneAdjPoland = 2,/* .homeLatitude = 52.093731, .homeLongitude = 20.661411,*/
-		.forLCD.hours.messageReadyFLAG = FALSE,
-		.forLCD.minutes.messageReadyFLAG = FALSE,
-		.forLCD.seconds.messageReadyFLAG = FALSE,
-		.forLCD.clock.messageReadyFLAG = FALSE,
-		.forLCD.latitude.messageReadyFLAG = FALSE,
-		.forLCD.latitudeIndicator.messageReadyFLAG = FALSE,
-		.forLCD.longitude.messageReadyFLAG = FALSE,
-		.forLCD.longitudeIndicator.messageReadyFLAG = FALSE,
-		.forLCD.status.messageReadyFLAG = FALSE,
-		.forLCD.satellitesUsed.messageReadyFLAG = FALSE,
-		.forLCD.altitude.messageReadyFLAG = FALSE,
-		.forLCD.speed.messageReadyFLAG = FALSE };
+.forLCD.hours.messageReadyFLAG = FALSE,
+.forLCD.minutes.messageReadyFLAG = FALSE,
+.forLCD.seconds.messageReadyFLAG = FALSE,
+.forLCD.clock.messageReadyFLAG = FALSE,
+.forLCD.latitude.messageReadyFLAG = FALSE,
+.forLCD.latitudeIndicator.messageReadyFLAG = FALSE,
+.forLCD.longitude.messageReadyFLAG = FALSE,
+.forLCD.longitudeIndicator.messageReadyFLAG = FALSE,
+.forLCD.status.messageReadyFLAG = FALSE,
+.forLCD.satellitesUsed.messageReadyFLAG = FALSE,
+.forLCD.altitude.messageReadyFLAG = FALSE,
+.forLCD.speed.messageReadyFLAG = FALSE };
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* For LCD parameters and settings */
@@ -124,34 +124,34 @@ LCD_message totalMileageForLCD = {.messageHandler = NULL, .size = 0, .messageRea
 LCD_message tripMileageForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
 
 waterTempSettings_struct CAR_waterTemp = {0};
-float waterTemperatureValue = 0.0;
+carTemperature_type waterTemperatureValue = 0.0;
 LCD_message waterTemperatureValueForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
 
 oilTempSettings_struct CAR_oilTemp = {0};
-float oilTemperatureValue = 0.0;
+carTemperature_type oilTemperatureValue = 0.0;
 LCD_message oilTemperatureValueForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
 
 oilPressureSettings_struct CAR_oilPressure = {0};
 #ifdef OIL_PRESSURE_ANALOG_SENSOR
-float oilPressureValue = 0.0;
+carOilAnalogPressure_type oilPressureValue = 0.0;
 LCD_message oilPressureValueForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
 #endif
 #ifdef OIL_PRESSURE_BINARY_SENSOR
-uint8_t oilPressureValueBinary = NOK;
+carOilBinaryPressure_type oilPressureValueBinary = NOK;
 LCD_message oilPressureValueBinaryForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
 #endif
 
 
 batterySettings_struct CAR_mainBattery = {0};
-float mainBatteryVoltageValue = 0.0;
+carVoltage_type mainBatteryVoltageValue = 0.0;
 LCD_message mainBatteryVoltageValueForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
 
 batterySettings_struct CAR_auxiliaryBattery = {0};
-float auxiliaryBatteryVoltageValue = 0.0;
+carVoltage_type auxiliaryBatteryVoltageValue = 0.0;
 LCD_message auxiliaryBatteryVoltageValueForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
 
 fuelSettings_struct CAR_fuel = {0};
-float fuelLevelValue = 0.0;
+cafFuelLevel_type fuelLevelValue = 0.0;
 LCD_message fuelLevelValueForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -166,20 +166,20 @@ EEPROM_parameters_struct EEPROM_board =
 
 /* CAR SETTINGS and VALUES*/
 boardVoltagesSettings_struct BOARD_voltage = {0};
-float voltage3V3 = 0.0;
-float voltage5V = 0.0;
-float voltageIn = 0.0;
+boardVoltage_type voltage3V3 = 0.0;
+boardVoltage_type voltage5V = 0.0;
+boardVoltage_type voltageIn = 0.0;
 LCD_message voltage3V3ForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
 LCD_message voltage5VForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
 LCD_message voltageInForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
 
 boardTemperaturesSettings_struct BOARD_temperature = {0};
-int16_t temperature3V3DCDC = 0;
-int16_t temperature5VDCDC = 0;
+boardTemperature_type temperature3V3DCDC = 0.0;
+boardTemperature_type temperature5VDCDC = 0.0;
 LCD_message temperature3V3DCDCForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
 LCD_message temperature5VDCDCForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
 
-uint8_t TimeZoneManualAdj = 0;		// for manual adjusting the time zone in clock
+int8_t TimeZoneManualAdj = 0;		// for manual adjusting the time zone in clock
 
 buzzerMainSettings_struct BUZZER_settings = {0};
 LCDMainSettings_struct LCD_MainSettings = {0};
@@ -197,6 +197,7 @@ osThreadId My_DumpToEEPROMHandle;
 osThreadId My_DumpToSDCardHandle;
 osThreadId My_250ms_TaskHandle;
 osThreadId My_50ms_TaskHandle;
+osThreadId My_DiagCheckHandle;
 osMessageQId Queue_EEPROM_readHandle;
 osMessageQId Queue_EEPROM_writeHandle;
 osMessageQId Queue_error_snapshot_dumpHandle;
@@ -217,6 +218,7 @@ extern void StartTaskDumpToEEPROM(void const * argument);
 void StartTaskDumpToSDCard(void const * argument);
 void StartTask250ms(void const * argument);
 void StartTask50ms(void const * argument);
+extern void StartTaskDiagCheck(void const * argument);
 void ENC_Button_LongPress_Callback(void const * argument);
 
 extern void MX_USB_DEVICE_Init(void);
@@ -404,6 +406,10 @@ void MX_FREERTOS_Init(void) {
   osThreadDef(My_50ms_Task, StartTask50ms, osPriorityIdle, 0, 128);
   My_50ms_TaskHandle = osThreadCreate(osThread(My_50ms_Task), NULL);
 
+  /* definition and creation of My_DiagCheck */
+  osThreadDef(My_DiagCheck, StartTaskDiagCheck, osPriorityAboveNormal, 0, 256);
+  My_DiagCheckHandle = osThreadCreate(osThread(My_DiagCheck), NULL);
+
   /* USER CODE BEGIN RTOS_THREADS */
 	/* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -459,7 +465,7 @@ void StartTask1000ms(void const * argument)
 		else
 		{
 			temperature5VDCDCForLCD.messageReadyFLAG = FALSE;
-			snprintf((char*)temperature5VDCDCForLCD.messageHandler, 6, "%" PRIi16 "%cC", temperature5VDCDC, DEGREE_SYMBOL_LCD);
+			snprintf((char*)temperature5VDCDCForLCD.messageHandler, 6, "%" PRIi16 "%cC", (uint16_t)temperature5VDCDC, DEGREE_SYMBOL_LCD);
 			temperature5VDCDCForLCD.size = strlen((char*)temperature5VDCDCForLCD.messageHandler);
 			temperature5VDCDCForLCD.messageReadyFLAG = TRUE;
 		}
@@ -473,7 +479,7 @@ void StartTask1000ms(void const * argument)
 		else
 		{
 			temperature3V3DCDCForLCD.messageReadyFLAG = FALSE;
-			snprintf((char*)temperature3V3DCDCForLCD.messageHandler, 6, "%" PRIi16 "%cC", temperature3V3DCDC, DEGREE_SYMBOL_LCD);
+			snprintf((char*)temperature3V3DCDCForLCD.messageHandler, 6, "%" PRIi16 "%cC", (uint16_t)temperature3V3DCDC, DEGREE_SYMBOL_LCD);
 			temperature3V3DCDCForLCD.size = strlen((char*)temperature3V3DCDCForLCD.messageHandler);
 			temperature3V3DCDCForLCD.messageReadyFLAG = TRUE;
 		}
@@ -638,27 +644,27 @@ void StartTask250ms(void const * argument)
 	Error_Code error = NO_ERROR;
 
 	/* For calculating the engine parameters (counting the mean value) */
-	static volatile float EngineWaterTemperatureTable[NO_OF_ENGINE_WATER_TEMP_MEASUREMENTS_ADDED] = {0};
-	static volatile float EngineWaterTemperatureMovingAverage[NO_OF_ENGINE_WATER_TEMP_MEASUREMENTS_ADDED] = {0};
+	static volatile carTemperature_type EngineWaterTemperatureTable[NO_OF_ENGINE_WATER_TEMP_MEASUREMENTS_ADDED] = {0};
+	static volatile carTemperature_type EngineWaterTemperatureMovingAverage[NO_OF_ENGINE_WATER_TEMP_MEASUREMENTS_ADDED] = {0};
 	static uint8_t i_waterTemp = 0;
-	static float tempEngineWaterTemp = 0.0;
-	float waterTemperatureValue_beforeMovingAverage = 0.0;
+	static carTemperature_type tempEngineWaterTemp = 0.0;
+	carTemperature_type waterTemperatureValue_beforeMovingAverage = 0.0;
 	static uint8_t waterTemperatureValueMessage[4] = "";
 	waterTemperatureValueForLCD.messageHandler = waterTemperatureValueMessage;
 
-	static volatile float EngineOilTemperatureTable[NO_OF_ENGINE_OIL_TEMP_MEASUREMENTS_ADDED] = {0};
-	static volatile float EngineOilTemperatureTableMovingAverage[NO_OF_ENGINE_OIL_TEMP_MEASUREMENTS_ADDED] = {0};
+	static volatile carTemperature_type EngineOilTemperatureTable[NO_OF_ENGINE_OIL_TEMP_MEASUREMENTS_ADDED] = {0};
+	static volatile carTemperature_type EngineOilTemperatureTableMovingAverage[NO_OF_ENGINE_OIL_TEMP_MEASUREMENTS_ADDED] = {0};
 	static uint8_t i_oilTemp = 0;
-	static float tempEngineOilTemp = 0.0;
-	float oilTemperatureValue_beforeMovingAverage = 0.0;
+	static carTemperature_type tempEngineOilTemp = 0.0;
+	carTemperature_type oilTemperatureValue_beforeMovingAverage = 0.0;
 	static uint8_t oilTemperatureValueMessage[4] = "";
 	oilTemperatureValueForLCD.messageHandler = oilTemperatureValueMessage;
 
 #ifdef OIL_PRESSURE_ANALOG_SENSOR
-	static volatile float EngineOilPressureTable[NO_OF_ENGINE_OIL_PRESSURE_MEASUREMENTS_ADDED] = {0};
+	static volatile carOilAnalogPressure_type EngineOilPressureTable[NO_OF_ENGINE_OIL_PRESSURE_MEASUREMENTS_ADDED] = {0};
 //	static volatile float EngineOilPressureTableMovingAverage[NO_OF_ENGINE_OIL_PRESSURE_MEASUREMENTS_ADDED] = {0};
 	static uint8_t i_oilPressure = 0;
-	static float tempEngineOilPressure = 0.0;
+	static carOilAnalogPressure_type tempEngineOilPressure = 0.0;
 	static uint8_t oilPressureValueMessage[4] = "";
 	oilPressureValueForLCD.messageHandler = oilPressureValueMessage;
 #endif
@@ -668,25 +674,25 @@ void StartTask250ms(void const * argument)
 	oilPressureValueBinaryForLCD.messageHandler = oilPressureValueBinaryMessage;
 #endif
 
-	static volatile float MainBatteryVoltageValueTable[NO_OF_MAIN_BATTERY_VOLTAGE_MEASUREMENTS_ADDED] = {0};
+	static volatile carVoltage_type MainBatteryVoltageValueTable[NO_OF_MAIN_BATTERY_VOLTAGE_MEASUREMENTS_ADDED] = {0};
 //	static volatile float MainBatteryVoltageValueTableMovingAverage[NO_OF_MAIN_BATTERY_VOLTAGE_MEASUREMENTS_ADDED] = {0};
 	static uint8_t i_mainBateryVoltage = 0;
-	static float tempMainBatteryVoltage = 0.0;
+	static carVoltage_type tempMainBatteryVoltage = 0.0;
 	static uint8_t mainBatteryVoltageValueMessage[6] = "";
 	mainBatteryVoltageValueForLCD.messageHandler = mainBatteryVoltageValueMessage;
 
-	static volatile float AuxiliaryBatteryVoltageValueTable[NO_OF_AUXILIARY_BATTERY_VOLTAGE_MEASUREMENTS_ADDED] = {0};
+	static volatile carVoltage_type AuxiliaryBatteryVoltageValueTable[NO_OF_AUXILIARY_BATTERY_VOLTAGE_MEASUREMENTS_ADDED] = {0};
 //	static volatile float AuxiliaryBatteryVoltageValueTableMovingAverage[NO_OF_AUXILIARY_BATTERY_VOLTAGE_MEASUREMENTS_ADDED] = {0};
 	static uint8_t i_auxBatteryVoltage = 0;
-	static float tempAuxBatteryVoltage = 0.0;
+	static carVoltage_type tempAuxBatteryVoltage = 0.0;
 	static uint8_t auxiliaryBatteryVoltageValueMessage[6] = "";
 	auxiliaryBatteryVoltageValueForLCD.messageHandler = auxiliaryBatteryVoltageValueMessage;
 
-	static volatile float FuelLevelValueTable[NO_OF_FUEL_LEVEL_MEASUREMENTS_ADDED] = {0};
-	static volatile float FuelLevelValueTableMovingAverage[NO_OF_FUEL_LEVEL_MEASUREMENTS_ADDED] = {0};
+	static volatile cafFuelLevel_type FuelLevelValueTable[NO_OF_FUEL_LEVEL_MEASUREMENTS_ADDED] = {0};
+	static volatile cafFuelLevel_type FuelLevelValueTableMovingAverage[NO_OF_FUEL_LEVEL_MEASUREMENTS_ADDED] = {0};
 	static uint8_t i_fuelLevel = 0;
-	static float tempFuelLevel = 0.0;
-	float fuelLevelValue_beforeMovingAverage = 0.0;
+	static cafFuelLevel_type tempFuelLevel = 0.0;
+	cafFuelLevel_type fuelLevelValue_beforeMovingAverage = 0.0;
 	static uint8_t fuelLevelValueMessage[3] = "";
 	fuelLevelValueForLCD.messageHandler = fuelLevelValueMessage;
 

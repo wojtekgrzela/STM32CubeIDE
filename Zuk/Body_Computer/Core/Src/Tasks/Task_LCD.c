@@ -25,8 +25,58 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Defines */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#define NUMBER_OF_SCROLLED_LINES	3u
+#define LINE1						0u
+#define LINE2						1u
+#define LINE3						2u
+#define STRING_BAR					"bar"
+#define STRING_LITERS				"liters"
 
+typedef struct LCD_board
+{
+	/* String buffers */
+	const char* const name;
+	uint8_t nameSize;
+	const char* const firstRow;
+	uint8_t firstRowSize;
+	const char* const secondRow;
+	uint8_t secondRowSize;
+
+	/* Pointers to other boards and lists */
+	struct LCD_board* previousLayer_ptr;
+	struct LCD_board* nextLayer_ptr;
+	struct LCD_board* upperLayer_ptr;
+	struct LCD_board* lowerLayer_ptr;
+
+	/* Info about the board */
+	Enum_Layer const thisLayer;
+	void (*RunningFunction)(struct LCD_board* currentBoard);
+	void (*EnterFunction)(struct LCD_board** currentBoard);
+
+	/* Controlling value */
+	void* value_ptr;
+	uint32_t settingsMask;
+	Enum_valueType valueType;
+	Enum_valueStepSize valueStepSize;
+	char* unit;
+	uint8_t unitSize;
+
+	/* EEPROM parameters */
+	EEPROM_parameters_struct* EEPROMParameters;
+	uint16_t EEPROM_memAddress;
+
+} LCD_board;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#define GET_STR_LENGTH(X) strlen(X)
+#define PREPARE_LCD_board(X) \
+		X.previousLayer_ptr = NULL;\
+		X.nextLayer_ptr 	= NULL;\
+		X.upperLayer_ptr 	= NULL;\
+		X.lowerLayer_ptr 	= NULL;\
+		X.nameSize 			= GET_STR_LENGTH(X.name);\
+		X.firstRowSize 		= GET_STR_LENGTH(X.firstRow);\
+		X.secondRowSize 	= GET_STR_LENGTH(X.secondRow);\
+		X.unitSize 			= GET_STR_LENGTH(X.unit);
 
 
 
@@ -67,6 +117,28 @@ extern oilPressureSettings_struct CAR_oilPressure;
 extern fuelSettings_struct CAR_fuel;
 extern batterySettings_struct CAR_mainBattery;
 extern batterySettings_struct CAR_auxiliaryBattery;
+
+extern boardVoltagesSettings_struct BOARD_voltage;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Functions prototypes */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+static void ENTER_GoInto(struct LCD_board** currentBoard);
+static void ENTER_SaveToEEPROM(struct LCD_board** currentBoard);
+
+static void RUNNING_ScrollList(struct LCD_board* currentBoard);
+static void RUNNING_DesktopLayer(struct LCD_board* currentBoard);
+static void RUNNING_GPSLayer(struct LCD_board* currentBoard);
+static void RUNNING_CarInfoLayer(struct LCD_board* currentBoard);
+static void RUNNING_JarvisInfoLayer(struct LCD_board* currentBoard);
+static void RUNNING_Last3Snaps(struct LCD_board* currentBoard);
+static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard);
+
+static void ScrollForward(LCD_board* displayTable[NUMBER_OF_SCROLLED_LINES], int8_t diff);
+static void ScrollBack(LCD_board* displayTable[NUMBER_OF_SCROLLED_LINES], int8_t diff);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -76,683 +148,717 @@ extern batterySettings_struct CAR_auxiliaryBattery;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Buffer of Rows*Columns size for whole display (80 bytes for 4x20) */
 uint8_t LCD_buffer[NO_OF_ROWS_IN_LCD][NO_OF_COLUMNS_IN_LCD];
+/* Buffer for degree symbol with "C" letter: "*C" */
+uint8_t degreeSymbolCharacter[3] = "";
+
+static LCD_board* currentBoard = NULL;
+static LCD_board* scrollList_currentlyPointedBoard = NULL;
+static boolean scrollList_doneOnce = FALSE;
+static boolean displayAndControlValue_doneOnce = FALSE;
+static boolean enterAction_save = FALSE;
+
+
+
+/* LCD boards with its parameters and pointers to others */
+static LCD_board LCD_MainMenu = {.name="<Main Menu>",
+						.firstRow 			= NULL,
+						.secondRow 			= NULL,
+						.thisLayer 			= MainMenu_Layer,
+						.RunningFunction 	= RUNNING_ScrollList,
+						.EnterFunction 		= ENTER_GoInto,
+						.value_ptr 			= NULL,
+						.valueType 			= _void_type_,
+						.valueStepSize 		= StepNotApplicable,
+						.unit 				= NULL,
+						.EEPROM_memAddress	= NO_ADDRESS };
+
+static LCD_board LCD_Desktop = {.name="<Desktop>",
+						.firstRow 			= NULL,
+						.secondRow 			= NULL,
+						.thisLayer 			= Desktop_Layer,
+						.RunningFunction 	= RUNNING_DesktopLayer,
+						.EnterFunction 		= NULL,
+						.value_ptr 			= NULL,
+						.valueType 			= _void_type_,
+						.valueStepSize 		= StepNotApplicable,
+						.unit 				= NULL,
+						.EEPROM_memAddress	= NO_ADDRESS };
+
+static LCD_board LCD_GPS = {.name="<GPS>",
+						.firstRow 			= NULL,
+						.secondRow 			= NULL,
+						.thisLayer 			= GPS_Layer,
+						.RunningFunction 	= RUNNING_GPSLayer,
+						.EnterFunction 		= NULL,
+						.value_ptr 			= NULL,
+						.valueType 			= _void_type_,
+						.valueStepSize 		= StepNotApplicable,
+						.unit 				= NULL,
+						.EEPROM_memAddress	= NO_ADDRESS };
+
+static LCD_board LCD_CarInfo = {.name="<Car Information>",
+						.firstRow 			= NULL,
+						.secondRow 			= NULL,
+						.thisLayer 			= CarInfo_Layer,
+						.RunningFunction 	= RUNNING_CarInfoLayer,
+						.EnterFunction 		= NULL,
+						.value_ptr 			= NULL,
+						.valueType 			= _void_type_,
+						.valueStepSize 		= StepNotApplicable,
+						.unit 				= NULL,
+						.EEPROM_memAddress	= NO_ADDRESS };
+
+static LCD_board LCD_JarvisInfo = {.name="<Jarvis Info>",
+						.firstRow 			= NULL,
+						.secondRow 			= NULL,
+						.thisLayer 			= JarvisInfo_Layer,
+						.RunningFunction 	= RUNNING_JarvisInfoLayer,
+						.EnterFunction 		= NULL,
+						.value_ptr 			= NULL,
+						.valueType 			= _void_type_,
+						.valueStepSize 		= StepNotApplicable,
+						.unit 				= NULL,
+						.EEPROM_memAddress	= NO_ADDRESS };
+
+static LCD_board LCD_Last3DiagSnaps = {.name="<Last 3 Diag Snaps>",
+						.firstRow 			= NULL,
+						.secondRow 			= NULL,
+						.thisLayer 			= Last3Diag_Layer,
+						.RunningFunction 	= RUNNING_Last3Snaps,
+						.EnterFunction 		= NULL,
+						.value_ptr 			= NULL,
+						.valueType 			= _void_type_,
+						.valueStepSize 		= StepNotApplicable,
+						.unit 				= NULL,
+						.EEPROM_memAddress	= NO_ADDRESS };
+
+static LCD_board LCD_Last3ErrorSnaps = {.name="<Last 3 Err Snaps>",
+						.firstRow 			= NULL,
+						.secondRow 			= NULL,
+						.thisLayer 			= Last3Err_Layer,
+						.RunningFunction 	= RUNNING_Last3Snaps,
+						.EnterFunction 		= NULL,
+						.value_ptr 			= NULL,
+						.valueType 			= _void_type_,
+						.valueStepSize 		= StepNotApplicable,
+						.unit 				= NULL,
+						.EEPROM_memAddress	= NO_ADDRESS };
+
+static LCD_board LCD_CarSettings = {.name="<Car Settings>",
+						.firstRow 			= NULL,
+						.secondRow 			= NULL,
+						.thisLayer 			= CarSettings_Layer,
+						.RunningFunction 	= RUNNING_ScrollList,
+						.EnterFunction 		= ENTER_GoInto,
+						.value_ptr 			= NULL,
+						.valueType 			= _void_type_,
+						.valueStepSize 		= StepNotApplicable,
+						.unit 				= NULL,
+						.EEPROM_memAddress	= NO_ADDRESS };
+
+static LCD_board LCD_JarvisSettings = {.name="<Jarvis Settings>",
+						.firstRow 			= NULL,
+						.secondRow 			= NULL,
+						.thisLayer 			= JarvisSettings_Layer,
+						.RunningFunction 	= RUNNING_ScrollList,
+						.EnterFunction 		= ENTER_GoInto,
+						.value_ptr 			= NULL,
+						.valueType 			= _void_type_,
+						.valueStepSize 		= StepNotApplicable,
+						.unit 				= NULL,
+						.EEPROM_memAddress	= NO_ADDRESS };
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Car Settings Boards */
+static LCD_board LCD_ClearDiagSnaps = {.name="Clear Diag Snaps.",
+						.firstRow 			= NULL,
+						.secondRow 			= NULL,
+						.thisLayer 			= ClearDiagnosticSnapshots,
+						.RunningFunction 	= NULL,
+						.EnterFunction 		= NULL,
+						.value_ptr 			= NULL,
+						.valueType 			= _void_type_,
+						.valueStepSize 		= StepNotApplicable,
+						.unit 				= NULL,
+						.EEPROM_memAddress	= NO_ADDRESS };
 
+static LCD_board LCD_ClearTripMileage = {.name="Clear Trip Mileage",
+						.firstRow 			= NULL,
+						.secondRow 			= NULL,
+						.thisLayer 			= ClearTripMileage,
+						.RunningFunction 	= NULL,
+						.EnterFunction 		= NULL,
+						.value_ptr 			= NULL,
+						.valueType 			= _void_type_,
+						.valueStepSize 		= StepNotApplicable,
+						.unit 				= NULL,
+						.EEPROM_memAddress	= NO_ADDRESS };
+
+static LCD_board LCD_WaterTempSettings = {.name="Water Temp Settings",
+						.firstRow 			= NULL,
+						.secondRow 			= NULL,
+						.thisLayer 			= WaterSettings_Layer,
+						.RunningFunction 	= RUNNING_ScrollList,
+						.EnterFunction 		= ENTER_GoInto,
+						.value_ptr 			= NULL,
+						.valueType 			= _void_type_,
+						.valueStepSize 		= StepNotApplicable,
+						.unit 				= NULL,
+						.EEPROM_memAddress	= NO_ADDRESS };
+
+static LCD_board LCD_OilTempSettings = {.name="Oil Temp Settings",
+						.firstRow 			= NULL,
+						.secondRow 			= NULL,
+						.thisLayer 			= OilTempSettings_Layer,
+						.RunningFunction 	= RUNNING_ScrollList,
+						.EnterFunction 		= ENTER_GoInto,
+						.value_ptr 			= NULL,
+						.valueType 			= _void_type_,
+						.valueStepSize 		= StepNotApplicable,
+						.unit 				= NULL,
+						.EEPROM_memAddress	= NO_ADDRESS };
+
+static LCD_board LCD_OilPressSettings = {.name="Oil Press Settings",
+						.firstRow 			= NULL,
+						.secondRow 			= NULL,
+						.thisLayer 			= OilPressureSettings_Layer,
+						.RunningFunction 	= RUNNING_ScrollList,
+						.EnterFunction 		= ENTER_GoInto,
+						.value_ptr 			= NULL,
+						.valueType 			= _void_type_,
+						.valueStepSize 		= StepNotApplicable,
+						.unit 				= NULL,
+						.EEPROM_memAddress	= NO_ADDRESS };
+
+static LCD_board LCD_FuelSettings = {.name="Fuel Settings",
+						.firstRow 			= NULL,
+						.secondRow 			= NULL,
+						.thisLayer 			= FuelSettings_Layer,
+						.RunningFunction 	= RUNNING_ScrollList,
+						.EnterFunction 		= ENTER_GoInto,
+						.value_ptr 			= NULL,
+						.valueType 			= _void_type_,
+						.valueStepSize 		= StepNotApplicable,
+						.unit 				= NULL,
+						.EEPROM_memAddress	= NO_ADDRESS };
+
+static LCD_board LCD_MainBattSettings = {.name="Main Batt Settings",
+						.firstRow 			= NULL,
+						.secondRow 			= NULL,
+						.thisLayer 			= MainBatterySettings_Layer,
+						.RunningFunction 	= RUNNING_ScrollList,
+						.EnterFunction 		= ENTER_GoInto,
+						.value_ptr 			= NULL,
+						.valueType 			= _void_type_,
+						.valueStepSize 		= StepNotApplicable,
+						.unit 				= NULL,
+						.EEPROM_memAddress	= NO_ADDRESS };
+
+static LCD_board LCD_AuxBattSettings = {.name="Aux Batt Settings",
+						.firstRow 			= NULL,
+						.secondRow 			= NULL,
+						.thisLayer 			= AuxBatterySettings_Layer,
+						.RunningFunction 	= RUNNING_ScrollList,
+						.EnterFunction 		= ENTER_GoInto,
+						.value_ptr 			= NULL,
+						.valueType 			= _void_type_,
+						.valueStepSize 		= StepNotApplicable,
+						.unit 				= NULL,
+						.EEPROM_memAddress	= NO_ADDRESS };
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Jarvis Settings Boards */
+static LCD_board LCD_ClearErrorSnap = {.name="Clear Error Snaps",
+						.firstRow 			= NULL,
+						.secondRow 			= NULL,
+						.thisLayer 			= ClearErrorsSnapshots,
+						.RunningFunction 	= NULL,
+						.EnterFunction 		= NULL,
+						.value_ptr 			= NULL,
+						.valueType 			= _void_type_,
+						.valueStepSize 		= StepNotApplicable,
+						.unit 				= NULL,
+						.EEPROM_memAddress	= NO_ADDRESS };
+
+static LCD_board LCD_AdjustPolishTime = {.name="Adjust Polish Time",
+						.firstRow 			= NULL,
+						.secondRow 			= NULL,
+						.thisLayer 			= AdjPolishTime,
+						.RunningFunction 	= NULL,
+						.EnterFunction 		= NULL,
+						.value_ptr 			= NULL,
+						.valueType 			= _void_type_,
+						.valueStepSize 		= StepNotApplicable,
+						.unit 				= NULL,
+						.EEPROM_memAddress	= NO_ADDRESS };
+
+static LCD_board LCD_AdjustTimeZone = {.name="Adjust Time Zone",
+						.firstRow 			= NULL,
+						.secondRow 			= NULL,
+						.thisLayer 			= AdjTimeZone,
+						.RunningFunction 	= NULL,
+						.EnterFunction 		= NULL,
+						.value_ptr 			= NULL,
+						.valueType 			= _void_type_,
+						.valueStepSize 		= StepNotApplicable,
+						.unit 				= NULL,
+						.EEPROM_memAddress	= NO_ADDRESS };
+
+static LCD_board LCD_InternalVoltSett = {.name="Internal Volt Sett",
+						.firstRow 			= NULL,
+						.secondRow 			= NULL,
+						.thisLayer 			= InterVoltSettings_Layer,
+						.RunningFunction 	= NULL,
+						.EnterFunction 		= ENTER_GoInto,
+						.value_ptr 			= NULL,
+						.valueType 			= _void_type_,
+						.valueStepSize 		= StepNotApplicable,
+						.unit 				= NULL,
+						.EEPROM_memAddress	= NO_ADDRESS };
+
+static LCD_board LCD_InternalTempSett = {.name="Internal Temp Sett",
+						.firstRow 			= NULL,
+						.secondRow 			= NULL,
+						.thisLayer 			= InterTempSettings_Layer,
+						.RunningFunction 	= NULL,
+						.EnterFunction 		= ENTER_GoInto,
+						.value_ptr 			= NULL,
+						.valueType 			= _void_type_,
+						.valueStepSize 		= StepNotApplicable,
+						.unit 				= NULL,
+						.EEPROM_memAddress	= NO_ADDRESS };
+
+static LCD_board LCD_BuzzerSettings = {.name="Buzzer Settings",
+						.firstRow 			= NULL,
+						.secondRow 			= NULL,
+						.thisLayer 			= BuzzerSettings_Layer,
+						.RunningFunction 	= NULL,
+						.EnterFunction 		= ENTER_GoInto,
+						.value_ptr 			= NULL,
+						.valueType 			= _void_type_,
+						.valueStepSize 		= StepNotApplicable,
+						.unit 				= NULL,
+						.EEPROM_memAddress	= NO_ADDRESS };
+
+static LCD_board LCD_LCDSettings = {.name="LCD Settings",
+						.firstRow 			= NULL,
+						.secondRow 			= NULL,
+						.thisLayer 			= LCDSettings_Layer,
+						.RunningFunction 	= NULL,
+						.EnterFunction 		= ENTER_GoInto,
+						.value_ptr 			= NULL,
+						.valueType 			= _void_type_,
+						.valueStepSize 		= StepNotApplicable,
+						.unit 				= NULL,
+						.EEPROM_memAddress	= NO_ADDRESS };
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Water Temperature Settings Boards */
+static LCD_board LCD_WaterHighTempWarningThreshold = {.name="High Temp Warn Thr",
+						.firstRow 			= "Water High Temp.",
+						.secondRow 			= "Warning Threshold",
+						.thisLayer 			= WaterHighTempWarningThreshold,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_waterTemp.waterHighTempWarningThreshold),
+						.valueType 			= _carTemperature_type_,
+						.valueStepSize 		= StepByOne,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= WATER_HIGH_TEMP_WARNING_THRESHOLD_ADDRESS };
+
+static LCD_board LCD_WaterHighTempAlarmThreshold = {.name="High Temp Alarm Thr",
+						.firstRow 			= "Water High Temp.",
+						.secondRow 			= "Alarm Threshold",
+						.thisLayer 			= WaterHighTempAlarmThreshold,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_waterTemp.waterHighTempWarningThreshold),
+						.valueType 			= _carTemperature_type_,
+						.valueStepSize 		= StepByOne,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= WATER_HIGH_TEMP_ALARM_THRESHOLD_ADDRESS };
+
+static LCD_board LCD_WaterHighTempFanOnThreshold = {.name="High Temp FanOn Thr",
+						.firstRow 			= "Water High Temp.",
+						.secondRow 			= "Fan On Threshold",
+						.thisLayer 			= WaterHighTempFanOnThreshold,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_waterTemp.waterHighTempFanOnThreshold),
+						.valueType 			= _carTemperature_type_,
+						.valueStepSize 		= StepByOne,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= WATER_HIGH_TEMP_FAN_ON_THRESHOLD_ADDRESS };
+
+static LCD_board LCD_WaterHighTempFanOffThreshold = {.name="High Temp FanOff Th",
+						.firstRow 			= "Water High Temp.",
+						.secondRow 			= "Fan Off Threshold",
+						.thisLayer 			= WaterHighTempFanOffThreshold,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_waterTemp.waterHighTempFanOffThreshold),
+						.valueType 			= _carTemperature_type_,
+						.valueStepSize 		= StepByOne,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= WATER_HIGH_TEMP_FAN_OFF_THRESHOLD_ADDRESS };
+
+static LCD_board LCD_WaterHighTempWarningOnOff = {.name="Warning On/Off",
+						.firstRow 			= "Water High Temp.",
+						.secondRow 			= "Warning On/Off",
+						.thisLayer 			= WaterTempWarningOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_waterTemp.allSettings),
+						.settingsMask		= 0b00000001,	/* first bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= WATER_TEMP_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_WaterHighTempAlarmOnOff = {.name="Alarm On/Off",
+						.firstRow 			= "Water High Temp.",
+						.secondRow 			= "Alarm On/Off",
+						.thisLayer 			= WaterTempAlarmOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_waterTemp.allSettings),
+						.settingsMask		= 0b00000010,	/* second bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= WATER_TEMP_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_WaterHighTempFanControlOnOff = {.name="Fan Control On/Off",
+						.firstRow 			= "Water High Temp.",
+						.secondRow 			= "Fan Control On/Off",
+						.thisLayer 			= WaterFanControlOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_waterTemp.allSettings),
+						.settingsMask		= 0b00000100,	/* third bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= WATER_TEMP_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_WaterHighTempWarningBuzzerOnOff = {.name="Warn. Buzz. On/Off",
+						.firstRow 			= "Water High Temp.",
+						.secondRow 			= "Warning Buzzer",
+						.thisLayer 			= WaterTempWarningBuzzerOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_waterTemp.allSettings),
+						.settingsMask		= 0b00001000,	/* fourth bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= WATER_TEMP_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_WaterHighTempAlarmBuzzerOnOff = {.name="Alarm Buzz. On/Off",
+						.firstRow 			= "Water High Temp.",
+						.secondRow 			= "Alarm Buzzer",
+						.thisLayer 			= WaterTempAlarmBuzzerOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_waterTemp.allSettings),
+						.settingsMask		= 0b00010000,	/* fifth bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= WATER_TEMP_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_WaterHighTempWarningSnapshotOnOff = {.name="Warn. Snap. On/Off",
+						.firstRow 			= "Water High Temp.",
+						.secondRow 			= "Warning Snapshot",
+						.thisLayer 			= WaterTempWarningSnapshotOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_waterTemp.allSettings),
+						.settingsMask		= 0b00100000,	/* sixth bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= WATER_TEMP_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_WaterHighTempAlarmSnapshotOnOff = {.name="Alarm Snap. On/Off",
+						.firstRow 			= "Water High Temp.",
+						.secondRow 			= "Alarm Snapshot",
+						.thisLayer 			= WaterTempAlarmSnapshotOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_waterTemp.allSettings),
+						.settingsMask		= 0b01000000,	/* seventh bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= WATER_TEMP_ALL_SETTINGS_ADDRESS };
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Oil Temperature Settings Boards */
+static LCD_board LCD_OilHighTempWarningThreshold = {.name="High Temp Warn Thr",
+						.firstRow 			= "Oil High Temperature",
+						.secondRow 			= "Warning Threshold",
+						.thisLayer 			= OilHighTempWarningThreshold,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_oilTemp.oilHighTempWarningThreshold),
+						.valueType 			= _carTemperature_type_,
+						.valueStepSize 		= StepByOne,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= OIL_HIGH_TEMP_WARNING_THRESHOLD_ADDRESS };
+
+static LCD_board LCD_OilHighTempAlarmThreshold = {.name="High Temp Alarm Thr",
+						.firstRow 			= "Oil High Temperature",
+						.secondRow 			= "Alarm Threshold",
+						.thisLayer 			= OilHighTempAlarmThreshold,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_oilTemp.oilHighTempAlarmThreshold),
+						.valueType 			= _carTemperature_type_,
+						.valueStepSize 		= StepByOne,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= OIL_HIGH_TEMP_ALARM_THRESHOLD_ADDRESS };
+
+static LCD_board LCD_OilHighTempWarningOnOff = {.name="Warning On/Off",
+						.firstRow 			= "Oil High Temperature",
+						.secondRow 			= "Warning On/Off",
+						.thisLayer 			= OilTempWarningOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_oilTemp.allSettings),
+						.settingsMask		= 0b00000001,	/* first bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= OIL_TEMP_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_OilHighTempAlarmOnOff = {.name="Alarm On/Off",
+						.firstRow 			= "Oil High Temperature",
+						.secondRow 			= "Alarm On/Off",
+						.thisLayer 			= OilTempAlarmOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_oilTemp.allSettings),
+						.settingsMask		= 0b00000010,	/* second bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= OIL_TEMP_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_OilHighTempWarningBuzzerOnOff = {.name="Warn. Buzzer On/Off",
+						.firstRow 			= "Oil High Temperature",
+						.secondRow 			= "Warn. Buzzer On/Off",
+						.thisLayer 			= OilTempWarningBuzzerOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_oilTemp.allSettings),
+						.settingsMask		= 0b00000100,	/* third bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= OIL_TEMP_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_OilHighTempAlarmBuzzerOnOff = {.name="Alarm Buzzer On/Off",
+						.firstRow 			= "Oil High Temperature",
+						.secondRow 			= "Alarm Buzzer On/Off",
+						.thisLayer 			= OilTempAlarmBuzzerOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_oilTemp.allSettings),
+						.settingsMask		= 0b00001000,	/* fourth bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= OIL_TEMP_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_OilHighTempWarningSnapshotOnOff = {.name="Warn. Snap. On/Off",
+						.firstRow 			= "Oil High Temperature",
+						.secondRow 			= "Warning Snap. On/Off",
+						.thisLayer 			= OilTempWarningSnapshotOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_oilTemp.allSettings),
+						.settingsMask		= 0b00010000,	/* fifth bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= OIL_TEMP_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_OilHighTempAlarmSnapshotOnOff = {.name="Alarm Snap. On/Off",
+						.firstRow 			= "Oil High Temperature",
+						.secondRow 			= "Alarm Snap. On/Off",
+						.thisLayer 			= OilTempAlarmSpashotOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_oilTemp.allSettings),
+						.settingsMask		= 0b00100000,	/* sixth bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= OIL_TEMP_ALL_SETTINGS_ADDRESS };
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Oil Pressure Settings Boards */
+static LCD_board LCD_OilHighPressureAlarmThreshold = {.name="High Press Alarm Th",
+						.firstRow 			= "Oil High Pressure",
+						.secondRow 			= "Alarm Threshold",
+						.thisLayer 			= OilHighPressureAlarmThreshold,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_oilPressure.oilHighPressureAlarmThreshold),
+						.valueType 			= _carOilAnalogPressure_type_,
+						.valueStepSize 		= StepByOneTen,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= OIL_HIGH_PRESSURE_ALARM_THRESHOLD_ADDRESS };
+
+static LCD_board LCD_OilLowPressureAlarmThreshold = {.name="Low Press Alarm Thr",
+						.firstRow 			= "Oil Low Pressure",
+						.secondRow 			= "Alarm Threshold",
+						.thisLayer 			= OilLowPressureAlarmThreshold,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_oilPressure.oilLowPressureAlarmThreshold),
+						.valueType 			= _carOilAnalogPressure_type_,
+						.valueStepSize 		= StepByOneTen,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= OIL_LOW_PRESSURE_ALARM_THRESHOLD_ADDRESS };
+
+static LCD_board LCD_OilPressureAnalogMeasurementOnOff = {.name="Analog Measurement",
+						.firstRow 			= "Oil Pressure Analog",
+						.secondRow 			= "Measurement On/Off",
+						.thisLayer 			= OilPressureAnalogMeasurement,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_oilPressure.allSettings),
+						.settingsMask		= 0b00000001,	/* first bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= OIL_PRESSURE_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_OilHighPressureAlarmOnOff = {.name="High Pressure Alarm",
+						.firstRow 			= "Oil High Pressure",
+						.secondRow 			= "Alarm On/Off",
+						.thisLayer 			= OilHighPressureAlarmOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_oilPressure.allSettings),
+						.settingsMask		= 0b00000010,	/* second bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= OIL_PRESSURE_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_OilLowPressureAlarmOnOff= {.name="Low Pressure Alarm",
+						.firstRow 			= "Oil Low Pressure",
+						.secondRow 			= "Alarm On/Off",
+						.thisLayer 			= OilLowPressureAlarmOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_oilPressure.allSettings),
+						.settingsMask		= 0b00000100,	/* third bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= OIL_PRESSURE_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_OilPressureAlarmBuzzerOnOff = {.name="Alarm Buzzer On/Off",
+						.firstRow 			= "Oil Pressure Alarm",
+						.secondRow 			= "Buzzer On/Off",
+						.thisLayer 			= OilPressureAlarmBuzzerOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_oilPressure.allSettings),
+						.settingsMask		= 0b00001000,	/* fourth bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= OIL_PRESSURE_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_OilPressureAlarmSnapshotOnOff = {.name="Alarm Snap. On/Off",
+						.firstRow 			= "Oil Pressure Alarm",
+						.secondRow 			= "Snapshot On/Off",
+						.thisLayer 			= OilPressureAlarmSnapshotOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_oilPressure.allSettings),
+						.settingsMask		= 0b00010000,	/* fifth bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= OIL_PRESSURE_ALL_SETTINGS_ADDRESS };
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Fuel Settings Boards */
+static LCD_board LCD_FuelLowLevelWarningThreshold = {.name="Low Level Threshold",
+						.firstRow 			= "Fuel Low Level",
+						.secondRow 			= "Warning Threshold",
+						.thisLayer 			= FuelLowLevelWarningThreshold,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_fuel.fuelLowLevelWarningThreshold),
+						.valueType 			= _cafFuelLevel_type_,
+						.valueStepSize 		= StepByOne,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= FUEL_LOW_LEVEL_WARNING_THRESHOLD_ADDRESS };
+
+static LCD_board LCD_FuelLowLevelWarningOnOff = {.name="Lvl Warning On/Off",
+						.firstRow 			= "Fuel Low Level",
+						.secondRow 			= "Warning On/Off",
+						.thisLayer 			= FuelLowLevelWarningOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_fuel.allSettings),
+						.settingsMask		= 0b00000001,	/* first bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= FUEL_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_FuelLowLevelWarningBuzzerOnOff = {.name="Lvl Buzzer On/Off",
+						.firstRow 			= "Fuel Low Level",
+						.secondRow 			= "Buzzer On/Off",
+						.thisLayer 			= FuelLowLevelWarningBuzzerOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(CAR_fuel.allSettings),
+						.settingsMask		= 0b00000010,	/* second bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_car,
+						.EEPROM_memAddress	= FUEL_ALL_SETTINGS_ADDRESS };
 
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/* Structures for LCD (screens and layers) */
-static LCDBoard LCD_MainMenu =	/* Cannot be constant - can be modified by user (.layerPrevious) */
-		{ .name = "Main Menu",
-		.nameActualSize = sizeof("Main Menu")-1,
-		.layer = MainMenu_Layer,
-		.actionForEnter = GoInto_EnterAction,
-		.screenType = ScrollList_ScreenType,
-		.layerPrevious = Desktop_Layer };
-
-static LCDBoard LCD_YesNo =	/* Cannot be constant - can be modified by user (.layerPrevious) */
-		{ .name = "Are you sure?",
-		.nameActualSize = sizeof("Are you sure?")-1,
-		.layer = YesNo_Layer,
-		.actionForEnter = Done_EnterAction,
-		.screenType = YesNo_ScreenType,
-		.layerPrevious = MainMenu_Layer /* Should be last one opened */ };
-
-static LCDBoard LCD_Ctrl =		/* Cannot be constant - not yet decided //TODO */
-		{ .name = "Ctrl",
-		.nameActualSize = sizeof("Ctrl")-1,
-		.layer = Ctrl_Layer,
-		.actionForEnter = Ctrl_EnterAction,
-		.screenType = Ctrl_ScreenType,
-		.layerPrevious = MainMenu_Layer /* Should be last one opened */ };
-
-static LCDBoard LCD_Alarm =	/* Cannot be constant - not yet decided //TODO */
-		{ .name = "!!! ALARM !!!",
-		.nameActualSize = sizeof("!!! ALARM !!!")-1,
-		.layer = Alarm_Layer,
-		.actionForEnter = Alarm_EnterAction,
-		.screenType = Alarm_ScreenType,
-		.layerPrevious = MainMenu_Layer /* Should be last one opened */ };
-
-/* Lists of sub-menus and sub-sub-menus etc. */
-static const LCDBoard LCD_MainMenuList[ ] = {
-			{ .name = "Desktop",
-			.nameActualSize = sizeof("Desktop")-1,
-			.layer = Desktop_Layer,
-			.actionForEnter = None_EnterAction,
-			.screenType = OneScreen_ScreenType,
-			.layerPrevious = MainMenu_Layer },
-
-			{ .name = "GPS",
-			.nameActualSize = sizeof("GPS")-1,
-			.layer = GPS_Layer,
-			.actionForEnter = None_EnterAction,
-			.screenType = OneScreen_ScreenType,
-			.layerPrevious = MainMenu_Layer },
-
-			{ .name = "Car information",
-			.nameActualSize = sizeof("Car information")-1,
-			.layer = CarInfo_Layer,
-			.actionForEnter = None_EnterAction,
-			.screenType = OneScreen_ScreenType,
-			.layerPrevious = MainMenu_Layer },
-
-			{ .name = "Jarvis information",
-			.nameActualSize = sizeof("Jarvis information")-1,
-			.layer = JarvisInfo_Layer,
-			.actionForEnter = None_EnterAction,
-			.screenType = OneScreen_ScreenType,
-			.layerPrevious = MainMenu_Layer },
-
-			{ .name = "Last 3 diag. snaps.",
-			.nameActualSize = sizeof("Last 3 diag. snaps.")-1,
-			.layer = Last3Diag_Layer,
-			.actionForEnter = None_EnterAction,
-			.screenType = OneScreen_ScreenType,
-			.layerPrevious = MainMenu_Layer },
-
-			{ .name = "Last 3 error snaps.",
-			.nameActualSize = sizeof("Last 3 error snaps.")-1,
-			.layer = Last3Err_Layer,
-			.actionForEnter = None_EnterAction,
-			.screenType = OneScreen_ScreenType,
-			.layerPrevious = MainMenu_Layer },
-
-			{ .name = "Car settings",
-			.nameActualSize = sizeof("Car settings")-1,
-			.layer = CarSettings_Layer,
-			.actionForEnter = GoInto_EnterAction,
-			.screenType = ScrollList_ScreenType,
-			.layerPrevious = MainMenu_Layer },
-
-			{ .name = "Board settings",
-			.nameActualSize = sizeof("Board settings")-1,
-			.layer = BoardSettings_Layer,
-			.actionForEnter = GoInto_EnterAction,
-			.screenType = ScrollList_ScreenType,
-			.layerPrevious = MainMenu_Layer },
-	};
-static const uint8_t LCD_MainMenuList_SIZE = sizeof(LCD_MainMenuList)/sizeof(LCDBoard);
-
-static const LCDBoard LCD_CarSettingsList[ ] = {
-			{ .name = "Clear diag. snaps.",
-			.nameActualSize = sizeof("Clear diag. snaps.")-1,
-			.layer = ClearDiagnosticSnapshots,
-			.actionForEnter = YesNo_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = CarSettings_Layer },
-
-			{ .name = "Clear trip mileage",
-			.nameActualSize = sizeof("Clear trip mileage")-1,
-			.layer = ClearTripMileage,
-			.actionForEnter = YesNo_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = CarSettings_Layer },
-
-			{ .name = "Water T. sett.",
-			.nameActualSize = sizeof("Water T. sett.")-1,
-			.layer = WaterSettings_Layer,
-			.actionForEnter = GoInto_EnterAction,
-			.screenType = ScrollList_ScreenType,
-			.layerPrevious = CarSettings_Layer },
-
-			{ .name = "Oil temp. sett.",
-			.nameActualSize = sizeof("Oil temp. sett.")-1,
-			.layer = OilTempSettings_Layer,
-			.actionForEnter = GoInto_EnterAction,
-			.screenType = ScrollList_ScreenType,
-			.layerPrevious = CarSettings_Layer },
-
-			{ .name = "Oil press. sett.",
-			.nameActualSize = sizeof("Oil press. sett.")-1,
-			.layer = OilPressureSettings_Layer,
-			.actionForEnter = GoInto_EnterAction,
-			.screenType = ScrollList_ScreenType,
-			.layerPrevious = CarSettings_Layer },
-
-			{ .name = "Fuel settings",
-			.nameActualSize = sizeof("Fuel settings")-1,
-			.layer = FuelSettings_Layer,
-			.actionForEnter = GoInto_EnterAction,
-			.screenType = ScrollList_ScreenType,
-			.layerPrevious = CarSettings_Layer },
-
-			{ .name = "Main batt. sett.",
-			.nameActualSize = sizeof("Main batt. sett.")-1,
-			.layer = MainBatterySettings_Layer,
-			.actionForEnter = GoInto_EnterAction,
-			.screenType = ScrollList_ScreenType,
-			.layerPrevious = CarSettings_Layer },
-
-			{ .name = "Aux batt. sett.",
-			.nameActualSize = sizeof("Aux Batt. sett.")-1,
-			.layer = AuxBatterySettings_Layer,
-			.actionForEnter = GoInto_EnterAction,
-			.screenType = ScrollList_ScreenType,
-			.layerPrevious = CarSettings_Layer }
-	};
-static const uint8_t LCD_CarSettingsList_SIZE = sizeof(LCD_CarSettingsList)/sizeof(LCDBoard);
-
-static const LCDBoard LCD_BoardSettingsList[ ] = {
-			{ .name = "Clear err. snaps.",
-			.nameActualSize = sizeof("Clear err. snaps.")-1,
-			.layer = ClearErrorsSnapshots,
-			.actionForEnter = YesNo_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = BoardSettings_Layer },
-
-			{ .name = "Adj. time PL",
-			.nameActualSize = sizeof("Adj. time PL")-1,
-			.layer = AdjTimePoland,
-			.actionForEnter = WinterSummer_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = BoardSettings_Layer },
-
-			{ .name = "Adj. time zone",
-			.nameActualSize = sizeof("Adj. time zone")-1,
-			.layer = AdjTimeZone,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = BoardSettings_Layer },
-
-			{ .name = "Inter. V. sett.",
-			.nameActualSize = sizeof("Inter. V. sett.")-1,
-			.layer = InterVoltSettings_Layer,
-			.actionForEnter = GoInto_EnterAction,
-			.screenType = ScrollList_ScreenType,
-			.layerPrevious = BoardSettings_Layer },
-
-			{ .name = "Inter. T. sett.",
-			.nameActualSize = sizeof("Inter. T. sett.")-1,
-			.layer = InterTempSettings_Layer,
-			.actionForEnter = GoInto_EnterAction,
-			.screenType = ScrollList_ScreenType,
-			.layerPrevious = BoardSettings_Layer },
-
-			{ .name = "Buzzer settings",
-			.nameActualSize = sizeof("Buzzer settings")-1,
-			.layer = BuzzerSettings_Layer,
-			.actionForEnter = GoInto_EnterAction,
-			.screenType = ScrollList_ScreenType,
-			.layerPrevious = BoardSettings_Layer },
-
-			{ .name = "LCD settings",
-			.nameActualSize = sizeof("LCD settings")-1,
-			.layer = LCDSettings_Layer,
-			.actionForEnter = GoInto_EnterAction,
-			.screenType = ScrollList_ScreenType,
-			.layerPrevious = BoardSettings_Layer }
-	};
-static const uint8_t LCD_BoardSettingsList_SIZE = sizeof(LCD_BoardSettingsList)/sizeof(LCDBoard);
-
-static const LCDBoard LCD_Car_WaterTempSettingsList[ ] = {
-			{ .name = "Water H. T. warn.",
-			.nameActualSize = sizeof("Water H. T. warn.")-1,
-			.layer = WaterHighTempWarningThreshold,
-			.actionForEnter = Done_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = WaterSettings_Layer },
-
-			{ .name = "Water H. T. alarm",
-			.nameActualSize = sizeof("Water H. T. alarm")-1,
-			.layer = WaterHighTempAlarmThreshold,
-			.actionForEnter = Done_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = WaterSettings_Layer },
-
-			{ .name = "Water H. T. FanOn",
-			.nameActualSize = sizeof("Water H. T. FanOn")-1,
-			.layer = WaterHighTempFanOnThreshold,
-			.actionForEnter = Done_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = WaterSettings_Layer },
-
-			{ .name = "Water H. T. FanOff",
-			.nameActualSize = sizeof("Water H. T. FanOff")-1,
-			.layer = WaterHighTempFanOffThreshold,
-			.actionForEnter = Done_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = WaterSettings_Layer },
-
-			{ .name = "Water T. warn.",
-			.nameActualSize = sizeof("Water T. warn.")-1,
-			.layer = WaterTempWarningOn,
-			.actionForEnter = Done_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = WaterSettings_Layer },
-
-			{ .name = "Water T. alarm",
-			.nameActualSize = sizeof("Water T. alarm")-1,
-			.layer = WaterTempAlarmOn,
-			.actionForEnter = Done_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = WaterSettings_Layer },
-
-			{ .name = "Water T. Fan ctrl",
-			.nameActualSize = sizeof("Water T. Fan ctrl")-1,
-			.layer = WaterFanControlOn,
-			.actionForEnter = Done_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = WaterSettings_Layer },
-
-			{ .name = "Wat. T. warn. Buzz.",
-			.nameActualSize = sizeof("Wat. T. warn. Buzz.")-1,
-			.layer = WaterTempWarningBuzzerOn,
-			.actionForEnter = Done_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = WaterSettings_Layer },
-
-			{ .name = "Wat. T. alarm Buzz.",
-			.nameActualSize = sizeof("Wat. T. alarm Buzz.")-1,
-			.layer = WaterTempAlarmBuzzerOn,
-			.actionForEnter = Done_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = WaterSettings_Layer },
-
-			{ .name = "Wat. T. warn. snap.",
-			.nameActualSize = sizeof("Wat. T. warn. snap.")-1,
-			.layer = WaterTempWarningSnapshotOn,
-			.actionForEnter = Done_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = WaterSettings_Layer },
-
-			{ .name = "Wat. T. alarm snap.",
-			.nameActualSize = sizeof("Wat. T. alarm snap.")-1,
-			.layer = WaterTempAlarmSnapshotOn,
-			.actionForEnter = Done_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = WaterSettings_Layer }
-	};
-static const uint8_t LCD_Car_WaterTempSettingsList_SIZE = sizeof(LCD_Car_WaterTempSettingsList)/sizeof(LCDBoard);
-
-static const LCDBoard LCD_Car_OilTempSettingsList[ ] = {
-			{ .name = "Oil H. T. warning",
-			.nameActualSize = sizeof("Oil H. T. warning")-1,
-			.layer = OilHighTempWarningThreshold,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilTempSettings_Layer },
-
-			{ .name = "Oil H. T. alarm",
-			.nameActualSize = sizeof("Oil H. T. alarm")-1,
-			.layer = OilHighTempAlarmThreshold,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilTempSettings_Layer },
-
-			{ .name = "Oil T. warning",
-			.nameActualSize = sizeof("Oil T. warning")-1,
-			.layer = OilTempWarningOn,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilTempSettings_Layer },
-
-			{ .name = "Oil T. alarm",
-			.nameActualSize = sizeof("Oil T. alarm")-1,
-			.layer = OilTempAlarmOn,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilTempSettings_Layer },
-
-			{ .name = "Oil T. warn. Buzz.",
-			.nameActualSize = sizeof("Oil T. warn. Buzz.")-1,
-			.layer = OilTempWarningBuzzerOn,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilTempSettings_Layer },
-
-			{ .name = "Oil T. alarm Buzz.",
-			.nameActualSize = sizeof("Oil T. alarm Buzz.")-1,
-			.layer = OilTempAlarmBuzzerOn,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilTempSettings_Layer },
-
-			{ .name = "Oil T. warn. snap.",
-			.nameActualSize = sizeof("Oil T. warn. snap.")-1,
-			.layer = OilTempWarningSnapshotOn,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilTempSettings_Layer },
-
-			{ .name = "Oil T. alarm snap.",
-			.nameActualSize = sizeof("Oil T. alarm snap.")-1,
-			.layer = OilTempAlarmSpashotOn,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilTempSettings_Layer }
-	};
-static const uint8_t LCD_Car_OilTempSettingsList_SIZE = sizeof(LCD_Car_OilTempSettingsList)/sizeof(LCDBoard);
-
-static const LCDBoard LCD_Car_OilPressureSettingsList[ ] = {
-			{ .name = "Oil H. P. alarm",
-			.nameActualSize = sizeof("Oil H. P. alarm")-1,
-			.layer = OilHighPressureAlarmThreshold,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilPressureSettings_Layer },
-
-			{ .name = "Oil L. P. alarm",
-			.nameActualSize = sizeof("Oil L. P. alarm")-1,
-			.layer = OilLowPressureAlarmThreshold,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilPressureSettings_Layer },
-
-			{ .name = "Oil P. analog",
-			.nameActualSize = sizeof("Oil P. analog")-1,
-			.layer = OilPressureAnalogMeasurement,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilPressureSettings_Layer },
-
-			{ .name = "Oil H. P. alarm",
-			.nameActualSize = sizeof("Oil H. P. alarm")-1,
-			.layer = OilHighPressureAlarmOn,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilPressureSettings_Layer },
-
-			{ .name = "Oil L. P. alarm",
-			.nameActualSize = sizeof("Oil L. P. alarm")-1,
-			.layer = OilLowPressureAlarmOn,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilPressureSettings_Layer },
-
-			{ .name = "Oil P. alarm Buzz.",
-			.nameActualSize = sizeof("Oil P. alarm Buzz.")-1,
-			.layer = OilPressureAlarmBuzzerOn,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilPressureSettings_Layer },
-
-			{ .name = "Oil P. alarm snap.",
-			.nameActualSize = sizeof("Oil P. alarm snap.")-1,
-			.layer = OilPressureAlarmSnapshotOn,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = OilPressureSettings_Layer }
-	};
-static const uint8_t LCD_Car_OilPressureSettingsList_SIZE = sizeof(LCD_Car_OilPressureSettingsList)/sizeof(LCDBoard);
-
-static const LCDBoard LCD_Car_FuelSettingsList[ ] = {
-			{ .name = "Fuel Low warn. thr.",
-			.nameActualSize = sizeof("Fuel Low warn. thr.")-1,
-			.layer = FuelLowLevelWarningThreshold,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = FuelSettings_Layer },
-
-			{ .name = "Fuel Low warn. ON/OFF",
-			.nameActualSize = sizeof("Fuel Low warn. ON/OFF")-1,
-			.layer = FuelLowLevelWarningOn,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = FuelSettings_Layer },
-
-			{ .name = "Fuel Low Buzzer",
-			.nameActualSize = sizeof("Fuel Low Buzzer")-1,
-			.layer = FuelLowLevelWarningBuzzerOn,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = FuelSettings_Layer }
-	};
-static const uint8_t LCD_Car_FuelSettingsList_SIZE = sizeof(LCD_Car_FuelSettingsList)/sizeof(LCDBoard);
-
-static const LCDBoard LCD_Car_MainBatterySettingsList[ ] = {
-			{ .name = "Low V. thres.",
-			.nameActualSize = sizeof("Low V. thres.")-1,
-			.layer = MainBatteryLowVoltageAlarmThreshold,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = MainBatterySettings_Layer },
-
-			{ .name = "High V. thres.",
-			.nameActualSize = sizeof("High V. thres.")-1,
-			.layer = MainBatteryHighVoltageAlarmThreshold,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = MainBatterySettings_Layer },
-
-			{ .name = "Low V. alarm",
-			.nameActualSize = sizeof("Low V. alarm")-1,
-			.layer = MainBatteryLowVoltageAlarmOn,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = MainBatterySettings_Layer },
-
-			{ .name = "High V. alarm",
-			.nameActualSize = sizeof("High V. alarm")-1,
-			.layer = MainBatteryHighVoltageAlarmOn,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = MainBatterySettings_Layer },
-
-			{ .name = "Volt. alarm Buzz.",
-			.nameActualSize = sizeof("Volt. alarm Buzz.")-1,
-			.layer = MainBatteryAlarmBuzzerOn,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = MainBatterySettings_Layer },
-
-			{ .name = "L. V. alarm snap.",
-			.nameActualSize = sizeof("L. V. alarm snap.")-1,
-			.layer = MainBatteryLowVoltageSnapshotOn,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = MainBatterySettings_Layer },
-
-			{ .name = "H. V. alarm snap.",
-			.nameActualSize = sizeof("H. V. alarm snap.")-1,
-			.layer = MainBatteryHighVoltageSnapshotOn,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = MainBatterySettings_Layer }
-	};
-static const uint8_t LCD_Car_MainBatterySettingsList_SIZE = sizeof(LCD_Car_MainBatterySettingsList)/sizeof(LCDBoard);
-
-static const LCDBoard LCD_Car_AuxBatterySettingsList[ ] = {
-			{ .name = "Low V. thres.",
-			.nameActualSize = sizeof("Low V. thres.")-1,
-			.layer = AuxBatteryLowVoltageAlarmThreshold,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = AuxBatterySettings_Layer },
-
-			{ .name = "High V. thres.",
-			.nameActualSize = sizeof("High V. thres.")-1,
-			.layer = AuxBatteryHighVoltageAlarmThreshold,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = AuxBatterySettings_Layer },
-
-			{ .name = "Low V. alarm",
-			.nameActualSize = sizeof("Low V. alarm")-1,
-			.layer = AuxBatteryLowVoltageAlarmOn,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = AuxBatterySettings_Layer },
-
-			{ .name = "High V. alarm",
-			.nameActualSize = sizeof("High V. alarm")-1,
-			.layer = AuxBatteryHighVoltageAlarmOn,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = AuxBatterySettings_Layer },
-
-			{ .name = "Volt. alarm Buzz.",
-			.nameActualSize = sizeof("Volt. alarm Buzz.")-1,
-			.layer = AuxBatteryAlarmBuzzerOn,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = AuxBatterySettings_Layer },
-
-			{ .name = "L. V. alarm snap.",
-			.nameActualSize = sizeof("L. V. alarm snap.")-1,
-			.layer = AuxBatteryLowVoltageSnapshotOn,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = AuxBatterySettings_Layer },
-
-			{ .name = "H. V. alarm snap.",
-			.nameActualSize = sizeof("H. V. alarm snap.")-1,
-			.layer = AuxBatteryHighVoltageSnapshotOn,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = AuxBatterySettings_Layer }
-	};
-static const uint8_t LCD_Car_AuxBatterySettingsList_SIZE = sizeof(LCD_Car_AuxBatterySettingsList)/sizeof(LCDBoard);
-
-static const LCDBoard LCD_Board_InternalVoltSettingsList[ ] = {
-			{ .name = "5V Low thres.",
-			.nameActualSize = sizeof("5V Low thres.")-1,
-			.layer = Supply5VLowThreshold,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = InterVoltSettings_Layer },
-
-			{ .name = "5V High thres.",
-			.nameActualSize = sizeof("5V High thres.")-1,
-			.layer = Supply5VHighThreshold,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = InterVoltSettings_Layer },
-
-			{ .name = "3V3 Low thres.",
-			.nameActualSize = sizeof("3V3 Low thres.")-1,
-			.layer = Supply3V3LowThreshold,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = InterVoltSettings_Layer },
-
-			{ .name = "3V3 High thres.",
-			.nameActualSize = sizeof("3V3 High thres.")-1,
-			.layer = Supply3V3HighThreshold,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = InterVoltSettings_Layer },
-
-			{ .name = "VIn Low thres.",
-			.nameActualSize = sizeof("VIn Low thres.")-1,
-			.layer = SupplyVinLowThreshold,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = InterVoltSettings_Layer }
-	};
-static const uint8_t LCD_Board_InternalVoltSettingsList_SIZE = sizeof(LCD_Board_InternalVoltSettingsList)/sizeof(LCDBoard);
-
-static const LCDBoard LCD_Board_InternalTempSettingsList[ ] = {
-			{ .name = "3V3 DCDC T. thres.",
-			.nameActualSize = sizeof("3V3 DCDC T. thres.")-1,
-			.layer = DCDC3V3HighTempThreshold,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = InterTempSettings_Layer },
-
-			{ .name = "5V DCDC T. thres.",
-			.nameActualSize = sizeof("5V DCDC T. thres.")-1,
-			.layer = DCDC5VHighTempThreshold,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = InterTempSettings_Layer }
-	};
-static const uint8_t LCD_Board_InternalTempSettingsList_SIZE = sizeof(LCD_Board_InternalTempSettingsList)/sizeof(LCDBoard);
-
-static const LCDBoard LCD_Board_BuzzerSettingsList[ ] = {
-			{ .name = "Buzzer Main",
-			.nameActualSize = sizeof("Buzzer Main")-1,
-			.layer = BuzzerMainSwitch,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = BuzzerSettings_Layer },
-
-			{ .name = "Buzzer Main alarm",
-			.nameActualSize = sizeof("Buzzer Main alarm")-1,
-			.layer = BuzzerMainAlarmsSwitch,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = BuzzerSettings_Layer },
-
-			{ .name = "Buzzer Main button",
-			.nameActualSize = sizeof("Buzzer Main button")-1,
-			.layer = BuzzerMainButtonsSwitch,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = BuzzerSettings_Layer },
-
-			{ .name = "Buzzer Short press",
-			.nameActualSize = sizeof("Buzzer Short press")-1,
-			.layer = BuzzerWhenShortPress,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = BuzzerSettings_Layer },
-
-			{ .name = "Buzzer Long press",
-			.nameActualSize = sizeof("Buzzer Long press")-1,
-			.layer = BuzzerWhenLongPress,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = BuzzerSettings_Layer }
-	};
-static const uint8_t LCD_Board_BuzzerSettingsList_SIZE = sizeof(LCD_Board_BuzzerSettingsList)/sizeof(LCDBoard);
-
-static const LCDBoard LCD_Board_LCDSettingsList[ ] = {
-			{ .name = "Backlight level",
-			.nameActualSize = sizeof("Backlight level")-1,
-			.layer = BacklightBrightnessLevel,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = LCDSettings_Layer },
-
-			{ .name = "Sec to off light",
-			.nameActualSize = sizeof("Sec to off light")-1,
-			.layer = SecondsToTurnOffBacklight,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = LCDSettings_Layer },
-
-			{ .name = "Auto off from",
-			.nameActualSize = sizeof("Auto off from")-1,
-			.layer = AutoBacklightOffStartHour,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = LCDSettings_Layer },
-
-			{ .name = "Auto off to",
-			.nameActualSize = sizeof("Auto off to")-1,
-			.layer = AutoBacklightOffEndHour,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = LCDSettings_Layer },
-
-			{ .name = "Home screen",
-			.nameActualSize = sizeof("Home screen")-1,
-			.layer = HomeScreen,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = LCDSettings_Layer },
-
-			{ .name = "Auto home return",
-			.nameActualSize = sizeof("Auto home return")-1,
-			.layer = AutoHomeReturnTime,
-			.actionForEnter = Ctrl_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = LCDSettings_Layer },
-
-			{ .name = "Auto light off",
-			.nameActualSize = sizeof("Auto light off")-1,
-			.layer = AutoBacklightOff,
-			.actionForEnter = OnOff_EnterAction,
-			.screenType = No_ScreenType,
-			.layerPrevious = LCDSettings_Layer },
-	};
-static const uint8_t LCD_Board_LCDSettingsList_SIZE = sizeof(LCD_Board_LCDSettingsList)/sizeof(LCDBoard);
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-
-
-static Error_Code ControlValueWithEncoder(const LCDBoard* const currentBoard, boolean* displayErrorFlag, boolean* displayDoneFlag, boolean* doneOnce);
 
 
 
@@ -763,45 +869,261 @@ void StartTaskLCD(void const * argument)
 	Error_Code error = NO_ERROR;
 
 	/* No better option for making a degree symbol was found so far */
-	uint8_t degreeSymbolCharacter[2] = "";
-	snprintf((char*)degreeSymbolCharacter, 2, "%c", DEGREE_SYMBOL_LCD);
+	snprintf((char*)degreeSymbolCharacter, 3, "%cC", DEGREE_SYMBOL_LCD);
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-	int32_t submenuIterator = 0;
+	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+	/* Add units to the proper boards */
+	LCD_WaterHighTempWarningThreshold.unit		= (char*)degreeSymbolCharacter;
+	LCD_WaterHighTempAlarmThreshold.unit 		= (char*)degreeSymbolCharacter;
+	LCD_WaterHighTempFanOnThreshold.unit 		= (char*)degreeSymbolCharacter;
+	LCD_WaterHighTempFanOffThreshold.unit 		= (char*)degreeSymbolCharacter;
 
-	Enum_Layer currentLayer = HOME_SCREEN;
+	LCD_OilHighTempWarningThreshold.unit		= (char*)degreeSymbolCharacter;
+	LCD_OilHighTempAlarmThreshold.unit			= (char*)degreeSymbolCharacter;
 
-	boolean displayErrorFlag = FALSE;
-	boolean displayDoneFlag = FALSE;
+	LCD_OilHighPressureAlarmThreshold.unit		= STRING_BAR;
+	LCD_OilLowPressureAlarmThreshold.unit		= STRING_BAR;
 
-	/******************************************************/
-	/* For reading the data from EEPROM and displaying it */
-	DiagnosticDataToEEPROM_struct DiagnosticDataRead =
-	{ .DiagnosticDataForEEPROM =
-		{ .EEPROMParameters = &EEPROM_car,
-		.data = DiagnosticDataRead.data,
-		.size = MAX_DIAGNOSTIC_SNAPSHOT_SIZE,
-		.memAddress = 0u,
-		.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE },
-	.diag_mess_from_queue =
-		{ .snapshotIdentificator = DIAGNOSTICS_OK,
-		.value = 0 } };
+	LCD_FuelLowLevelWarningThreshold.unit		= STRING_LITERS;
 
-	ErrorDataToEEPROM_struct ErrorDataRead =
-	{ .ErrorDataForEEPROM =
-		{ .EEPROMParameters = &EEPROM_board,
-		.data = ErrorDataRead.data,
-		.size = MAX_ERROR_SNAPSHOT_SIZE,
-		.memAddress = 0u,
-		.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE	},
-	.error_mess_from_queue = NO_ERROR };
 
-	INITIALIZE_EEPROM_data_struct(DiagnosticDataRead.DiagnosticDataForEEPROM);
-	INITIALIZE_EEPROM_data_struct(ErrorDataRead.ErrorDataForEEPROM);
-	/******************************************************/
+	/* Prepare LCD boards to be used - calculate sizes (See Macro definition) */
+	PREPARE_LCD_board(LCD_MainMenu);
+	PREPARE_LCD_board(LCD_Desktop);
+	PREPARE_LCD_board(LCD_GPS);
+	PREPARE_LCD_board(LCD_CarInfo);
+	PREPARE_LCD_board(LCD_JarvisInfo);
+	PREPARE_LCD_board(LCD_Last3DiagSnaps);
+	PREPARE_LCD_board(LCD_Last3ErrorSnaps);
+	PREPARE_LCD_board(LCD_CarSettings);
+	PREPARE_LCD_board(LCD_JarvisSettings);
 
-	/* Home screen applied - can be changed in settings from LCD */
-	LCD_MainMenu.layerPrevious = HOME_SCREEN;
+	PREPARE_LCD_board(LCD_ClearDiagSnaps);
+	PREPARE_LCD_board(LCD_ClearTripMileage);
+	PREPARE_LCD_board(LCD_WaterTempSettings);
+	PREPARE_LCD_board(LCD_OilTempSettings);
+	PREPARE_LCD_board(LCD_OilPressSettings);
+	PREPARE_LCD_board(LCD_FuelSettings);
+	PREPARE_LCD_board(LCD_MainBattSettings);
+	PREPARE_LCD_board(LCD_AuxBattSettings);
+
+	PREPARE_LCD_board(LCD_ClearErrorSnap);
+	PREPARE_LCD_board(LCD_AdjustPolishTime);
+	PREPARE_LCD_board(LCD_AdjustTimeZone);
+	PREPARE_LCD_board(LCD_InternalVoltSett);
+	PREPARE_LCD_board(LCD_InternalTempSett);
+	PREPARE_LCD_board(LCD_BuzzerSettings);
+	PREPARE_LCD_board(LCD_LCDSettings);
+
+	PREPARE_LCD_board(LCD_WaterHighTempWarningThreshold);
+	PREPARE_LCD_board(LCD_WaterHighTempAlarmThreshold);
+	PREPARE_LCD_board(LCD_WaterHighTempFanOnThreshold);
+	PREPARE_LCD_board(LCD_WaterHighTempFanOffThreshold);
+	PREPARE_LCD_board(LCD_WaterHighTempWarningOnOff);
+	PREPARE_LCD_board(LCD_WaterHighTempAlarmOnOff);
+	PREPARE_LCD_board(LCD_WaterHighTempFanControlOnOff);
+	PREPARE_LCD_board(LCD_WaterHighTempWarningBuzzerOnOff);
+	PREPARE_LCD_board(LCD_WaterHighTempAlarmBuzzerOnOff);
+	PREPARE_LCD_board(LCD_WaterHighTempWarningSnapshotOnOff);
+	PREPARE_LCD_board(LCD_WaterHighTempAlarmSnapshotOnOff);
+
+	PREPARE_LCD_board(LCD_OilHighTempWarningThreshold);
+	PREPARE_LCD_board(LCD_OilHighTempAlarmThreshold);
+	PREPARE_LCD_board(LCD_OilHighTempWarningOnOff);
+	PREPARE_LCD_board(LCD_OilHighTempAlarmOnOff);
+	PREPARE_LCD_board(LCD_OilHighTempWarningBuzzerOnOff);
+	PREPARE_LCD_board(LCD_OilHighTempAlarmBuzzerOnOff);
+	PREPARE_LCD_board(LCD_OilHighTempWarningSnapshotOnOff);
+	PREPARE_LCD_board(LCD_OilHighTempAlarmSnapshotOnOff);
+
+	PREPARE_LCD_board(LCD_OilHighPressureAlarmThreshold);
+	PREPARE_LCD_board(LCD_OilLowPressureAlarmThreshold);
+	PREPARE_LCD_board(LCD_OilPressureAnalogMeasurementOnOff);
+	PREPARE_LCD_board(LCD_OilHighPressureAlarmOnOff);
+	PREPARE_LCD_board(LCD_OilLowPressureAlarmOnOff);
+	PREPARE_LCD_board(LCD_OilPressureAlarmBuzzerOnOff);
+	PREPARE_LCD_board(LCD_OilPressureAlarmSnapshotOnOff);
+
+	PREPARE_LCD_board(LCD_FuelLowLevelWarningThreshold);
+	PREPARE_LCD_board(LCD_FuelLowLevelWarningOnOff);
+	PREPARE_LCD_board(LCD_FuelLowLevelWarningBuzzerOnOff);
+
+//	PREPARE_LCD_board();
+//	PREPARE_LCD_board();
+//	PREPARE_LCD_board();
+	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+	/* Prepare LCD boards to be used - making connections (lists) */
+	LCD_MainMenu.lowerLayer_ptr				= &LCD_Desktop;
+	LCD_Desktop.upperLayer_ptr 				= &LCD_MainMenu;
+	LCD_Desktop.nextLayer_ptr 				= &LCD_GPS;
+	LCD_GPS.previousLayer_ptr				= &LCD_Desktop;
+	LCD_GPS.upperLayer_ptr 					= &LCD_MainMenu;
+	LCD_GPS.nextLayer_ptr 					= &LCD_CarInfo;
+	LCD_CarInfo.previousLayer_ptr 			= &LCD_GPS;
+	LCD_CarInfo.upperLayer_ptr 				= &LCD_MainMenu;
+	LCD_CarInfo.nextLayer_ptr 				= &LCD_JarvisInfo;
+	LCD_JarvisInfo.previousLayer_ptr 		= &LCD_CarInfo;
+	LCD_JarvisInfo.upperLayer_ptr 			= &LCD_MainMenu;
+	LCD_JarvisInfo.nextLayer_ptr 			= &LCD_Last3DiagSnaps;
+	LCD_Last3DiagSnaps.previousLayer_ptr 	= &LCD_JarvisInfo;
+	LCD_Last3DiagSnaps.upperLayer_ptr 		= &LCD_MainMenu;
+	LCD_Last3DiagSnaps.nextLayer_ptr		= &LCD_Last3ErrorSnaps;
+	LCD_Last3ErrorSnaps.previousLayer_ptr 	= &LCD_Last3DiagSnaps;
+	LCD_Last3ErrorSnaps.upperLayer_ptr 		= &LCD_MainMenu;
+	LCD_Last3ErrorSnaps.nextLayer_ptr 		= &LCD_CarSettings;
+	LCD_CarSettings.previousLayer_ptr 		= &LCD_Last3ErrorSnaps;
+	LCD_CarSettings.lowerLayer_ptr			= &LCD_ClearDiagSnaps;
+	LCD_CarSettings.upperLayer_ptr 			= &LCD_MainMenu;
+	LCD_CarSettings.nextLayer_ptr 			= &LCD_JarvisSettings;
+	LCD_JarvisSettings.lowerLayer_ptr		= &LCD_ClearErrorSnap;
+	LCD_JarvisSettings.previousLayer_ptr	= &LCD_Last3ErrorSnaps;
+	LCD_JarvisSettings.upperLayer_ptr 		= &LCD_MainMenu;
+
+	/* CarSettings_Layer */
+	LCD_ClearDiagSnaps.upperLayer_ptr 		= &LCD_CarSettings;
+	LCD_ClearDiagSnaps.nextLayer_ptr 		= &LCD_ClearTripMileage;
+	LCD_ClearTripMileage.previousLayer_ptr 	= &LCD_ClearDiagSnaps;
+	LCD_ClearTripMileage.upperLayer_ptr 	= &LCD_CarSettings;
+	LCD_ClearTripMileage.nextLayer_ptr 		= &LCD_WaterTempSettings;
+	LCD_WaterTempSettings.previousLayer_ptr = &LCD_ClearTripMileage;
+	LCD_WaterTempSettings.lowerLayer_ptr	= &LCD_WaterHighTempWarningThreshold;
+	LCD_WaterTempSettings.upperLayer_ptr 	= &LCD_CarSettings;
+	LCD_WaterTempSettings.nextLayer_ptr 	= &LCD_OilTempSettings;
+	LCD_OilTempSettings.previousLayer_ptr 	= &LCD_WaterTempSettings;
+	LCD_OilTempSettings.upperLayer_ptr 		= &LCD_CarSettings;
+	LCD_OilTempSettings.nextLayer_ptr		= &LCD_OilPressSettings;
+	LCD_OilPressSettings.previousLayer_ptr 	= &LCD_OilTempSettings;
+	LCD_OilPressSettings.upperLayer_ptr 	= &LCD_CarSettings;
+	LCD_OilPressSettings.nextLayer_ptr 		= &LCD_FuelSettings;
+	LCD_FuelSettings.previousLayer_ptr 		= &LCD_OilPressSettings;
+	LCD_FuelSettings.upperLayer_ptr 		= &LCD_CarSettings;
+	LCD_FuelSettings.nextLayer_ptr 			= &LCD_MainBattSettings;
+	LCD_MainBattSettings.previousLayer_ptr 	= &LCD_FuelSettings;
+	LCD_MainBattSettings.upperLayer_ptr		= &LCD_CarSettings;
+	LCD_MainBattSettings.nextLayer_ptr 		= &LCD_AuxBattSettings;
+	LCD_AuxBattSettings.previousLayer_ptr 	= &LCD_MainBattSettings;
+	LCD_AuxBattSettings.upperLayer_ptr		= &LCD_CarSettings;
+
+	/* JarvisSettings_Layer */
+	LCD_ClearErrorSnap.upperLayer_ptr 		= &LCD_JarvisSettings;
+	LCD_ClearErrorSnap.nextLayer_ptr 		= &LCD_AdjustPolishTime;
+	LCD_AdjustPolishTime.previousLayer_ptr 	= &LCD_ClearErrorSnap;
+	LCD_AdjustPolishTime.upperLayer_ptr 	= &LCD_JarvisSettings;
+	LCD_AdjustPolishTime.nextLayer_ptr 		= &LCD_AdjustTimeZone;
+	LCD_AdjustTimeZone.previousLayer_ptr 	= &LCD_AdjustPolishTime;
+	LCD_AdjustTimeZone.upperLayer_ptr 		= &LCD_JarvisSettings;
+	LCD_AdjustTimeZone.nextLayer_ptr 		= &LCD_InternalVoltSett;
+	LCD_InternalVoltSett.previousLayer_ptr 	= &LCD_AdjustTimeZone;
+	LCD_InternalVoltSett.upperLayer_ptr 	= &LCD_JarvisSettings;
+	LCD_InternalVoltSett.nextLayer_ptr 		= &LCD_InternalTempSett;
+	LCD_InternalTempSett.previousLayer_ptr 	= &LCD_InternalVoltSett;
+	LCD_InternalTempSett.upperLayer_ptr 	= &LCD_JarvisSettings;
+	LCD_InternalTempSett.nextLayer_ptr 		= &LCD_BuzzerSettings;
+	LCD_BuzzerSettings.previousLayer_ptr 	= &LCD_InternalTempSett;
+	LCD_BuzzerSettings.upperLayer_ptr 		= &LCD_JarvisSettings;
+	LCD_BuzzerSettings.nextLayer_ptr 		= &LCD_LCDSettings;
+	LCD_LCDSettings.previousLayer_ptr 		= &LCD_InternalTempSett;
+	LCD_LCDSettings.upperLayer_ptr 			= &LCD_JarvisSettings;
+
+	/* CarSettings_Layer -> WaterSettings_Layer */
+	LCD_WaterHighTempWarningThreshold.upperLayer_ptr 		= &LCD_WaterTempSettings;
+	LCD_WaterHighTempWarningThreshold.nextLayer_ptr 		= &LCD_WaterHighTempAlarmThreshold;
+	LCD_WaterHighTempAlarmThreshold.previousLayer_ptr 		= &LCD_WaterHighTempWarningThreshold;
+	LCD_WaterHighTempAlarmThreshold.upperLayer_ptr 			= &LCD_WaterTempSettings;
+	LCD_WaterHighTempAlarmThreshold.nextLayer_ptr 			= &LCD_WaterHighTempFanOnThreshold;
+	LCD_WaterHighTempFanOnThreshold.previousLayer_ptr 		= &LCD_WaterHighTempAlarmThreshold;
+	LCD_WaterHighTempFanOnThreshold.upperLayer_ptr 			= &LCD_WaterTempSettings;
+	LCD_WaterHighTempFanOnThreshold.nextLayer_ptr 			= &LCD_WaterHighTempFanOffThreshold;
+	LCD_WaterHighTempFanOffThreshold.previousLayer_ptr 		= &LCD_WaterHighTempFanOnThreshold;
+	LCD_WaterHighTempFanOffThreshold.upperLayer_ptr 		= &LCD_WaterTempSettings;
+	LCD_WaterHighTempFanOffThreshold.nextLayer_ptr 			= &LCD_WaterHighTempWarningOnOff;
+	LCD_WaterHighTempWarningOnOff.previousLayer_ptr 		= &LCD_WaterHighTempFanOffThreshold;
+	LCD_WaterHighTempWarningOnOff.upperLayer_ptr 			= &LCD_WaterTempSettings;
+	LCD_WaterHighTempWarningOnOff.nextLayer_ptr 			= &LCD_WaterHighTempAlarmOnOff;
+	LCD_WaterHighTempAlarmOnOff.previousLayer_ptr 			= &LCD_WaterHighTempWarningOnOff;
+	LCD_WaterHighTempAlarmOnOff.upperLayer_ptr 				= &LCD_WaterTempSettings;
+	LCD_WaterHighTempAlarmOnOff.nextLayer_ptr 				= &LCD_WaterHighTempFanControlOnOff;
+	LCD_WaterHighTempFanControlOnOff.previousLayer_ptr 		= &LCD_WaterHighTempAlarmOnOff;
+	LCD_WaterHighTempFanControlOnOff.upperLayer_ptr 		= &LCD_WaterTempSettings;
+	LCD_WaterHighTempFanControlOnOff.nextLayer_ptr 			= &LCD_WaterHighTempWarningBuzzerOnOff;
+	LCD_WaterHighTempWarningBuzzerOnOff.previousLayer_ptr 	= &LCD_WaterHighTempFanControlOnOff;
+	LCD_WaterHighTempWarningBuzzerOnOff.upperLayer_ptr 		= &LCD_WaterTempSettings;
+	LCD_WaterHighTempWarningBuzzerOnOff.nextLayer_ptr 		= &LCD_WaterHighTempAlarmBuzzerOnOff;
+	LCD_WaterHighTempAlarmBuzzerOnOff.previousLayer_ptr 	= &LCD_WaterHighTempWarningBuzzerOnOff;
+	LCD_WaterHighTempAlarmBuzzerOnOff.upperLayer_ptr 		= &LCD_WaterTempSettings;
+	LCD_WaterHighTempAlarmBuzzerOnOff.nextLayer_ptr 		= &LCD_WaterHighTempWarningSnapshotOnOff;
+	LCD_WaterHighTempWarningSnapshotOnOff.previousLayer_ptr = &LCD_WaterHighTempAlarmBuzzerOnOff;
+	LCD_WaterHighTempWarningSnapshotOnOff.upperLayer_ptr 	= &LCD_WaterTempSettings;
+	LCD_WaterHighTempWarningSnapshotOnOff.nextLayer_ptr 	= &LCD_WaterHighTempAlarmSnapshotOnOff;
+	LCD_WaterHighTempAlarmSnapshotOnOff.previousLayer_ptr 	= &LCD_WaterHighTempWarningSnapshotOnOff;
+	LCD_WaterHighTempAlarmSnapshotOnOff.upperLayer_ptr 		= &LCD_WaterTempSettings;
+
+	/* CarSettings_Layer -> OilTempSettings_Layer */
+	LCD_OilHighTempWarningThreshold.upperLayer_ptr			= &LCD_OilTempSettings;
+	LCD_OilHighTempWarningThreshold.nextLayer_ptr			= &LCD_OilHighTempAlarmThreshold;
+	LCD_OilHighTempAlarmThreshold.previousLayer_ptr			= &LCD_OilHighTempWarningThreshold;
+	LCD_OilHighTempAlarmThreshold.upperLayer_ptr			= &LCD_OilTempSettings;
+	LCD_OilHighTempAlarmThreshold.nextLayer_ptr				= &LCD_OilHighTempWarningOnOff;
+	LCD_OilHighTempWarningOnOff.previousLayer_ptr			= &LCD_OilHighTempAlarmThreshold;
+	LCD_OilHighTempWarningOnOff.upperLayer_ptr				= &LCD_OilTempSettings;
+	LCD_OilHighTempWarningOnOff.nextLayer_ptr				= &LCD_OilHighTempAlarmOnOff;
+	LCD_OilHighTempAlarmOnOff.previousLayer_ptr				= &LCD_OilHighTempWarningOnOff;
+	LCD_OilHighTempAlarmOnOff.upperLayer_ptr				= &LCD_OilTempSettings;
+	LCD_OilHighTempAlarmOnOff.nextLayer_ptr					= &LCD_OilHighTempWarningBuzzerOnOff;
+	LCD_OilHighTempWarningBuzzerOnOff.previousLayer_ptr		= &LCD_OilHighTempAlarmOnOff;
+	LCD_OilHighTempWarningBuzzerOnOff.upperLayer_ptr		= &LCD_OilTempSettings;
+	LCD_OilHighTempWarningBuzzerOnOff.nextLayer_ptr			= &LCD_OilHighTempAlarmBuzzerOnOff;
+	LCD_OilHighTempAlarmBuzzerOnOff.previousLayer_ptr		= &LCD_OilHighTempWarningBuzzerOnOff;
+	LCD_OilHighTempAlarmBuzzerOnOff.upperLayer_ptr			= &LCD_OilTempSettings;
+	LCD_OilHighTempAlarmBuzzerOnOff.nextLayer_ptr			= &LCD_OilHighTempWarningSnapshotOnOff;
+	LCD_OilHighTempWarningSnapshotOnOff.previousLayer_ptr	= &LCD_OilHighTempAlarmBuzzerOnOff;
+	LCD_OilHighTempWarningSnapshotOnOff.upperLayer_ptr		= &LCD_OilTempSettings;
+	LCD_OilHighTempWarningSnapshotOnOff.nextLayer_ptr		= &LCD_OilHighTempAlarmSnapshotOnOff;
+	LCD_OilHighTempAlarmSnapshotOnOff.previousLayer_ptr		= &LCD_OilHighTempWarningSnapshotOnOff;
+	LCD_OilHighTempAlarmSnapshotOnOff.upperLayer_ptr		= &LCD_OilTempSettings;
+
+	/* CarSettings_Layer -> OilPressureSettings_Layer */
+	LCD_OilHighPressureAlarmThreshold.upperLayer_ptr		= &LCD_OilPressSettings;
+	LCD_OilHighPressureAlarmThreshold.nextLayer_ptr			= &LCD_OilLowPressureAlarmThreshold;
+	LCD_OilLowPressureAlarmThreshold.previousLayer_ptr		= &LCD_OilHighPressureAlarmThreshold;
+	LCD_OilLowPressureAlarmThreshold.upperLayer_ptr			= &LCD_OilPressSettings;
+	LCD_OilLowPressureAlarmThreshold.nextLayer_ptr			= &LCD_OilPressureAnalogMeasurementOnOff;
+	LCD_OilPressureAnalogMeasurementOnOff.previousLayer_ptr	= &LCD_OilLowPressureAlarmThreshold;
+	LCD_OilPressureAnalogMeasurementOnOff.upperLayer_ptr	= &LCD_OilPressSettings;
+	LCD_OilPressureAnalogMeasurementOnOff.nextLayer_ptr		= &LCD_OilHighPressureAlarmOnOff;
+	LCD_OilHighPressureAlarmOnOff.previousLayer_ptr			= &LCD_OilPressureAnalogMeasurementOnOff;
+	LCD_OilHighPressureAlarmOnOff.upperLayer_ptr			= &LCD_OilPressSettings;
+	LCD_OilHighPressureAlarmOnOff.nextLayer_ptr				= &LCD_OilLowPressureAlarmOnOff;
+	LCD_OilLowPressureAlarmOnOff.previousLayer_ptr			= &LCD_OilHighPressureAlarmOnOff;
+	LCD_OilLowPressureAlarmOnOff.upperLayer_ptr				= &LCD_OilPressSettings;
+	LCD_OilLowPressureAlarmOnOff.nextLayer_ptr				= &LCD_OilPressureAlarmBuzzerOnOff;
+	LCD_OilPressureAlarmBuzzerOnOff.previousLayer_ptr		= &LCD_OilLowPressureAlarmOnOff;
+	LCD_OilPressureAlarmBuzzerOnOff.upperLayer_ptr			= &LCD_OilPressSettings;
+	LCD_OilPressureAlarmBuzzerOnOff.nextLayer_ptr			= &LCD_OilPressureAlarmSnapshotOnOff;
+	LCD_OilPressureAlarmSnapshotOnOff.previousLayer_ptr		= &LCD_OilPressureAlarmBuzzerOnOff;
+	LCD_OilPressureAlarmSnapshotOnOff.upperLayer_ptr		= &LCD_OilPressSettings;
+
+	/* CarSettings_Layer -> FuelSettings_Layer */
+	LCD_FuelLowLevelWarningThreshold.upperLayer_ptr			= &LCD_FuelSettings;
+	LCD_FuelLowLevelWarningThreshold.nextLayer_ptr			= &LCD_FuelLowLevelWarningOnOff;
+	LCD_FuelLowLevelWarningOnOff.previousLayer_ptr			= &LCD_FuelLowLevelWarningThreshold;
+	LCD_FuelLowLevelWarningOnOff.upperLayer_ptr				= &LCD_FuelSettings;
+	LCD_FuelLowLevelWarningOnOff.nextLayer_ptr				= &LCD_FuelLowLevelWarningBuzzerOnOff;
+	LCD_FuelLowLevelWarningBuzzerOnOff.previousLayer_ptr	= &LCD_FuelLowLevelWarningOnOff;
+	LCD_FuelLowLevelWarningBuzzerOnOff.upperLayer_ptr		= &LCD_FuelSettings;
+
+	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+	/* Prepare LCD boards to be used - setting up units and their sizes */
+
+
+	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+	currentBoard = &LCD_Desktop;
 
 	/* Setting " " in the whole buffer */
 	memset(LCD_buffer, SPACE_IN_ASCII, (LCD.noOfRowsLCD * LCD.noOfColumnsLCD));
@@ -849,7 +1171,7 @@ void StartTaskLCD(void const * argument)
 	}
 
 	/************/
-	/* For the "hello" text to display for 3 seconds */
+	/* For the "hello" text to display for a few seconds */
 	vTaskDelay(HELLO_MESSAGE_DISPLAY_TIME);
 	/************/
 
@@ -862,1959 +1184,28 @@ void StartTaskLCD(void const * argument)
 		/** Cleaning the buffer by writing only spaces into it **/
 		memset(LCD_buffer, SPACE_IN_ASCII, (LCD.noOfRowsLCD * LCD.noOfColumnsLCD));
 
-#if 0
-		switch (LCD.layer)
+		/* Calling a function to run on this LCD board (if one exists) */
+		if(currentBoard->RunningFunction) currentBoard->RunningFunction(currentBoard);
+
+		if(TRUE == ENC_button.shortPressDetected)
 		{
-			case Desktop_3: /** Information about board internals (voltages, temperatures ...) **/
-			{
-				/** First Row **/
-				error = copy_str_to_buffer((char*)"3V3: ", (char*)LCD_buffer[Row1], 0, 5);
-				error = copy_str_to_buffer((char*)DCDC_3V3_temperature_LCD.messageHandler, (char*)LCD_buffer[Row1], 5, DCDC_3V3_temperature_LCD.size);
-				error = copy_str_to_buffer((char*)GPS.forLCD.clock.messageHandler, (char*)LCD_buffer[Row1], 12, GPS.forLCD.clock.size);
-
-				/** Second Row **/
-				error = copy_str_to_buffer((char*)"5V: ", (char*)LCD_buffer[Row2], 0, 4);
-				error = copy_str_to_buffer((char*)Stabilizer_5V_temperature_LCD.messageHandler, (char*)LCD_buffer[Row2], 4, Stabilizer_5V_temperature_LCD.size);
-				error = copy_str_to_buffer((char*)Voltage_5V_LCD.messageHandler, (char*)LCD_buffer[Row2], (4+Stabilizer_5V_temperature_LCD.size+1), Voltage_5V_LCD.size);
-
-				/** Third Row **/
-				error = copy_str_to_buffer((char*)"In: ", (char*)LCD_buffer[Row3], 0, 4);
-				error = copy_str_to_buffer((char*)Voltage_Vin_LCD.messageHandler, (char*)LCD_buffer[Row3], 4, Voltage_Vin_LCD.size);
-
-				/** Fourth Row **/
-
-				break;
-			}
-			default:
-			{
-				while(1) {};
-				break;
-			}
-		}
-#endif
-
-		switch(currentLayer)
-		{
-			case MainMenu_Layer:
-			{
-				error = copy_str_to_buffer("1.", (char*)LCD_buffer[Row1], 0, 2);
-				error = copy_str_to_buffer(LCD_MainMenu.name, (char*)LCD_buffer[Row1], 2, LCD_MainMenu.nameActualSize);
-
-				scroll_list(LCD_MainMenuList, LCD_MainMenuList_SIZE, &LCD_MainMenu, &(LCD_buffer[Row1]), (int8_t*)&EncoderCounterDiff, &submenuIterator);
-
-				if(ENC_button.shortPressDetected)
-				{
-					error = shortButtonPressDetected_LCD(&LCD_MainMenu, LCD_MainMenuList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					error = longButtonPressDetected_LCD(&LCD_MainMenu, &currentLayer, &submenuIterator);
-				}
-
-				break;
-			}
-			case Desktop_Layer:
-			{
-				/*** First Row ***/
-					/* Main Battery Voltage */
-				if(TRUE == mainBatteryVoltageValueForLCD.messageReadyFLAG)
-					error = copy_str_to_buffer((char*)mainBatteryVoltageValueForLCD.messageHandler, (char*)LCD_buffer[Row1], 0, mainBatteryVoltageValueForLCD.size);
-				error = copy_str_to_buffer("V", (char*)LCD_buffer[Row1], 5, 1);
-
-				if(1 == tuBylemFLAG)	//TODO: do usuniecia po ogarnieciu obslugi MicroSD
-					error = copy_str_to_buffer((char*)TEMPBUFF, (char*)LCD_buffer[Row2],13 , 5);
-
-					/* Aux Battery Voltage */
-				if(TRUE == auxiliaryBatteryVoltageValueForLCD.messageReadyFLAG)
-					error = copy_str_to_buffer((char*)auxiliaryBatteryVoltageValueForLCD.messageHandler, (char*)LCD_buffer[Row1], 7, auxiliaryBatteryVoltageValueForLCD.size);
-				error = copy_str_to_buffer("V", (char*)LCD_buffer[Row1], 12, 1);
-
-					/* clock */
-				if((TRUE == GPS.forLCD.hours.messageReadyFLAG) && (TRUE == GPS.forLCD.minutes.messageReadyFLAG))
-				{
-					error = copy_str_to_buffer((char*)GPS.forLCD.hours.messageHandler, (char*)LCD_buffer[Row1], 15, GPS.forLCD.hours.size);
-					error = copy_str_to_buffer(":", (char*)LCD_buffer[Row1], (15+GPS.forLCD.hours.size), 1);
-					error = copy_str_to_buffer((char*)GPS.forLCD.minutes.messageHandler, (char*)LCD_buffer[Row1], (15+GPS.forLCD.hours.size+1), GPS.forLCD.minutes.size);
-				}
-
-				/*** Second Row ***/
-					/* Water temperature */
-				error = copy_str_to_buffer("Water: ", (char*)LCD_buffer[Row2], 0, 7);
-				if(TRUE == waterTemperatureValueForLCD.messageReadyFLAG)
-					error = copy_str_to_buffer((char*)waterTemperatureValueForLCD.messageHandler, (char*)LCD_buffer[Row2], 7, waterTemperatureValueForLCD.size);
-				error = copy_str_to_buffer((char*)degreeSymbolCharacter, (char*)LCD_buffer[Row2], 7+waterTemperatureValueForLCD.size, 1);
-				error = copy_str_to_buffer("C", (char*)LCD_buffer[Row2], 7+waterTemperatureValueForLCD.size+1, 1);
-
-				/*** Third Row ***/
-					/* Speed */
-				if(TRUE == GPS.forLCD.speed.messageReadyFLAG)
-					error = copy_str_to_buffer((char*)GPS.forLCD.speed.messageHandler, (char*)LCD_buffer[Row3], 0, GPS.forLCD.speed.size);
-				error = copy_str_to_buffer("km/h", (char*)LCD_buffer[Row3], (GPS.forLCD.speed.size+1), 4);
-					/* Total Mileage */
-				if(TRUE == totalMileageForLCD.messageReadyFLAG)
-					error = copy_str_to_buffer((char*)totalMileageForLCD.messageHandler, (char*)LCD_buffer[Row3], 9, totalMileageForLCD.size);
-				error = copy_str_to_buffer("km", (char*)LCD_buffer[Row3], (9+totalMileageForLCD.size+1), 2);
-
-				/*** Fourth Row ***/
-					/* Engine RPM */
-				//TODO
-//				if(TRUE == RPMForLCD.messageReadyFLAG)
-//					error = copy_str_to_buffer((char*)RPMForLCD.messageHandler, (char*)LCD_buffer[Row4], 8, RPM.size);
-				error = copy_str_to_buffer("rpm", (char*)LCD_buffer[Row4], 5, 3);
-					/* Trip Mileage */
-				if(TRUE == tripMileageForLCD.messageReadyFLAG)
-					error = copy_str_to_buffer((char*)tripMileageForLCD.messageHandler, (char*)LCD_buffer[Row4], 9, tripMileageForLCD.size);
-				error = copy_str_to_buffer("km", (char*)LCD_buffer[Row4], (9+tripMileageForLCD.size+1), 2);
-
-				if(ENC_button.shortPressDetected)
-				{
-					ENC_button.shortPressDetected = FALSE;
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					error = longButtonPressDetected_LCD(&LCD_MainMenuList[0], &currentLayer, &submenuIterator);
-				}
-
-				break;
-			}
-			case GPS_Layer:
-			{
-				/*** First Row ***/
-					/* Fix / NoFix */
-				if(TRUE == GPS.forLCD.status.messageReadyFLAG)
-					error = copy_str_to_buffer((char*)GPS.forLCD.status.messageHandler, (char*)LCD_buffer[Row1], 0, GPS.forLCD.status.size);
-					/* Speed */
-				if(TRUE == GPS.forLCD.speed.messageReadyFLAG)
-					error = copy_str_to_buffer((char*)GPS.forLCD.speed.messageHandler, (char*)LCD_buffer[Row1], 6, GPS.forLCD.speed.size);
-				error = copy_str_to_buffer("km/h", (char*)LCD_buffer[Row1], (6+GPS.forLCD.speed.size+1), 4);
-					/* clock */
-				if((TRUE == GPS.forLCD.hours.messageReadyFLAG) && (TRUE == GPS.forLCD.minutes.messageReadyFLAG))
-				{
-					error = copy_str_to_buffer((char*)GPS.forLCD.hours.messageHandler, (char*)LCD_buffer[Row1], 15, GPS.forLCD.hours.size);
-					error = copy_str_to_buffer(":", (char*)LCD_buffer[Row1], (15+GPS.forLCD.hours.size), 1);
-					error = copy_str_to_buffer((char*)GPS.forLCD.minutes.messageHandler, (char*)LCD_buffer[Row1], (15+GPS.forLCD.hours.size+1), GPS.forLCD.minutes.size);
-				}
-
-				/*** Second Row ***/
-					/* GPS: Latitude */
-				error = copy_str_to_buffer("Lat.:", (char*)LCD_buffer[Row2], 0, 5);
-				if(TRUE == GPS.forLCD.latitude.messageReadyFLAG)
-					error = copy_str_to_buffer((char*)GPS.forLCD.latitude.messageHandler, (char*)LCD_buffer[Row2], 6, GPS.forLCD.latitude.size);
-					/* GPS: Latitude Indicator */
-				if(TRUE == GPS.forLCD.latitudeIndicator.messageReadyFLAG)
-					error = copy_str_to_buffer((char*)GPS.forLCD.latitudeIndicator.messageHandler, (char*)LCD_buffer[Row2], 6+GPS.forLCD.latitude.size+1, GPS.forLCD.latitudeIndicator.size);
-
-
-				/*** Third Row ***/
-					/* GPS: Longitude */
-				error = copy_str_to_buffer("Lon.:", (char*)LCD_buffer[Row3], 0, 5);
-				if(TRUE == GPS.forLCD.longitude.messageReadyFLAG)
-					error = copy_str_to_buffer((char*)GPS.forLCD.longitude.messageHandler, (char*)LCD_buffer[Row3], 6, GPS.forLCD.longitude.size);
-					/* GPS: Longitude Indicator */
-				error = copy_str_to_buffer((char*)GPS.forLCD.longitudeIndicator.messageHandler, (char*)LCD_buffer[Row3], 6+GPS.forLCD.longitude.size+1, GPS.forLCD.longitudeIndicator.size);
-
-				/*** Fourth Row ***/
-					/* GPS: Altitude */
-				error = copy_str_to_buffer("Alt.:", (char*)LCD_buffer[Row4], 0, 5);
-				if(TRUE == GPS.forLCD.altitude.messageReadyFLAG)
-					error = copy_str_to_buffer((char*)GPS.forLCD.altitude.messageHandler, (char*)LCD_buffer[Row4], 6, GPS.forLCD.altitude.size);
-				error = copy_str_to_buffer("m npm", (char*)LCD_buffer[Row4], (6+GPS.forLCD.altitude.size+1), 5);
-
-				if(ENC_button.shortPressDetected)
-				{
-					ENC_button.shortPressDetected = FALSE;
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					error = longButtonPressDetected_LCD(&LCD_MainMenuList[1], &currentLayer, &submenuIterator);
-				}
-
-				break;
-			}
-			case CarInfo_Layer:
-			{
-				if(ENC_button.longPressDetected)
-				{
-					error = longButtonPressDetected_LCD(&LCD_MainMenuList[2], &currentLayer, &submenuIterator);
-				}
-
-				break;
-			}
-			case JarvisInfo_Layer:
-			{
-				if(ENC_button.longPressDetected)
-				{
-					error = longButtonPressDetected_LCD(&LCD_MainMenuList[3], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case Last3Diag_Layer:
-			{
-				static uint8_t isDoneOnce = FALSE;
-				static uint8_t isEmpty = FALSE;
-				error = copy_str_to_buffer("Last 3 Diag. Snaps.:", (char*)LCD_buffer[Row1], 0u, 20u);
-
-				if(FALSE == isDoneOnce)
-				{
-					if(TRUE == CAR_EEPROM_counters.didTheNumberOfDiagnosticSnapshotsOverflowed)
-					{
-						for(uint8_t i=0; i<3; ++i)
-						{
-							*(DiagnosticDataRead.DiagnosticDataForEEPROM.isReadyPtr) = DATA_NOT_READY;
-							DiagnosticDataRead.DiagnosticDataForEEPROM.memAddress = DIAGNOSTIC_SNAPSHOTS_START_ADDRESS + (uint16_t)((uint8_t)(CAR_EEPROM_counters.diagnosticSnapshotEEPROMIndex - i)*EEPROM_PAGE_SIZE);
-							xQueueSend(Queue_EEPROM_readHandle, &(DiagnosticDataRead.DiagnosticDataForEEPROM), (TickType_t)100U/*100ms wait time if the queue is full*/);
-
-							vTaskDelay((TickType_t)MAX_WAIT_TIME_FOR_EEPROM);	/* The wait time for the response from EEPROM */
-
-							if(DATA_READY == *(DiagnosticDataRead.DiagnosticDataForEEPROM.isReadyPtr))
-							{
-								error = copy_str_to_buffer("ERROR", (char*)LCD_buffer[Row3], 7u, 5u);
-								vTaskDelay((TickType_t)2000U);	/* Print "ERROR" for 2 seconds */
-							}
-							//TODO getting description of the diagnostic problem
-							//TODO writing the description into the LCD buffer
-						}
-					}
-					else
-					{
-						if(0u != CAR_EEPROM_counters.diagnosticSnapshotEEPROMIndex)
-						{
-							for(uint8_t i=0; ((i<3) && (i<=CAR_EEPROM_counters.diagnosticSnapshotEEPROMIndex)); ++i)
-							{
-								*(DiagnosticDataRead.DiagnosticDataForEEPROM.isReadyPtr) = DATA_NOT_READY;
-								DiagnosticDataRead.DiagnosticDataForEEPROM.memAddress = DIAGNOSTIC_SNAPSHOTS_START_ADDRESS + (uint16_t)((uint8_t)(CAR_EEPROM_counters.diagnosticSnapshotEEPROMIndex - i)*EEPROM_PAGE_SIZE);
-								xQueueSend(Queue_EEPROM_readHandle, &(DiagnosticDataRead.DiagnosticDataForEEPROM), (TickType_t)100U/*100ms wait time if the queue is full*/);
-
-								vTaskDelay((TickType_t)MAX_WAIT_TIME_FOR_EEPROM);	/* The wait time for the response from EEPROM */
-
-								if(DATA_READY == *(DiagnosticDataRead.DiagnosticDataForEEPROM.isReadyPtr))
-								{
-									error = copy_str_to_buffer("ERROR", (char*)LCD_buffer[Row3], 7u, 5u);
-									vTaskDelay((TickType_t)2000U);	/* Print "ERROR" for 2 seconds */
-								}
-								//TODO getting description of the diagnostic problem
-								//TODO writing the description into the LCD buffer
-							}
-						}
-						else
-						{
-							isEmpty = TRUE;
-						}
-					}
-					isDoneOnce = TRUE;
-				}//if(FALSE == isDoneOnce)
-
-				if(TRUE == isEmpty)
-				{
-					error = copy_str_to_buffer("Nothing to display", (char*)LCD_buffer[Row3], 1u, 18u);
-				}
-				if(ENC_button.longPressDetected)
-				{
-					isDoneOnce = FALSE;
-					isEmpty = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_MainMenuList[4], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case Last3Err_Layer:
-			{
-				static uint8_t isDoneOnce = FALSE;
-				static uint8_t isEmpty = FALSE;
-				error = copy_str_to_buffer("Last 3 Error Snaps.:", (char*)LCD_buffer[Row1], 0u, 20u);
-
-				if(FALSE == isDoneOnce)
-				{
-					if(TRUE == BOARD_EEPROM_counters.didTheNumberOfErrorSnapshotsOverflowed)
-					{
-						for(uint8_t i=0; i<3; ++i)
-						{
-							*(ErrorDataRead.ErrorDataForEEPROM.isReadyPtr) = DATA_NOT_READY;
-							ErrorDataRead.ErrorDataForEEPROM.memAddress = ERROR_SNAPSHOTS_START_ADDRESS + (uint16_t)((uint8_t)(BOARD_EEPROM_counters.errorSnapshotEEPROMIndex - i)*EEPROM_PAGE_SIZE);
-							xQueueSend(Queue_EEPROM_readHandle, &(ErrorDataRead.ErrorDataForEEPROM), (TickType_t)100U/*100ms wait time if the queue is full*/);
-
-							vTaskDelay((TickType_t)MAX_WAIT_TIME_FOR_EEPROM);	/* The wait time for the response from EEPROM */
-
-							if(DATA_READY == *(ErrorDataRead.ErrorDataForEEPROM.isReadyPtr))
-							{
-								error = copy_str_to_buffer("ERROR", (char*)LCD_buffer[Row3], 7u, 5u);
-								vTaskDelay((TickType_t)2000U);	/* Print "ERROR" for 2 seconds */
-							}
-							//TODO getting description of the error problem
-							//TODO writing the description into the LCD buffer
-						}
-					}
-					else
-					{
-						if(0u != BOARD_EEPROM_counters.errorSnapshotEEPROMIndex)
-						{
-							for(uint8_t i=0; ((i<3) && (i<=BOARD_EEPROM_counters.errorSnapshotEEPROMIndex)); ++i)
-							{
-								*(ErrorDataRead.ErrorDataForEEPROM.isReadyPtr) = DATA_NOT_READY;
-								ErrorDataRead.ErrorDataForEEPROM.memAddress = ERROR_SNAPSHOTS_START_ADDRESS + (uint16_t)((uint8_t)(BOARD_EEPROM_counters.errorSnapshotEEPROMIndex - i)*EEPROM_PAGE_SIZE);
-								xQueueSend(Queue_EEPROM_readHandle, &(ErrorDataRead.ErrorDataForEEPROM), (TickType_t)100U/*100ms wait time if the queue is full*/);
-
-								vTaskDelay((TickType_t)MAX_WAIT_TIME_FOR_EEPROM);	/* The wait time for the response from EEPROM */
-
-								if(DATA_READY == *(ErrorDataRead.ErrorDataForEEPROM.isReadyPtr))
-								{
-									error = copy_str_to_buffer("ERROR", (char*)LCD_buffer[Row3], 7u, 5u);
-									vTaskDelay((TickType_t)2000U);	/* Print "ERROR" for 2 seconds */
-								}
-								//TODO getting description of the error problem
-								//TODO writing the description into the LCD buffer
-							}
-						}
-						else
-						{
-							isEmpty = TRUE;
-						}
-					}
-					isDoneOnce = TRUE;
-				}//if(FALSE == isDoneOnce)
-
-				if(TRUE == isEmpty)
-				{
-					error = copy_str_to_buffer("Nothing to display", (char*)LCD_buffer[Row3], 1u, 19u);
-				}
-				if(ENC_button.longPressDetected)
-				{
-					isDoneOnce = FALSE;
-					isEmpty = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_MainMenuList[5], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case CarSettings_Layer:
-			{
-				error = copy_str_to_buffer("7.", (char*)LCD_buffer[Row1], 0, 2);
-				error = copy_str_to_buffer(LCD_MainMenuList[6].name, (char*)LCD_buffer[Row1], 2, LCD_MainMenuList[6].nameActualSize);
-
-				scroll_list(LCD_CarSettingsList, LCD_CarSettingsList_SIZE, &(LCD_MainMenuList[6]), &(LCD_buffer[Row1]), (int8_t*)&EncoderCounterDiff, &submenuIterator);
-
-				if(ENC_button.shortPressDetected)
-				{
-					error = shortButtonPressDetected_LCD(&(LCD_MainMenuList[6]), LCD_CarSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					error = longButtonPressDetected_LCD(&(LCD_MainMenuList[6]), &currentLayer, &submenuIterator);
-				}
-
-				break;
-			}
-
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-			/* Car settings list : */
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-			case /* CarSettings_Layer -> */ClearDiagnosticSnapshots:
-			{
-				char tempBuff[4u] = {' '};
-				error = copy_str_to_buffer("No. diag snaps:", (char*)LCD_buffer[Row1], 0u, 15u);
-				snprintf(tempBuff, 4u, "%3" PRIu16, CAR_EEPROM_counters.diagnosticSnapshotEEPROMIndex);
-				error = copy_str_to_buffer(tempBuff, (char*)LCD_buffer[Row1], 16u, 3u);
-
-				error = copy_str_to_buffer("Overflowed?", (char*)LCD_buffer[Row2], 0u, 11u);
-				error = copy_str_to_buffer(((TRUE == CAR_EEPROM_counters.didTheNumberOfDiagnosticSnapshotsOverflowed) ? "Yes" : " No"), (char*)LCD_buffer[Row2], 16u, 3u);
-
-				error = copy_str_to_buffer("Click enter to clear", (char*)LCD_buffer[Row3], 0u, 20u);
-				error = copy_str_to_buffer("Diagnostic snapshots", (char*)LCD_buffer[Row4], 0u, 20u);
-
-				if(ENC_button.shortPressDetected)
-				{
-					LCD_YesNo.layerPrevious = ClearDiagnosticSnapshots;
-					error = shortButtonPressDetected_LCD(&(LCD_CarSettingsList[0]), LCD_CarSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					error = longButtonPressDetected_LCD(&LCD_CarSettingsList[0], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> */ClearTripMileage:
-			{
-				error = copy_str_to_buffer("Trip mileage:", (char*)LCD_buffer[Row1], 0u, 15u);
-				if(TRUE == tripMileageForLCD.messageReadyFLAG)
-					error = copy_str_to_buffer((char*)tripMileageForLCD.messageHandler, (char*)LCD_buffer[Row2], 0u, tripMileageForLCD.size);
-				error = copy_str_to_buffer("km", (char*)LCD_buffer[Row2], (tripMileageForLCD.size+1), 2u);
-
-				error = copy_str_to_buffer("Click enter to clear", (char*)LCD_buffer[Row3], 0u, 20u);
-				error = copy_str_to_buffer("the trip mileage", (char*)LCD_buffer[Row4], 0u, 16u);
-
-				if(ENC_button.shortPressDetected)
-				{
-					LCD_YesNo.layerPrevious = ClearTripMileage;
-					error = shortButtonPressDetected_LCD(&(LCD_CarSettingsList[1]), LCD_CarSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					error = longButtonPressDetected_LCD(&LCD_CarSettingsList[1], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> */WaterSettings_Layer:
-			{
-				error = copy_str_to_buffer("7.3.", (char*)LCD_buffer[Row1], 0, 4);
-				error = copy_str_to_buffer(LCD_CarSettingsList[2].name, (char*)LCD_buffer[Row1], 4, LCD_CarSettingsList[2].nameActualSize);
-
-				scroll_list(LCD_Car_WaterTempSettingsList, LCD_Car_WaterTempSettingsList_SIZE, &(LCD_CarSettingsList[2]), &(LCD_buffer[Row1]), (int8_t*)&EncoderCounterDiff, &submenuIterator);
-
-				if(ENC_button.shortPressDetected)
-				{
-					error = shortButtonPressDetected_LCD(&(LCD_CarSettingsList[2]), LCD_Car_WaterTempSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					error = longButtonPressDetected_LCD(&LCD_CarSettingsList[2], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-			/* CarSettings_Layer -> WaterSettings_Layer: */
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-			case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterHighTempWarningThreshold:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_WaterTempSettingsList[0]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_WaterTempSettingsList[0]), LCD_Car_WaterTempSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_WaterTempSettingsList[0], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterHighTempAlarmThreshold:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_WaterTempSettingsList[1]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_WaterTempSettingsList[1]), LCD_Car_WaterTempSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_WaterTempSettingsList[1], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterHighTempFanOnThreshold:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_WaterTempSettingsList[2]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_WaterTempSettingsList[2]), LCD_Car_WaterTempSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_WaterTempSettingsList[2], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterHighTempFanOffThreshold:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_WaterTempSettingsList[3]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_WaterTempSettingsList[3]), LCD_Car_WaterTempSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_WaterTempSettingsList[3], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterTempWarningOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_WaterTempSettingsList[4]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_WaterTempSettingsList[4]), LCD_Car_WaterTempSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_WaterTempSettingsList[4], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterTempAlarmOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_WaterTempSettingsList[5]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_WaterTempSettingsList[5]), LCD_Car_WaterTempSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_WaterTempSettingsList[5], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterFanControlOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_WaterTempSettingsList[6]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_WaterTempSettingsList[6]), LCD_Car_WaterTempSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_WaterTempSettingsList[6], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterTempWarningBuzzerOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_WaterTempSettingsList[7]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_WaterTempSettingsList[7]), LCD_Car_WaterTempSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_WaterTempSettingsList[7], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterTempAlarmBuzzerOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_WaterTempSettingsList[8]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_WaterTempSettingsList[8]), LCD_Car_WaterTempSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_WaterTempSettingsList[8], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterTempWarningSnapshotOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_WaterTempSettingsList[9]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_WaterTempSettingsList[9]), LCD_Car_WaterTempSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_WaterTempSettingsList[9], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterTempAlarmSnapshotOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_WaterTempSettingsList[10]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_WaterTempSettingsList[10]), LCD_Car_WaterTempSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_WaterTempSettingsList[10], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-
-			case /* CarSettings_Layer -> */OilTempSettings_Layer:
-			{
-				error = copy_str_to_buffer("7.4.", (char*)LCD_buffer[Row1], 0, 4);
-				error = copy_str_to_buffer(LCD_CarSettingsList[3].name, (char*)LCD_buffer[Row1], 4, LCD_CarSettingsList[3].nameActualSize);
-
-				scroll_list(LCD_Car_OilTempSettingsList, LCD_Car_OilTempSettingsList_SIZE, &(LCD_CarSettingsList[3]), &(LCD_buffer[Row1]), (int8_t*)&EncoderCounterDiff, &submenuIterator);
-
-				if(ENC_button.longPressDetected)
-				{
-					error = longButtonPressDetected_LCD(&LCD_CarSettingsList[3], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-			/* CarSettings_Layer -> OilTempSettings_Layer: */
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-			case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilHighTempWarningThreshold:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_OilTempSettingsList[0]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_OilTempSettingsList[0]), LCD_Car_OilTempSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_OilTempSettingsList[0], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilHighTempAlarmThreshold:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_OilTempSettingsList[1]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_OilTempSettingsList[1]), LCD_Car_OilTempSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_OilTempSettingsList[1], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilTempWarningOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_OilTempSettingsList[2]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_OilTempSettingsList[2]), LCD_Car_OilTempSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_OilTempSettingsList[2], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilTempAlarmOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_OilTempSettingsList[3]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_OilTempSettingsList[3]), LCD_Car_OilTempSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_OilTempSettingsList[3], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilTempWarningBuzzerOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_OilTempSettingsList[4]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_OilTempSettingsList[4]), LCD_Car_OilTempSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_OilTempSettingsList[4], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilTempAlarmBuzzerOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_OilTempSettingsList[5]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_OilTempSettingsList[5]), LCD_Car_OilTempSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_OilTempSettingsList[5], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilTempWarningSnapshotOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_OilTempSettingsList[6]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_OilTempSettingsList[6]), LCD_Car_OilTempSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_OilTempSettingsList[6], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilTempAlarmSpashotOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_OilTempSettingsList[7]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_OilTempSettingsList[7]), LCD_Car_OilTempSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_OilTempSettingsList[7], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-
-			case /* CarSettings_Layer -> */OilPressureSettings_Layer:
-			{
-				error = copy_str_to_buffer("7.5.", (char*)LCD_buffer[Row1], 0, 4);
-				error = copy_str_to_buffer(LCD_CarSettingsList[4].name, (char*)LCD_buffer[Row1], 4, LCD_CarSettingsList[4].nameActualSize);
-
-				scroll_list(LCD_Car_OilPressureSettingsList, LCD_Car_OilPressureSettingsList_SIZE, &(LCD_CarSettingsList[4]), &(LCD_buffer[Row1]), (int8_t*)&EncoderCounterDiff, &submenuIterator);
-
-				if(ENC_button.longPressDetected)
-				{
-					error = longButtonPressDetected_LCD(&LCD_CarSettingsList[4], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-			/* CarSettings_Layer -> OilPressureSettings_Layer: */
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-			case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilHighPressureAlarmThreshold:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_OilPressureSettingsList[0]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_OilPressureSettingsList[0]), LCD_Car_OilPressureSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_OilPressureSettingsList[0], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilLowPressureAlarmThreshold:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_OilPressureSettingsList[1]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_OilPressureSettingsList[1]), LCD_Car_OilPressureSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_OilPressureSettingsList[1], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilPressureAnalogMeasurement:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_OilPressureSettingsList[2]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_OilPressureSettingsList[2]), LCD_Car_OilPressureSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_OilPressureSettingsList[2], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilHighPressureAlarmOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_OilPressureSettingsList[3]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_OilPressureSettingsList[3]), LCD_Car_OilPressureSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_OilPressureSettingsList[3], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilLowPressureAlarmOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_OilPressureSettingsList[4]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_OilPressureSettingsList[4]), LCD_Car_OilPressureSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_OilPressureSettingsList[4], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilPressureAlarmBuzzerOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_OilPressureSettingsList[5]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_OilPressureSettingsList[5]), LCD_Car_OilPressureSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_OilPressureSettingsList[5], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilPressureAlarmSnapshotOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_OilPressureSettingsList[6]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_OilPressureSettingsList[6]), LCD_Car_OilPressureSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_OilPressureSettingsList[6], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-
-			case /* CarSettings_Layer -> */FuelSettings_Layer:
-			{
-				error = copy_str_to_buffer("7.6.", (char*)LCD_buffer[Row1], 0, 4);
-				error = copy_str_to_buffer(LCD_CarSettingsList[5].name, (char*)LCD_buffer[Row1], 4, LCD_CarSettingsList[5].nameActualSize);
-
-				scroll_list(LCD_Car_FuelSettingsList, LCD_Car_FuelSettingsList_SIZE, &(LCD_CarSettingsList[5]), &(LCD_buffer[Row1]), (int8_t*)&EncoderCounterDiff, &submenuIterator);
-
-				if(ENC_button.longPressDetected)
-				{
-					error = longButtonPressDetected_LCD(&LCD_CarSettingsList[5], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-			/* CarSettings_Layer -> FuelSettings_Layer: */
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-			case /* CarSettings_Layer -> FuelSettings_Layer -> */FuelLowLevelWarningThreshold:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_FuelSettingsList[0]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_FuelSettingsList[0]), LCD_Car_FuelSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_FuelSettingsList[0], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> FuelSettings_Layer -> */FuelLowLevelWarningOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_FuelSettingsList[1]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_FuelSettingsList[1]), LCD_Car_FuelSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_FuelSettingsList[1], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> FuelSettings_Layer -> */FuelLowLevelWarningBuzzerOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_FuelSettingsList[2]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_FuelSettingsList[2]), LCD_Car_FuelSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_FuelSettingsList[2], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-
-			case /* CarSettings_Layer -> */MainBatterySettings_Layer:
-			{
-				error = copy_str_to_buffer("7.7.", (char*)LCD_buffer[Row1], 0, 4);
-				error = copy_str_to_buffer(LCD_CarSettingsList[6].name, (char*)LCD_buffer[Row1], 4, LCD_CarSettingsList[6].nameActualSize);
-
-				scroll_list(LCD_Car_MainBatterySettingsList, LCD_Car_MainBatterySettingsList_SIZE, &(LCD_CarSettingsList[6]), &(LCD_buffer[Row1]), (int8_t*)&EncoderCounterDiff, &submenuIterator);
-
-				if(ENC_button.longPressDetected)
-				{
-					error = longButtonPressDetected_LCD(&LCD_CarSettingsList[6], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-			/* CarSettings_Layer -> MainBatterySettings_Layer: */
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-			case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryLowVoltageAlarmThreshold:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_MainBatterySettingsList[0]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_MainBatterySettingsList[0]), LCD_Car_MainBatterySettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_MainBatterySettingsList[0], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryHighVoltageAlarmThreshold:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_MainBatterySettingsList[1]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_MainBatterySettingsList[1]), LCD_Car_MainBatterySettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_MainBatterySettingsList[1], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryLowVoltageAlarmOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_MainBatterySettingsList[2]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_MainBatterySettingsList[2]), LCD_Car_MainBatterySettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_MainBatterySettingsList[2], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryHighVoltageAlarmOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_MainBatterySettingsList[3]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_MainBatterySettingsList[3]), LCD_Car_MainBatterySettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_MainBatterySettingsList[3], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryAlarmBuzzerOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_MainBatterySettingsList[4]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_MainBatterySettingsList[4]), LCD_Car_MainBatterySettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_MainBatterySettingsList[4], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryLowVoltageSnapshotOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_MainBatterySettingsList[5]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_MainBatterySettingsList[5]), LCD_Car_MainBatterySettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_MainBatterySettingsList[5], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryHighVoltageSnapshotOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_MainBatterySettingsList[6]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_MainBatterySettingsList[6]), LCD_Car_MainBatterySettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_MainBatterySettingsList[6], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-
-			case /* CarSettings_Layer -> */AuxBatterySettings_Layer:
-			{
-				error = copy_str_to_buffer("7.8.", (char*)LCD_buffer[Row1], 0, 4);
-				error = copy_str_to_buffer(LCD_CarSettingsList[7].name, (char*)LCD_buffer[Row1], 4, LCD_CarSettingsList[7].nameActualSize);
-
-				scroll_list(LCD_Car_AuxBatterySettingsList, LCD_Car_AuxBatterySettingsList_SIZE, &(LCD_CarSettingsList[7]), &(LCD_buffer[Row1]), (int8_t*)&EncoderCounterDiff, &submenuIterator);
-
-				if(ENC_button.longPressDetected)
-				{
-					error = longButtonPressDetected_LCD(&LCD_CarSettingsList[7], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-			/* CarSettings_Layer -> AuxBatterySettings_Layer: */
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-			case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryLowVoltageAlarmThreshold:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_AuxBatterySettingsList[0]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_AuxBatterySettingsList[0]), LCD_Car_AuxBatterySettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_AuxBatterySettingsList[0], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryHighVoltageAlarmThreshold:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_AuxBatterySettingsList[1]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_AuxBatterySettingsList[1]), LCD_Car_AuxBatterySettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_AuxBatterySettingsList[1], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryLowVoltageAlarmOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_AuxBatterySettingsList[2]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_AuxBatterySettingsList[2]), LCD_Car_AuxBatterySettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_AuxBatterySettingsList[2], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryHighVoltageAlarmOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_AuxBatterySettingsList[3]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_AuxBatterySettingsList[3]), LCD_Car_AuxBatterySettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_AuxBatterySettingsList[3], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryAlarmBuzzerOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_AuxBatterySettingsList[4]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_AuxBatterySettingsList[4]), LCD_Car_AuxBatterySettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_AuxBatterySettingsList[4], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryLowVoltageSnapshotOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_AuxBatterySettingsList[6]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_AuxBatterySettingsList[6]), LCD_Car_AuxBatterySettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_AuxBatterySettingsList[6], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryHighVoltageSnapshotOn:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Car_AuxBatterySettingsList[7]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Car_AuxBatterySettingsList[7]), LCD_Car_AuxBatterySettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Car_AuxBatterySettingsList[7], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-			case BoardSettings_Layer:
-			{
-				error = copy_str_to_buffer("8.", (char*)LCD_buffer[Row1], 0, 2);
-				error = copy_str_to_buffer(LCD_MainMenuList[7].name, (char*)LCD_buffer[Row1], 3, LCD_MainMenuList[7].nameActualSize);
-
-				scroll_list(LCD_BoardSettingsList, LCD_BoardSettingsList_SIZE, &(LCD_MainMenuList[7]), &(LCD_buffer[Row1]), (int8_t*)&EncoderCounterDiff, &submenuIterator);
-
-				if(ENC_button.shortPressDetected)
-				{
-					error = shortButtonPressDetected_LCD(&LCD_MainMenuList[7], LCD_BoardSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					error = longButtonPressDetected_LCD(&LCD_MainMenuList[7], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-			/* Board settings list : */
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-			case /* BoardSettings_Layer -> */ClearErrorsSnapshots:
-			{
-				char tempBuff[4u] = {' '};
-				error = copy_str_to_buffer("No. error snaps:", (char*)LCD_buffer[Row1], 0u, 16u);
-				snprintf(tempBuff, 4u, "%3" PRIu16, BOARD_EEPROM_counters.errorSnapshotEEPROMIndex);
-				error = copy_str_to_buffer(tempBuff, (char*)LCD_buffer[Row1], 17u, 3u);
-
-				error = copy_str_to_buffer("Overflowed?", (char*)LCD_buffer[Row2], 0u, 11u);
-				error = copy_str_to_buffer(((TRUE == BOARD_EEPROM_counters.didTheNumberOfErrorSnapshotsOverflowed) ? "Yes" : " No"), (char*)LCD_buffer[Row2], 16u, 3u);
-
-				error = copy_str_to_buffer("Click enter to clear", (char*)LCD_buffer[Row3], 0u, 20u);
-				error = copy_str_to_buffer("All error snapshots", (char*)LCD_buffer[Row4], 0u, 20u);
-
-				if(ENC_button.shortPressDetected)
-				{
-					LCD_YesNo.layerPrevious = ClearErrorsSnapshots;
-					error = shortButtonPressDetected_LCD(&(LCD_CarSettingsList[0]), LCD_CarSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					error = longButtonPressDetected_LCD(&LCD_CarSettingsList[0], &currentLayer, &submenuIterator);
-				}
-				break;
-				if(ENC_button.longPressDetected)
-				{
-					error = longButtonPressDetected_LCD(&LCD_BoardSettingsList[0], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* BoardSettings_Layer -> */AdjTimePoland:
-			{
-				// TODO dorobic kontrole
-				if(ENC_button.longPressDetected)
-				{
-					error = longButtonPressDetected_LCD(&LCD_BoardSettingsList[0], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* BoardSettings_Layer -> */AdjTimeZone:
-			{
-				// TODO dorobic kontrole
-				if(ENC_button.longPressDetected)
-				{
-					error = longButtonPressDetected_LCD(&LCD_BoardSettingsList[0], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* BoardSettings_Layer -> */InterVoltSettings_Layer:
-			{
-				error = copy_str_to_buffer("8.4.", (char*)LCD_buffer[Row1], 0, 4);
-				error = copy_str_to_buffer(LCD_BoardSettingsList[3].name, (char*)LCD_buffer[Row1], 4, LCD_BoardSettingsList[3].nameActualSize);
-
-				scroll_list(LCD_Board_InternalVoltSettingsList, LCD_Board_InternalVoltSettingsList_SIZE, &(LCD_BoardSettingsList[3]), &(LCD_buffer[Row1]), (int8_t*)&EncoderCounterDiff, &submenuIterator);
-
-				if(ENC_button.longPressDetected)
-				{
-					error = longButtonPressDetected_LCD(&LCD_BoardSettingsList[0], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-			/* BoardSettings_Layer -> InterVoltSettings_Layer: */
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-			case /* BoardSettings_Layer -> InterVoltSettings_Layer -> */Supply5VLowThreshold:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Board_InternalVoltSettingsList[0]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Board_InternalVoltSettingsList[0]), LCD_Board_InternalVoltSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Board_InternalVoltSettingsList[0], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* BoardSettings_Layer -> InterVoltSettings_Layer -> */Supply5VHighThreshold:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Board_InternalVoltSettingsList[1]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Board_InternalVoltSettingsList[1]), LCD_Board_InternalVoltSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Board_InternalVoltSettingsList[1], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* BoardSettings_Layer -> InterVoltSettings_Layer -> */Supply3V3LowThreshold:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Board_InternalVoltSettingsList[2]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Board_InternalVoltSettingsList[2]), LCD_Board_InternalVoltSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Board_InternalVoltSettingsList[2], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* BoardSettings_Layer -> InterVoltSettings_Layer -> */Supply3V3HighThreshold:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Board_InternalVoltSettingsList[3]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Board_InternalVoltSettingsList[3]), LCD_Board_InternalVoltSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Board_InternalVoltSettingsList[3], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* BoardSettings_Layer -> InterVoltSettings_Layer -> */SupplyVinLowThreshold:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Board_InternalVoltSettingsList[4]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Board_InternalVoltSettingsList[4]), LCD_Board_InternalVoltSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Board_InternalVoltSettingsList[4], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-
-			case /* BoardSettings_Layer -> */InterTempSettings_Layer:
-			{
-				error = copy_str_to_buffer("8.5.", (char*)LCD_buffer[Row1], 0, 4);
-				error = copy_str_to_buffer(LCD_BoardSettingsList[4].name, (char*)LCD_buffer[Row1], 4, LCD_BoardSettingsList[4].nameActualSize);
-
-				scroll_list(LCD_Board_InternalTempSettingsList, LCD_Board_InternalTempSettingsList_SIZE, &(LCD_BoardSettingsList[4]), &(LCD_buffer[Row1]), (int8_t*)&EncoderCounterDiff, &submenuIterator);
-
-				if(ENC_button.longPressDetected)
-				{
-					error = longButtonPressDetected_LCD(&LCD_BoardSettingsList[0], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-			/* BoardSettings_Layer -> InterTempSettings_Layer: */
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-			case /* BoardSettings_Layer -> InterTempSettings_Layer -> */DCDC3V3HighTempThreshold:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Board_InternalTempSettingsList[0]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Board_InternalTempSettingsList[0]), LCD_Board_InternalTempSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Board_InternalTempSettingsList[0], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* BoardSettings_Layer -> InterTempSettings_Layer -> */DCDC5VHighTempThreshold:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Board_InternalTempSettingsList[1]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Board_InternalTempSettingsList[1]), LCD_Board_InternalTempSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Board_InternalTempSettingsList[1], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-
-			case /* BoardSettings_Layer -> */BuzzerSettings_Layer:
-			{
-				error = copy_str_to_buffer("8.6.", (char*)LCD_buffer[Row1], 0, 4);
-				error = copy_str_to_buffer(LCD_BoardSettingsList[5].name, (char*)LCD_buffer[Row1], 4, LCD_BoardSettingsList[5].nameActualSize);
-
-				scroll_list(LCD_Board_BuzzerSettingsList, LCD_Board_BuzzerSettingsList_SIZE, &(LCD_BoardSettingsList[5]), &(LCD_buffer[Row1]), (int8_t*)&EncoderCounterDiff, &submenuIterator);
-
-				if(ENC_button.longPressDetected)
-				{
-					error = longButtonPressDetected_LCD(&LCD_BoardSettingsList[0], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-			/* BoardSettings_Layer -> BuzzerSettings_Layer: */
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-			case /* BoardSettings_Layer -> BuzzerSettings_Layer -> */BuzzerMainSwitch:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Board_BuzzerSettingsList[0]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Board_BuzzerSettingsList[0]), LCD_Board_BuzzerSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Board_BuzzerSettingsList[0], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* BoardSettings_Layer -> BuzzerSettings_Layer -> */BuzzerMainAlarmsSwitch:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Board_BuzzerSettingsList[1]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Board_BuzzerSettingsList[1]), LCD_Board_BuzzerSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Board_BuzzerSettingsList[1], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* BoardSettings_Layer -> BuzzerSettings_Layer -> */BuzzerMainButtonsSwitch:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Board_BuzzerSettingsList[2]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Board_BuzzerSettingsList[2]), LCD_Board_BuzzerSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Board_BuzzerSettingsList[2], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* BoardSettings_Layer -> BuzzerSettings_Layer -> */BuzzerWhenShortPress:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Board_BuzzerSettingsList[3]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Board_BuzzerSettingsList[3]), LCD_Board_BuzzerSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Board_BuzzerSettingsList[3], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* BoardSettings_Layer -> BuzzerSettings_Layer -> */BuzzerWhenLongPress:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Board_BuzzerSettingsList[4]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Board_BuzzerSettingsList[4]), LCD_Board_BuzzerSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Board_BuzzerSettingsList[4], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-
-			case /* BoardSettings_Layer -> */LCDSettings_Layer:
-			{
-				error = copy_str_to_buffer("8.7.", (char*)LCD_buffer[Row1], 0, 2);
-				error = copy_str_to_buffer(LCD_BoardSettingsList[6].name, (char*)LCD_buffer[Row1], 4, LCD_BoardSettingsList[6].nameActualSize);
-
-				scroll_list(LCD_Board_LCDSettingsList, LCD_Board_LCDSettingsList_SIZE, &(LCD_BoardSettingsList[6]), &(LCD_buffer[Row1]), (int8_t*)&EncoderCounterDiff, &submenuIterator);
-
-				if(ENC_button.longPressDetected)
-				{
-					error = longButtonPressDetected_LCD(&LCD_BoardSettingsList[0], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-			/* BoardSettings_Layer -> LCDSettings_Layer: */
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-			case /* BoardSettings_Layer -> LCDSettings_Layer -> */BacklightBrightnessLevel:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Board_LCDSettingsList[0]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Board_LCDSettingsList[0]), LCD_Board_LCDSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Board_LCDSettingsList[0], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* BoardSettings_Layer -> LCDSettings_Layer -> */SecondsToTurnOffBacklight:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Board_LCDSettingsList[1]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Board_LCDSettingsList[1]), LCD_Board_LCDSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Board_LCDSettingsList[1], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* BoardSettings_Layer -> LCDSettings_Layer -> */AutoBacklightOffStartHour:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Board_LCDSettingsList[24]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Board_LCDSettingsList[2]), LCD_Board_LCDSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Board_LCDSettingsList[2], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* BoardSettings_Layer -> LCDSettings_Layer -> */AutoBacklightOffEndHour:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Board_LCDSettingsList[3]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Board_LCDSettingsList[3]), LCD_Board_LCDSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Board_LCDSettingsList[3], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* BoardSettings_Layer -> LCDSettings_Layer -> */HomeScreen:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Board_LCDSettingsList[4]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Board_LCDSettingsList[4]), LCD_Board_LCDSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Board_LCDSettingsList[4], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* BoardSettings_Layer -> LCDSettings_Layer -> */AutoHomeReturnTime:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Board_LCDSettingsList[5]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Board_LCDSettingsList[5]), LCD_Board_LCDSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Board_LCDSettingsList[5], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			case /* BoardSettings_Layer -> LCDSettings_Layer -> */AutoBacklightOff:
-			{
-				static boolean doneOnce = FALSE;
-				error = ControlValueWithEncoder(&(LCD_Board_LCDSettingsList[6]), &displayErrorFlag, &displayDoneFlag, &doneOnce);
-
-				if(ENC_button.shortPressDetected)
-				{
-					doneOnce = FALSE;
-					error = shortButtonPressDetected_LCD(&(LCD_Board_LCDSettingsList[6]), LCD_Board_LCDSettingsList, &currentLayer, &submenuIterator);
-				}
-
-				if(ENC_button.longPressDetected)
-				{
-					doneOnce = FALSE;
-					error = longButtonPressDetected_LCD(&LCD_Board_LCDSettingsList[6], &currentLayer, &submenuIterator);
-				}
-				break;
-			}
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-			/* Actions layers */
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-			case YesNo_Layer:
-			{
-				error = copy_str_to_buffer(LCD_YesNo.name, (char*)LCD_buffer[Row1], 3, LCD_YesNo.nameActualSize);
-				error = copy_str_to_buffer("Short press: Yes", (char*)LCD_buffer[Row2], 0, 16);
-				error = copy_str_to_buffer("Long press: No", (char*)LCD_buffer[Row3], 0, 14);
-
-				switch(LCD_YesNo.layerPrevious)
-				{
-					case /* CarSettings_Layer -> */ClearDiagnosticSnapshots:
-					{
-						if(ENC_button.shortPressDetected)
-						{
-							CREATE_EEPROM_data_struct(EEPROMData);
-
-							CAR_EEPROM_counters.diagnosticSnapshotEEPROMIndex = 0u;
-							CAR_EEPROM_counters.didTheNumberOfDiagnosticSnapshotsOverflowed = FALSE;
-
-							EEPROMData.EEPROMParameters = &EEPROM_car;
-							EEPROMData.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE;
-							EEPROMData.size = UINT8_T_SIZE;
-
-							EEPROMData.memAddress = TOTAL_SNAPSHOTS_NUMBER_ADDRESS;
-							EEPROMData.data = &(CAR_EEPROM_counters.diagnosticSnapshotEEPROMIndex);
-							xQueueSend(Queue_EEPROM_writeHandle, &EEPROMData, (TickType_t)100U/*100ms wait time if the queue is full*/);
-
-							EEPROMData.memAddress = NUMBER_OF_DIAGNOSTIC_SNAPSHOTS_OVERFLOWED_ADDRESS;
-							EEPROMData.data = &(CAR_EEPROM_counters.didTheNumberOfDiagnosticSnapshotsOverflowed);
-							xQueueSend(Queue_EEPROM_writeHandle, &EEPROMData, (TickType_t)100U/*100ms wait time if the queue is full*/);
-
-							vTaskDelay((TickType_t)MAX_WAIT_TIME_FOR_EEPROM);	/* wait for xx ms for EEPROM to be able to process that */
-
-							if(DATA_READY == *(EEPROMData.isReadyPtr))
-							{
-								displayDoneFlag = TRUE;
-							}
-							else
-							{
-								displayErrorFlag = TRUE;
-							}
-
-							error = shortButtonPressDetected_LCD(&LCD_YesNo, LCD_CarSettingsList, &currentLayer, &submenuIterator);
-						}
-
-						break;
-					}//case /* CarSettings_Layer -> */ClearDiagnosticSnapshots:
-					case /* CarSettings_Layer -> */ClearTripMileage:
-					{
-						if(ENC_button.shortPressDetected)
-						{
-							CREATE_EEPROM_data_struct(EEPROMData);
-
-							CAR_mileage.tripMileage = 0U;
-
-							EEPROMData.EEPROMParameters = &EEPROM_car;
-							EEPROMData.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE;
-							EEPROMData.size = UINT32_T_SIZE;
-
-							EEPROMData.memAddress = TRIP_MILEAGE_START_ADDRESS;	//TODO - improve to write in the place we should as there is a table of addresses where the mileage is written!!
-							EEPROMData.data = &(CAR_mileage.data[4]);
-							xQueueSend(Queue_EEPROM_writeHandle, &EEPROMData, (TickType_t)100U/*100ms wait time if the queue is full*/);
-
-							vTaskDelay((TickType_t)MAX_WAIT_TIME_FOR_EEPROM);	/* wait for xx ms for EEPROM to be able to process that */
-
-							if(DATA_READY == *(EEPROMData.isReadyPtr))
-							{
-								displayDoneFlag = TRUE;
-							}
-							else
-							{
-								displayErrorFlag = TRUE;
-							}
-
-							error = shortButtonPressDetected_LCD(&LCD_YesNo, LCD_CarSettingsList, &currentLayer, &submenuIterator);
-						}
-
-						break;
-					}//case /* CarSettings_Layer -> */ClearTripMileage:
-					case /* BoardSettings_Layer -> */ClearErrorsSnapshots:
-					{
-						if(ENC_button.shortPressDetected)
-						{
-							CREATE_EEPROM_data_struct(EEPROMData);
-
-							BOARD_EEPROM_counters.errorSnapshotEEPROMIndex = 0u;
-							BOARD_EEPROM_counters.didTheNumberOfErrorSnapshotsOverflowed = FALSE;
-
-							EEPROMData.EEPROMParameters = &EEPROM_board;
-							EEPROMData.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE;
-							EEPROMData.size = UINT8_T_SIZE;
-
-							EEPROMData.memAddress = NUMBER_OF_ERROR_SNAPSHOTS;
-							EEPROMData.data = &(CAR_EEPROM_counters.diagnosticSnapshotEEPROMIndex);
-							xQueueSend(Queue_EEPROM_writeHandle, &EEPROMData, (TickType_t)100U/*100ms wait time if the queue is full*/);
-
-							EEPROMData.memAddress = NUMBER_OF_ERROR_SNAPSHOTS_OVERFLOWED_ADDRESS;
-							EEPROMData.data = &(CAR_EEPROM_counters.didTheNumberOfDiagnosticSnapshotsOverflowed);
-							xQueueSend(Queue_EEPROM_writeHandle, &EEPROMData, (TickType_t)100U/*100ms wait time if the queue is full*/);
-
-							vTaskDelay((TickType_t)MAX_WAIT_TIME_FOR_EEPROM);	/* wait for xx ms for EEPROM to be able to process that */
-
-							if(DATA_READY == *(EEPROMData.isReadyPtr))
-							{
-								displayDoneFlag = TRUE;
-							}
-							else
-							{
-								displayErrorFlag = TRUE;
-							}
-
-							error = shortButtonPressDetected_LCD(&LCD_YesNo, LCD_CarSettingsList, &currentLayer, &submenuIterator);
-						}
-
-						break;
-					}//case /* BoardSettings_Layer -> */ClearErrorsSnapshots:
-					default:
-					{
-						error = LCD__LAYER_CHOICE_FAILURE;
-						break;
-					}//default:
-				}//switch(LCD_YesNo.layerPrevious)
-				if(ENC_button.longPressDetected)
-				{
-					error = longButtonPressDetected_LCD(&LCD_BoardSettingsList[0], &currentLayer, &submenuIterator);
-				}
-				break;
-			}//case YesNo_Layer:
-			/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-			case Alarm_Layer:
-			case Ctrl_Layer:
-			default:
-			{
-				error = LCD__LAYER_CHOICE_FAILURE;
-				currentLayer = HOME_SCREEN;
-			}
-				break;
-		}//End of switching between layers
-
-
-
-		if(NO_ERROR != error)
-		{
-			my_error_handler(error);
+			if(currentBoard->EnterFunction)
+				currentBoard->EnterFunction(&currentBoard);	/* Execute Enter function pointed by current board (if one exists) */
+			ENC_button.shortPressDetected = FALSE;
+			ENC_button.longPressDetected = FALSE;
+			scrollList_doneOnce = FALSE;	/* Clean the doneOnce Flag for the ScrollList Function */
 		}
 
-		if(TRUE == displayErrorFlag)
+		if(TRUE == ENC_button.longPressDetected)
 		{
-			error = copy_str_to_buffer("       ERROR!       ", (char*)LCD_buffer[Row4], 0u, 20u);
+			if(currentBoard->upperLayer_ptr)
+				currentBoard = currentBoard->upperLayer_ptr;	/* Go to the upper layer (if one exists) */
+			ENC_button.shortPressDetected = FALSE;
+			ENC_button.longPressDetected = FALSE;
+			scrollList_doneOnce = FALSE;	/* Clean the doneOnce Flag for the ScrollList Function */
 		}
-		if(TRUE == displayDoneFlag)
-		{
-			error = copy_str_to_buffer("       !DONE!       ", (char*)LCD_buffer[Row4], 0u, 20u);
-		}
+
+
 
 		/** Send buffers to the LCD **/
 		if(TRUE != lcdSetCursorPosition(0, Row1))
@@ -2865,13 +1256,6 @@ void StartTaskLCD(void const * argument)
 		}
 		vTaskDelay(1);
 
-		if((TRUE == displayErrorFlag) || (TRUE == displayDoneFlag))
-		{
-			vTaskDelay((TickType_t)ERROR_DONE_DISPLAY_TIME);	/* Print "ERROR!" or "!DONE!" for 2 seconds */
-			displayErrorFlag = FALSE;
-			displayDoneFlag = FALSE;
-		}
-
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -2879,1490 +1263,417 @@ void StartTaskLCD(void const * argument)
 
 
 
-static Error_Code ControlValueWithEncoder(const LCDBoard* const currentBoard, boolean* displayErrorFlag, boolean* displayDoneFlag, boolean* doneOnce)
+
+static void ENTER_GoInto(struct LCD_board** currentBoard)
+{
+	if(scrollList_currentlyPointedBoard) *currentBoard = scrollList_currentlyPointedBoard;
+}
+
+
+
+static void ENTER_SaveToEEPROM(struct LCD_board** currentBoard)
+{
+	enterAction_save = TRUE;
+}
+
+
+
+static void RUNNING_ScrollList(struct LCD_board* currentBoard)
+{
+	Error_Code error = NO_ERROR;
+	static LCD_board* displayBoards[NUMBER_OF_SCROLLED_LINES] = {NULL};
+
+
+	error = copy_str_to_buffer(currentBoard->name, (char*)LCD_buffer[Row1], (uint8_t)((20-currentBoard->nameSize)/2), currentBoard->nameSize);
+	error = copy_str_to_buffer(">", (char*)LCD_buffer[Row3], 0u, 1u);
+
+
+	if(FALSE == scrollList_doneOnce)
+	{
+		for(uint8_t i = 0; i < NUMBER_OF_SCROLLED_LINES; ++i) {displayBoards[i] = NULL;}
+		if(currentBoard->lowerLayer_ptr) displayBoards[LINE2] = currentBoard->lowerLayer_ptr;
+		if(displayBoards[LINE2]->previousLayer_ptr) displayBoards[LINE1] = displayBoards[LINE2]->previousLayer_ptr;
+		if(displayBoards[LINE2]->nextLayer_ptr) displayBoards[LINE3] = displayBoards[LINE2]->nextLayer_ptr;
+
+		scrollList_doneOnce = TRUE;
+	}
+
+	if(0 < EncoderCounterDiff)
+	{
+		ScrollForward(displayBoards, EncoderCounterDiff);
+		EncoderCounterDiff = 0;
+	}
+	else
+	{
+		if(0 > EncoderCounterDiff)
+		{
+			ScrollBack(displayBoards, EncoderCounterDiff);
+			EncoderCounterDiff = 0;
+		}
+	}
+
+	scrollList_currentlyPointedBoard = displayBoards[LINE2];
+
+	if(displayBoards[LINE1])
+		error = copy_str_to_buffer(displayBoards[LINE1]->name, (char*)LCD_buffer[Row2], 1u, displayBoards[LINE1]->nameSize);
+	if(displayBoards[LINE2])
+		error = copy_str_to_buffer(displayBoards[LINE2]->name, (char*)LCD_buffer[Row3], 1u, displayBoards[LINE2]->nameSize);
+	if(displayBoards[LINE3])
+		error = copy_str_to_buffer(displayBoards[LINE3]->name, (char*)LCD_buffer[Row4], 1u, displayBoards[LINE3]->nameSize);
+
+	if(NO_ERROR != error) my_error_handler(error);
+}
+
+
+
+static void RUNNING_DesktopLayer(struct LCD_board* currentBoard)
+{
+	Error_Code error = NO_ERROR;
+
+	/*** First Row ***/
+		/* Main Battery Voltage */
+	if(TRUE == mainBatteryVoltageValueForLCD.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)mainBatteryVoltageValueForLCD.messageHandler, (char*)LCD_buffer[Row1], 0, mainBatteryVoltageValueForLCD.size);
+	error = copy_str_to_buffer("V", (char*)LCD_buffer[Row1], 5, 1);
+
+	if(1 == tuBylemFLAG)	//TODO: do usuniecia po ogarnieciu obslugi MicroSD
+		error = copy_str_to_buffer((char*)TEMPBUFF, (char*)LCD_buffer[Row2], 13, 5);
+
+		/* Aux Battery Voltage */
+	if(TRUE == auxiliaryBatteryVoltageValueForLCD.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)auxiliaryBatteryVoltageValueForLCD.messageHandler, (char*)LCD_buffer[Row1], 7, auxiliaryBatteryVoltageValueForLCD.size);
+	error = copy_str_to_buffer("V", (char*)LCD_buffer[Row1], 12, 1);
+
+		/* clock */
+	if((TRUE == GPS.forLCD.hours.messageReadyFLAG) && (TRUE == GPS.forLCD.minutes.messageReadyFLAG))
+	{
+		error = copy_str_to_buffer((char*)GPS.forLCD.hours.messageHandler, (char*)LCD_buffer[Row1], 15, GPS.forLCD.hours.size);
+		error = copy_str_to_buffer(":", (char*)LCD_buffer[Row1], (15+GPS.forLCD.hours.size), 1);
+		error = copy_str_to_buffer((char*)GPS.forLCD.minutes.messageHandler, (char*)LCD_buffer[Row1], (15+GPS.forLCD.hours.size+1), GPS.forLCD.minutes.size);
+	}
+
+	if(NO_ERROR != error) my_error_handler(error);
+
+	/*** Second Row ***/
+		/* Water temperature */
+	error = copy_str_to_buffer("Water: ", (char*)LCD_buffer[Row2], 0, 7);
+	if(TRUE == waterTemperatureValueForLCD.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)waterTemperatureValueForLCD.messageHandler, (char*)LCD_buffer[Row2], 7, waterTemperatureValueForLCD.size);
+	error = copy_str_to_buffer((char*)degreeSymbolCharacter, (char*)LCD_buffer[Row2], 7+waterTemperatureValueForLCD.size, 1);
+	error = copy_str_to_buffer("C", (char*)LCD_buffer[Row2], 7+waterTemperatureValueForLCD.size+1, 1);
+
+	if(NO_ERROR != error) my_error_handler(error);
+
+	/*** Third Row ***/
+		/* Speed */
+	if(TRUE == GPS.forLCD.speed.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)GPS.forLCD.speed.messageHandler, (char*)LCD_buffer[Row3], 0, GPS.forLCD.speed.size);
+	error = copy_str_to_buffer("km/h", (char*)LCD_buffer[Row3], (GPS.forLCD.speed.size+1), 4);
+		/* Total Mileage */
+	if(TRUE == totalMileageForLCD.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)totalMileageForLCD.messageHandler, (char*)LCD_buffer[Row3], 9, totalMileageForLCD.size);
+	error = copy_str_to_buffer("km", (char*)LCD_buffer[Row3], (9+totalMileageForLCD.size+1), 2);
+
+	if(NO_ERROR != error) my_error_handler(error);
+
+	/*** Fourth Row ***/
+		/* Engine RPM */
+	//TODO
+//				if(TRUE == RPMForLCD.messageReadyFLAG)
+//					error = copy_str_to_buffer((char*)RPMForLCD.messageHandler, (char*)LCD_buffer[Row4], 8, RPM.size);
+	error = copy_str_to_buffer("rpm", (char*)LCD_buffer[Row4], 5, 3);
+		/* Trip Mileage */
+	if(TRUE == tripMileageForLCD.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)tripMileageForLCD.messageHandler, (char*)LCD_buffer[Row4], 9, tripMileageForLCD.size);
+	error = copy_str_to_buffer("km", (char*)LCD_buffer[Row4], (9+tripMileageForLCD.size+1), 2);
+
+	if(NO_ERROR != error) my_error_handler(error);
+}
+
+
+
+static void RUNNING_GPSLayer(struct LCD_board* currentBoard)
+{
+	Error_Code error = NO_ERROR;
+
+	/*** First Row ***/
+		/* Fix / NoFix */
+	if(TRUE == GPS.forLCD.status.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)GPS.forLCD.status.messageHandler, (char*)LCD_buffer[Row1], 0, GPS.forLCD.status.size);
+		/* Speed */
+	if(TRUE == GPS.forLCD.speed.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)GPS.forLCD.speed.messageHandler, (char*)LCD_buffer[Row1], 6, GPS.forLCD.speed.size);
+	error = copy_str_to_buffer("km/h", (char*)LCD_buffer[Row1], (6+GPS.forLCD.speed.size+1), 4);
+		/* clock */
+	if((TRUE == GPS.forLCD.hours.messageReadyFLAG) && (TRUE == GPS.forLCD.minutes.messageReadyFLAG))
+	{
+		error = copy_str_to_buffer((char*)GPS.forLCD.hours.messageHandler, (char*)LCD_buffer[Row1], 15, GPS.forLCD.hours.size);
+		error = copy_str_to_buffer(":", (char*)LCD_buffer[Row1], (15+GPS.forLCD.hours.size), 1);
+		error = copy_str_to_buffer((char*)GPS.forLCD.minutes.messageHandler, (char*)LCD_buffer[Row1], (15+GPS.forLCD.hours.size+1), GPS.forLCD.minutes.size);
+	}
+
+	if(NO_ERROR != error) my_error_handler(error);
+
+	/*** Second Row ***/
+		/* GPS: Latitude */
+	error = copy_str_to_buffer("Lat.:", (char*)LCD_buffer[Row2], 0, 5);
+	if(TRUE == GPS.forLCD.latitude.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)GPS.forLCD.latitude.messageHandler, (char*)LCD_buffer[Row2], 6, GPS.forLCD.latitude.size);
+		/* GPS: Latitude Indicator */
+	if(TRUE == GPS.forLCD.latitudeIndicator.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)GPS.forLCD.latitudeIndicator.messageHandler, (char*)LCD_buffer[Row2], 6+GPS.forLCD.latitude.size+1, GPS.forLCD.latitudeIndicator.size);
+
+	if(NO_ERROR != error) my_error_handler(error);
+
+	/*** Third Row ***/
+		/* GPS: Longitude */
+	error = copy_str_to_buffer("Lon.:", (char*)LCD_buffer[Row3], 0, 5);
+	if(TRUE == GPS.forLCD.longitude.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)GPS.forLCD.longitude.messageHandler, (char*)LCD_buffer[Row3], 6, GPS.forLCD.longitude.size);
+		/* GPS: Longitude Indicator */
+	error = copy_str_to_buffer((char*)GPS.forLCD.longitudeIndicator.messageHandler, (char*)LCD_buffer[Row3], 6+GPS.forLCD.longitude.size+1, GPS.forLCD.longitudeIndicator.size);
+
+	if(NO_ERROR != error) my_error_handler(error);
+
+	/*** Fourth Row ***/
+		/* GPS: Altitude */
+	error = copy_str_to_buffer("Alt.:", (char*)LCD_buffer[Row4], 0, 5);
+	if(TRUE == GPS.forLCD.altitude.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)GPS.forLCD.altitude.messageHandler, (char*)LCD_buffer[Row4], 6, GPS.forLCD.altitude.size);
+	error = copy_str_to_buffer("m npm", (char*)LCD_buffer[Row4], (6+GPS.forLCD.altitude.size+1), 5);
+
+	if(NO_ERROR != error) my_error_handler(error);
+}
+
+
+
+static void RUNNING_CarInfoLayer(struct LCD_board* currentBoard)
+{
+	(void)copy_str_to_buffer("Nothing yet :)", (char*)LCD_buffer[Row2], 3u, 14u);
+}
+
+
+
+static void RUNNING_JarvisInfoLayer(struct LCD_board* currentBoard)
+{
+	(void)copy_str_to_buffer("Nothing yet :)", (char*)LCD_buffer[Row2], 3u, 14u);
+}
+
+
+
+static void RUNNING_Last3Snaps(struct LCD_board* currentBoard)
+{
+	(void)copy_str_to_buffer("Nothing yet :)", (char*)LCD_buffer[Row2], 3u, 14u);
+}
+
+
+
+static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard)
 {
 	Error_Code error = NO_ERROR;
 	char tempSettingBuffer[10u] = {' '};
+	static float tempSetting = 0.0f;
+	static uint8_t tempState = 0;
+	uint8_t tempSize = 0u;
+	static CREATE_EEPROM_data_struct(EEPROMData);
+	static data32bit_union dataToSend = {0};
+	EEPROMData.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE;
+	EEPROMData.data = dataToSend.u8bit;
 
-	boolean writeToEEPROM = FALSE;
-	CREATE_EEPROM_data_struct(EEPROMData);
+	error = copy_str_to_buffer(currentBoard->firstRow, (char*)LCD_buffer[Row1], (uint8_t)((20-currentBoard->firstRowSize)/2), currentBoard->firstRowSize);
+	error = copy_str_to_buffer(currentBoard->secondRow, (char*)LCD_buffer[Row2], (uint8_t)((20-currentBoard->secondRowSize)/2), currentBoard->secondRowSize);
 
-	error = copy_str_to_buffer("Enter: save", (char*)LCD_buffer[Row4], 0u, 11u);
+	if(NO_ERROR != error) my_error_handler(error);
 
-
-	switch(currentBoard->layerPrevious)
+	switch(currentBoard->valueType)
 	{
-		case WaterSettings_Layer:
+		case _carTemperature_type_:
+		case _carOilAnalogPressure_type_:
+		case _carVoltage_type_:
+		case _boardVoltage_type_:
+		case _boardTemperature_type_:
 		{
-			static carTemperature_type tempSetting = 0;
-			static boolean tempState = 0;
-			EEPROMData.EEPROMParameters = &EEPROM_car;
-			EEPROMData.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE;
-
-			switch(currentBoard->layer)
+			if(FALSE == displayAndControlValue_doneOnce)
 			{
-				case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterHighTempWarningThreshold:
+				tempSetting = *((float*)(currentBoard->value_ptr));
+				displayAndControlValue_doneOnce = TRUE;
+			}
+
+			switch(currentBoard->valueStepSize)
+			{
+				case StepByOne:
 				{
-					error = copy_str_to_buffer("Water High Temp.", (char*)LCD_buffer[Row1], 2u, 16u);
-					error = copy_str_to_buffer("Warning Threshold", (char*)LCD_buffer[Row2], 1u, 17u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempSetting = CAR_waterTemp.waterHighTempWarningThreshold;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					tempSetting += EncoderCounterDiff;	//Changing the value with encoder
-					snprintf(tempSettingBuffer, 7u, "%d %cC", (uint8_t)tempSetting, DEGREE_SYMBOL_LCD);
-					error = copy_str_to_buffer(tempSettingBuffer, (char*)LCD_buffer[Row3], 7u, strlen(tempSettingBuffer));
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_waterTemp.waterHighTempWarningThreshold = tempSetting;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = WATER_HIGH_TEMP_WARNING_THRESHOLD_ADDRESS;
-						EEPROMData.data = &(CAR_waterTemp.waterHighTempWarningThreshold);
-					}
-
+					tempSetting += EncoderCounterDiff;
+					tempSize = snprintf(tempSettingBuffer, 10u, "%01d ", (uint16_t)tempSetting);
 					break;
 				}
-				case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterHighTempAlarmThreshold:
+				case StepByOneTen:
 				{
-					error = copy_str_to_buffer("Water High Temp.", (char*)LCD_buffer[Row1], 2u, 16u);
-					error = copy_str_to_buffer("Alarm Threshold", (char*)LCD_buffer[Row2], 2u, 15u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempSetting = CAR_waterTemp.waterHighTempAlarmThreshold;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					tempSetting += EncoderCounterDiff;	//Changing the value with encoder
-					snprintf(tempSettingBuffer, 7u, "%d %cC", (uint8_t)tempSetting, DEGREE_SYMBOL_LCD);
-					error = copy_str_to_buffer(tempSettingBuffer, (char*)LCD_buffer[Row3], 7u, strlen(tempSettingBuffer));
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_waterTemp.waterHighTempAlarmThreshold = tempSetting;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = WATER_HIGH_TEMP_ALARM_THRESHOLD_ADDRESS;
-						EEPROMData.data = &(CAR_waterTemp.waterHighTempAlarmThreshold);
-					}
-
+					tempSetting += EncoderCounterDiff/10;
+					tempSize = snprintf(tempSettingBuffer, 10u, "%02d.%01d ", (uint16_t)tempSetting, (uint16_t)(tempSetting*10)%10);
 					break;
 				}
-				case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterHighTempFanOnThreshold:
+				case StepByOneHundred:
 				{
-					error = copy_str_to_buffer("Water High Temp.", (char*)LCD_buffer[Row1], 2u, 16u);
-					error = copy_str_to_buffer("Fan On Threshold", (char*)LCD_buffer[Row2], 2u, 16u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempSetting = CAR_waterTemp.waterHighTempFanOnThreshold;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					tempSetting += EncoderCounterDiff;	//Changing the value with encoder
-					snprintf(tempSettingBuffer, 7u, "%d %cC", (uint8_t)tempSetting, DEGREE_SYMBOL_LCD);
-					error = copy_str_to_buffer(tempSettingBuffer, (char*)LCD_buffer[Row3], 7u, strlen(tempSettingBuffer));
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_waterTemp.waterHighTempFanOnThreshold = tempSetting;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = WATER_HIGH_TEMP_FAN_ON_THRESHOLD_ADDRESS;
-						EEPROMData.data = &(CAR_waterTemp.waterHighTempFanOnThreshold);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterHighTempFanOffThreshold:
-				{
-					error = copy_str_to_buffer("Water High Temp.", (char*)LCD_buffer[Row1], 2u, 16u);
-					error = copy_str_to_buffer("Fan Off Threshold", (char*)LCD_buffer[Row2], 1u, 17u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempSetting = CAR_waterTemp.waterHighTempFanOffThreshold;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					tempSetting += EncoderCounterDiff;	//Changing the value with encoder
-					snprintf(tempSettingBuffer, 7u, "%d %cC", (uint8_t)tempSetting, DEGREE_SYMBOL_LCD);
-					error = copy_str_to_buffer(tempSettingBuffer, (char*)LCD_buffer[Row3], 7u, strlen(tempSettingBuffer));
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_waterTemp.waterHighTempFanOffThreshold = tempSetting;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = WATER_HIGH_TEMP_FAN_OFF_THRESHOLD_ADDRESS;
-						EEPROMData.data = &(CAR_waterTemp.waterHighTempFanOffThreshold);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterTempWarningOn:
-				{
-					error = copy_str_to_buffer("Water High Temp.", (char*)LCD_buffer[Row1], 2u, 16u);
-					error = copy_str_to_buffer("Warning On/Off", (char*)LCD_buffer[Row2], 3u, 14u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_waterTemp.waterTempWarningOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_waterTemp.waterTempWarningOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = WATER_TEMP_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_waterTemp.allSettings);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterTempAlarmOn:
-				{
-					error = copy_str_to_buffer("Water High Temp.", (char*)LCD_buffer[Row1], 2u, 16u);
-					error = copy_str_to_buffer("Alarm On/Off", (char*)LCD_buffer[Row2], 4u, 12u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_waterTemp.waterTempAlarmOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_waterTemp.waterTempAlarmOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = WATER_TEMP_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_waterTemp.allSettings);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterFanControlOn:
-				{
-					error = copy_str_to_buffer("Water High Temp.", (char*)LCD_buffer[Row1], 2u, 16u);
-					error = copy_str_to_buffer("Fan Control On/Off", (char*)LCD_buffer[Row2], 1u, 18u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_waterTemp.waterFanControlOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_waterTemp.waterFanControlOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = WATER_TEMP_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_waterTemp.allSettings);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterTempWarningBuzzerOn:
-				{
-					error = copy_str_to_buffer("Water High Temp.", (char*)LCD_buffer[Row1], 2u, 16u);
-					error = copy_str_to_buffer("Warning Buzzer", (char*)LCD_buffer[Row2], 3u, 14u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_waterTemp.waterTempWarningBuzzerOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_waterTemp.waterTempWarningBuzzerOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = WATER_TEMP_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_waterTemp.allSettings);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterTempAlarmBuzzerOn:
-				{
-					error = copy_str_to_buffer("Water High Temp.", (char*)LCD_buffer[Row1], 2u, 16u);
-					error = copy_str_to_buffer("Alarm Buzzer", (char*)LCD_buffer[Row2], 4u, 12u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_waterTemp.waterTempAlarmBuzzerOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_waterTemp.waterTempAlarmBuzzerOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = WATER_TEMP_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_waterTemp.allSettings);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterTempWarningSnapshotOn:
-				{
-					error = copy_str_to_buffer("Water High Temp.", (char*)LCD_buffer[Row1], 2u, 16u);
-					error = copy_str_to_buffer("Warning Snapshot", (char*)LCD_buffer[Row2], 2u, 16u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_waterTemp.waterTempWarningSnapshotOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_waterTemp.waterTempWarningSnapshotOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = WATER_TEMP_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_waterTemp.allSettings);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> WaterSettings_Layer -> */WaterTempAlarmSnapshotOn:
-				{
-					error = copy_str_to_buffer("Water High Temp.", (char*)LCD_buffer[Row1], 2u, 16u);
-					error = copy_str_to_buffer("Alarm Snapshot", (char*)LCD_buffer[Row2], 3u, 14u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_waterTemp.waterTempAlarmSnapshotOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_waterTemp.waterTempAlarmSnapshotOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = WATER_TEMP_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_waterTemp.allSettings);
-					}
-
+					tempSetting += EncoderCounterDiff/100;
+					tempSize = snprintf(tempSettingBuffer, 10u, "%02d.%02d ", (uint16_t)tempSetting, (uint16_t)(tempSetting*100)%100);
 					break;
 				}
 				default:
 				{
-					error = LCD__LAYER_CHOICE_FAILURE;
 					break;
 				}
-			}//switch(currentBoard->layer)
-			break;
-		}//case WaterSettings_Layer:
-		/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
+			}//switch(currentBoard->valueStepSize)
 
-		case OilTempSettings_Layer:
-		{
-			static carTemperature_type tempSetting = 0;
-			static boolean tempState = 0;
-			EEPROMData.EEPROMParameters = &EEPROM_car;
-			EEPROMData.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE;
+			error = copy_str_to_buffer(tempSettingBuffer, (char*)LCD_buffer[Row3], (uint8_t)((20-tempSize-(currentBoard->unitSize))/2), tempSize);
+			error = copy_str_to_buffer(currentBoard->unit, (char*)LCD_buffer[Row3], (uint8_t)((20-(currentBoard->unitSize))/2), currentBoard->unitSize);
 
-			switch(currentBoard->layer)
+			if(TRUE == enterAction_save)
 			{
-				case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilHighTempWarningThreshold:
-				{
-					error = copy_str_to_buffer("Oil High Temperature", (char*)LCD_buffer[Row1], 0u, 20u);
-					error = copy_str_to_buffer("Warning Threshold", (char*)LCD_buffer[Row2], 1u, 17u);
+				*((float*)(currentBoard->value_ptr)) = tempSetting;
+				dataToSend.f32bit = tempSetting;
+				EEPROMData.size = FLOAT_SIZE;
+			}
 
-					if(FALSE == *doneOnce)
-					{
-						tempSetting = CAR_oilTemp.oilHighTempWarningThreshold;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					tempSetting += EncoderCounterDiff;	//Changing the value with encoder
-					snprintf(tempSettingBuffer, 7u, "%d %cC", (uint8_t)tempSetting, DEGREE_SYMBOL_LCD);
-					error = copy_str_to_buffer(tempSettingBuffer, (char*)LCD_buffer[Row3], 7u, strlen(tempSettingBuffer));
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_oilTemp.oilHighTempWarningThreshold = tempSetting;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = OIL_HIGH_TEMP_WARNING_THRESHOLD_ADDRESS;
-						EEPROMData.data = &(CAR_oilTemp.oilHighTempWarningThreshold);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilHighTempAlarmThreshold:
-				{
-					error = copy_str_to_buffer("Oil High Temperature", (char*)LCD_buffer[Row1], 0u, 20u);
-					error = copy_str_to_buffer("Alarm Threshold", (char*)LCD_buffer[Row2], 2u, 15u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempSetting = CAR_oilTemp.oilHighTempAlarmThreshold;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					tempSetting += EncoderCounterDiff;	//Changing the value with encoder
-					snprintf(tempSettingBuffer, 7u, "%d %cC", (uint8_t)tempSetting, DEGREE_SYMBOL_LCD);
-					error = copy_str_to_buffer(tempSettingBuffer, (char*)LCD_buffer[Row3], 7u, strlen(tempSettingBuffer));
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_oilTemp.oilHighTempAlarmThreshold = tempSetting;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = OIL_HIGH_TEMP_ALARM_THRESHOLD_ADDRESS;
-						EEPROMData.data = &(CAR_oilTemp.oilHighTempAlarmThreshold);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilTempWarningOn:
-				{
-					error = copy_str_to_buffer("Oil High Temperature", (char*)LCD_buffer[Row1], 0u, 20u);
-					error = copy_str_to_buffer("Warning On/Off", (char*)LCD_buffer[Row2], 3u, 14u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_oilTemp.oilTempWarningOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_oilTemp.oilTempWarningOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = OIL_TEMP_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_oilTemp.allSettings);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilTempAlarmOn:
-				{
-					error = copy_str_to_buffer("Oil High Temperature", (char*)LCD_buffer[Row1], 0u, 20u);
-					error = copy_str_to_buffer("Alarm On/Off", (char*)LCD_buffer[Row2], 4u, 12u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_oilTemp.oilTempAlarmOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_oilTemp.oilTempAlarmOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = OIL_TEMP_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_oilTemp.allSettings);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilTempWarningBuzzerOn:
-				{
-					error = copy_str_to_buffer("Oil High Temperature", (char*)LCD_buffer[Row1], 0u, 20u);
-					error = copy_str_to_buffer("Warning Buzzer", (char*)LCD_buffer[Row2], 3u, 14u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_oilTemp.oilTempWarningBuzzerOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_oilTemp.oilTempWarningBuzzerOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = OIL_TEMP_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_oilTemp.allSettings);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilTempAlarmBuzzerOn:
-				{
-					error = copy_str_to_buffer("Oil High Temperature", (char*)LCD_buffer[Row1], 0u, 20u);
-					error = copy_str_to_buffer("Alarm Buzzer", (char*)LCD_buffer[Row2], 4u, 12u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_oilTemp.oilTempAlarmBuzzerOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_oilTemp.oilTempAlarmBuzzerOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = OIL_TEMP_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_oilTemp.allSettings);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilTempWarningSnapshotOn:
-				{
-					error = copy_str_to_buffer("Oil High Temperature", (char*)LCD_buffer[Row1], 0u, 20u);
-					error = copy_str_to_buffer("Warning Snapshot", (char*)LCD_buffer[Row2], 2u, 16u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_oilTemp.oilTempWarningSnapshotOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_oilTemp.oilTempWarningSnapshotOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = OIL_TEMP_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_oilTemp.allSettings);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> OilTempSettings_Layer -> */OilTempAlarmSpashotOn:
-				{
-					error = copy_str_to_buffer("Oil High Temperature", (char*)LCD_buffer[Row1], 0u, 20u);
-					error = copy_str_to_buffer("Alarm Snapshot", (char*)LCD_buffer[Row2], 3u, 14u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_oilTemp.oilTempAlarmSnapshotOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_oilTemp.oilTempAlarmSnapshotOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = OIL_TEMP_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_oilTemp.allSettings);
-					}
-
-					break;
-				}
-				default:
-				{
-					error = LCD__LAYER_CHOICE_FAILURE;
-					break;
-				}
-			}//switch(currentBoard->layer)
 			break;
-		}//case OilTempSettings_Layer:
-		/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-		case OilPressureSettings_Layer:
+		}
+		case _boolean_type_:
+		case _carOilBinaryPressure_type_:
 		{
-			static carOilPressure_type tempSetting = 0;
-			static boolean tempState = 0;
-			EEPROMData.EEPROMParameters = &EEPROM_car;
-			EEPROMData.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE;
-
-			switch(currentBoard->layer)
+			if(FALSE == displayAndControlValue_doneOnce)
 			{
-				case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilHighPressureAlarmThreshold:
-				{
-					error = copy_str_to_buffer("Oil High Pressure", (char*)LCD_buffer[Row1], 1u, 17u);
-					error = copy_str_to_buffer("Alarm Threshold", (char*)LCD_buffer[Row2], 2u, 15u);
+				tempState = *(uint8_t*)(currentBoard->value_ptr);
+				displayAndControlValue_doneOnce = TRUE;
+			}
 
-					if(FALSE == *doneOnce)
-					{
-						tempSetting = CAR_oilPressure.oilHighPressureAlarmThreshold;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					tempSetting += EncoderCounterDiff;	//Changing the value with encoder
-					snprintf(tempSettingBuffer, 8u, "%d psi", (uint8_t)tempSetting);
-					error = copy_str_to_buffer(tempSettingBuffer, (char*)LCD_buffer[Row3], 7u, strlen(tempSettingBuffer));
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_oilPressure.oilHighPressureAlarmThreshold = tempSetting;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = OIL_HIGH_PRESSURE_ALARM_THRESHOLD_ADDRESS;
-						EEPROMData.data = &(CAR_oilPressure.oilHighPressureAlarmThreshold);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilLowPressureAlarmThreshold:
-				{
-					error = copy_str_to_buffer("Oil Low Pressure", (char*)LCD_buffer[Row1], 2u, 16u);
-					error = copy_str_to_buffer("Alarm Threshold", (char*)LCD_buffer[Row2], 2u, 15u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempSetting = CAR_oilPressure.oilLowPressureAlarmThreshold;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					tempSetting += EncoderCounterDiff;	//Changing the value with encoder
-					snprintf(tempSettingBuffer, 8u, "%d psi", (uint8_t)tempSetting);
-					error = copy_str_to_buffer(tempSettingBuffer, (char*)LCD_buffer[Row3], 7u, strlen(tempSettingBuffer));
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_oilPressure.oilLowPressureAlarmThreshold = tempSetting;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = OIL_LOW_PRESSURE_ALARM_THRESHOLD_ADDRESS;
-						EEPROMData.data = &(CAR_oilPressure.oilLowPressureAlarmThreshold);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilPressureAnalogMeasurement:
-				{
-					error = copy_str_to_buffer("Oil Pressure", (char*)LCD_buffer[Row1], 4u, 12u);
-					error = copy_str_to_buffer("Analog Measurement", (char*)LCD_buffer[Row2], 1u, 18u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_oilPressure.oilPressureAnalogMeasurement;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_oilPressure.oilPressureAnalogMeasurement = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = OIL_PRESSURE_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_oilPressure.allSettings);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilHighPressureAlarmOn:
-				{
-					error = copy_str_to_buffer("Oil High Pressure", (char*)LCD_buffer[Row1], 1u, 17u);
-					error = copy_str_to_buffer("Alarm On/Off", (char*)LCD_buffer[Row2], 4u, 12u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_oilPressure.oilHighPressureAlarmOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_oilPressure.oilHighPressureAlarmOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = OIL_PRESSURE_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_oilPressure.allSettings);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilLowPressureAlarmOn:
-				{
-					error = copy_str_to_buffer("Oil Low Pressure", (char*)LCD_buffer[Row1], 2u, 16u);
-					error = copy_str_to_buffer("Alarm On/Off", (char*)LCD_buffer[Row2], 4u, 12u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_oilPressure.oilLowPressureAlarmOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_oilPressure.oilLowPressureAlarmOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = OIL_PRESSURE_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_oilPressure.allSettings);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilPressureAlarmBuzzerOn:
-				{
-					error = copy_str_to_buffer("Oil Pressure", (char*)LCD_buffer[Row1], 4u, 12u);
-					error = copy_str_to_buffer("Alarm Buzzer", (char*)LCD_buffer[Row2], 4u, 12u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_oilPressure.oilPressureAlarmBuzzerOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_oilPressure.oilPressureAlarmBuzzerOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = OIL_PRESSURE_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_oilPressure.allSettings);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> OilPressureSettings_Layer -> */OilPressureAlarmSnapshotOn:
-				{
-					error = copy_str_to_buffer("Oil Pressure", (char*)LCD_buffer[Row1], 4u, 12u);
-					error = copy_str_to_buffer("Alarm Snapshot", (char*)LCD_buffer[Row2], 3u, 14u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_oilPressure.oilPressureAlarmSnapshotOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_oilPressure.oilPressureAlarmSnapshotOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = OIL_PRESSURE_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_oilPressure.allSettings);
-					}
-
-					break;
-				}
-				default:
-				{
-					error = LCD__LAYER_CHOICE_FAILURE;
-					break;
-				}
-			}//switch(currentBoard->layer)
-			break;
-		}//case OilPressureSettings_Layer:
-		/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-
-		case FuelSettings_Layer:
-		{
-			static cafFuelLevel_type tempSetting = 0;
-			static boolean tempState = 0;
-			EEPROMData.EEPROMParameters = &EEPROM_car;
-			EEPROMData.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE;
-
-			switch(currentBoard->layer)
+			if(0 != EncoderCounterDiff)
 			{
-				case /* CarSettings_Layer -> FuelSettings_Layer -> */FuelLowLevelWarningThreshold:
-				{
-					error = copy_str_to_buffer("Low Fuel Level", (char*)LCD_buffer[Row1], 3u, 14u);
-					error = copy_str_to_buffer("Warning Threshold", (char*)LCD_buffer[Row2], 1u, 17u);
+				tempState ^= currentBoard->settingsMask;	//Toggling the bit with encoder
+			}
 
-					if(FALSE == *doneOnce)
-					{
-						tempSetting = CAR_fuel.fuelLowLevelWarningThreshold;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
+			error = copy_str_to_buffer(((tempState&(currentBoard->settingsMask)) ? "ON " : "OFF"), (char*)LCD_buffer[Row3], (20u-3u)/2u, 3u);
 
-					tempSetting += EncoderCounterDiff;	//Changing the value with encoder
-					snprintf(tempSettingBuffer, 11u, "%d liters", (uint8_t)tempSetting);
-					error = copy_str_to_buffer(tempSettingBuffer, (char*)LCD_buffer[Row3], 6u, strlen(tempSettingBuffer));
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_fuel.fuelLowLevelWarningThreshold = tempSetting;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = FUEL_LOW_LEVEL_WARNING_THRESHOLD_ADDRESS;
-						EEPROMData.data = &(CAR_fuel.fuelLowLevelWarningThreshold);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> FuelSettings_Layer -> */FuelLowLevelWarningOn:
-				{
-					error = copy_str_to_buffer("Low Fuel Level", (char*)LCD_buffer[Row1], 3u, 14u);
-					error = copy_str_to_buffer("Warning On/Off", (char*)LCD_buffer[Row2], 3u, 14u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_fuel.lowFuelLevelWarningOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_fuel.lowFuelLevelWarningOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = FUEL_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_fuel.allSettings);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> FuelSettings_Layer -> */FuelLowLevelWarningBuzzerOn:
-				{
-					error = copy_str_to_buffer("Low Fuel Level", (char*)LCD_buffer[Row1], 3u, 14u);
-					error = copy_str_to_buffer("Warning Buzzer", (char*)LCD_buffer[Row2], 3u, 14u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_fuel.lowFuelLevelWarningBuzzerOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_fuel.lowFuelLevelWarningBuzzerOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = FUEL_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_fuel.allSettings);
-					}
-
-					break;
-				}
-				default:
-				{
-					error = LCD__LAYER_CHOICE_FAILURE;
-					break;
-				}
-			}//switch(currentBoard->layer)
-			break;
-		}//case FuelSettings_Layer:
-		/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-		case MainBatterySettings_Layer:
-		{
-			static carVoltage_type tempSetting = 0;
-			static boolean tempState = 0;
-			static data32bit_union union32bitVar = {0};
-			EEPROMData.EEPROMParameters = &EEPROM_car;
-			EEPROMData.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE;
-
-			switch(currentBoard->layer)
+			if(TRUE == enterAction_save)
 			{
-				case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryLowVoltageAlarmThreshold:
-				{
-					error = copy_str_to_buffer("Main Battery Low Vol", (char*)LCD_buffer[Row1], 0u, 20u);
-					error = copy_str_to_buffer("Alarm Threshold", (char*)LCD_buffer[Row2], 2u, 15u);
+				*((float*)(currentBoard->value_ptr)) = tempSetting;
+				dataToSend.u8bit[0] = tempSetting;
+				EEPROMData.size = UINT8_T_SIZE;
+			}
 
-					if(FALSE == *doneOnce)
-					{
-						tempSetting = CAR_mainBattery.batteryLowVoltageAlarmThreshold;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					tempSetting += (carVoltage_type)EncoderCounterDiff / 10.0f;	//Changing the value with encoder
-					if(0.0f/*lowest sensible voltage*/ >= tempSetting)
-					{
-						tempSetting = 0.0f;
-					}
-					else
-					{
-						if(30.0f/*highest sensible voltage*/ <= tempSetting)
-						{
-							tempSetting = 30.0f;
-						}
-						else
-						{
-							/* Do nothing */
-						}
-					}
-
-					snprintf(tempSettingBuffer, 8u, "%02d.%02d V", (uint8_t)tempSetting, (uint8_t)(tempSetting*100)%100);
-					error = copy_str_to_buffer(tempSettingBuffer, (char*)LCD_buffer[Row3], 7u, strlen(tempSettingBuffer));
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_mainBattery.batteryLowVoltageAlarmThreshold = tempSetting;
-
-						union32bitVar.f32bit = CAR_mainBattery.batteryLowVoltageAlarmThreshold;
-
-						EEPROMData.size = FLOAT_SIZE;
-						EEPROMData.memAddress = MAIN_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS;
-						EEPROMData.data = &(union32bitVar.u8bit[0]);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryHighVoltageAlarmThreshold:
-				{
-					error = copy_str_to_buffer("Main Battery high V", (char*)LCD_buffer[Row1], 0u, 19u);
-					error = copy_str_to_buffer("Alarm Threshold", (char*)LCD_buffer[Row2], 2u, 15u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempSetting = CAR_mainBattery.batteryHighVoltageAlarmThreshold;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					tempSetting += (carVoltage_type)EncoderCounterDiff / 10.0f;	//Changing the value with encoder
-					if(0.0f/*lowest sensible voltage*/ >= tempSetting)
-					{
-						tempSetting = 0.0f;
-					}
-					else
-					{
-						if(30.0f/*highest sensible voltage*/ <= tempSetting)
-						{
-							tempSetting = 30.0f;
-						}
-						else
-						{
-							/* Do nothing */
-						}
-					}
-
-					snprintf(tempSettingBuffer, 8u, "%02d.%02d V", (uint8_t)tempSetting, (uint8_t)(tempSetting*100)%100);
-					error = copy_str_to_buffer(tempSettingBuffer, (char*)LCD_buffer[Row3], 7u, strlen(tempSettingBuffer));
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_mainBattery.batteryHighVoltageAlarmThreshold = tempSetting;
-
-						union32bitVar.f32bit = CAR_mainBattery.batteryHighVoltageAlarmThreshold;
-
-						EEPROMData.size = FLOAT_SIZE;
-						EEPROMData.memAddress = MAIN_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS;
-						EEPROMData.data = &(union32bitVar.u8bit[0]);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryLowVoltageAlarmOn:
-				{
-					error = copy_str_to_buffer("Main Battery low Vol", (char*)LCD_buffer[Row1], 0u, 20u);
-					error = copy_str_to_buffer("Alarm On/Off", (char*)LCD_buffer[Row2], 4u, 12u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_mainBattery.lowVoltageAlarmOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_mainBattery.lowVoltageAlarmOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = MAIN_BATTERY_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_mainBattery.allSettings);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryHighVoltageAlarmOn:
-				{
-					error = copy_str_to_buffer("Main Battery high V", (char*)LCD_buffer[Row1], 0u, 19u);
-					error = copy_str_to_buffer("Alarm On/Off", (char*)LCD_buffer[Row2], 4u, 12u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_mainBattery.highVoltageAlarmOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_mainBattery.highVoltageAlarmOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = MAIN_BATTERY_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_mainBattery.allSettings);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryAlarmBuzzerOn:
-				{
-					error = copy_str_to_buffer("Main Battery Voltage", (char*)LCD_buffer[Row1], 0u, 20u);
-					error = copy_str_to_buffer("Alarm Buzzer On/Off", (char*)LCD_buffer[Row2], 0u, 19u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_mainBattery.VoltageAlarmBuzzerOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_mainBattery.VoltageAlarmBuzzerOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = MAIN_BATTERY_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_mainBattery.allSettings);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryLowVoltageSnapshotOn:
-				{
-					error = copy_str_to_buffer("Main Battery low Vol", (char*)LCD_buffer[Row1], 0u, 20u);
-					error = copy_str_to_buffer("Alarm Snapshot", (char*)LCD_buffer[Row2], 3u, 14u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_mainBattery.lowVoltageAlarmSnapshotOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_mainBattery.lowVoltageAlarmSnapshotOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = MAIN_BATTERY_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_mainBattery.allSettings);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> MainBatterySettings_Layer -> */MainBatteryHighVoltageSnapshotOn:
-				{
-					error = copy_str_to_buffer("Main Battery high V", (char*)LCD_buffer[Row1], 0u, 19u);
-					error = copy_str_to_buffer("Alarm Snapshot", (char*)LCD_buffer[Row2], 3u, 14u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_mainBattery.highVoltageAlarmSnapshotOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_mainBattery.highVoltageAlarmSnapshotOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = MAIN_BATTERY_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_mainBattery.allSettings);
-					}
-
-					break;
-				}
-				default:
-				{
-					error = LCD__LAYER_CHOICE_FAILURE;
-					break;
-				}
-			}//switch(currentBoard->layer)
 			break;
-		}//case MainBatterySettings_Layer:
-		/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-
-		case AuxBatterySettings_Layer:
-		{
-			static carVoltage_type tempSetting = 0;
-			static boolean tempState = 0;
-			static data32bit_union union32bitVar = {0};
-			EEPROMData.EEPROMParameters = &EEPROM_car;
-			EEPROMData.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE;
-
-			switch(currentBoard->layer)
-			{
-				case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryLowVoltageAlarmThreshold:
-				{
-					error = copy_str_to_buffer("Aux Battery Low Vol", (char*)LCD_buffer[Row1], 0u, 19u);
-					error = copy_str_to_buffer("Alarm Threshold", (char*)LCD_buffer[Row2], 2u, 15u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempSetting = CAR_auxiliaryBattery.batteryLowVoltageAlarmThreshold;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					tempSetting += (carVoltage_type)EncoderCounterDiff / 10.0f;	//Changing the value with encoder
-					if(0.0f/*lowest sensible voltage*/ >= tempSetting)
-					{
-						tempSetting = 0.0f;
-					}
-					else
-					{
-						if(30.0f/*highest sensible voltage*/ <= tempSetting)
-						{
-							tempSetting = 30.0f;
-						}
-						else
-						{
-							/* Do nothing */
-						}
-					}
-
-					snprintf(tempSettingBuffer, 8u, "%02d.%02d V", (uint8_t)tempSetting, (uint8_t)(tempSetting*100)%100);
-					error = copy_str_to_buffer(tempSettingBuffer, (char*)LCD_buffer[Row3], 7u, strlen(tempSettingBuffer));
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_auxiliaryBattery.batteryLowVoltageAlarmThreshold = tempSetting;
-
-						union32bitVar.f32bit = CAR_auxiliaryBattery.batteryLowVoltageAlarmThreshold;
-
-						EEPROMData.size = FLOAT_SIZE;
-						EEPROMData.memAddress = AUXILIARY_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS;
-						EEPROMData.data = &(union32bitVar.u8bit[0]);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryHighVoltageAlarmThreshold:
-				{
-					error = copy_str_to_buffer("Aux Battery high Vol", (char*)LCD_buffer[Row1], 0u, 20u);
-					error = copy_str_to_buffer("Alarm Threshold", (char*)LCD_buffer[Row2], 2u, 15u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempSetting = CAR_auxiliaryBattery.batteryHighVoltageAlarmThreshold;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					tempSetting += (carVoltage_type)EncoderCounterDiff / 10.0f;	//Changing the value with encoder
-					if(0.0f/*lowest sensible voltage*/ >= tempSetting)
-					{
-						tempSetting = 0.0f;
-					}
-					else
-					{
-						if(30.0f/*highest sensible voltage*/ <= tempSetting)
-						{
-							tempSetting = 30.0f;
-						}
-						else
-						{
-							/* Do nothing */
-						}
-					}
-
-					snprintf(tempSettingBuffer, 8u, "%02d.%02d V", (uint8_t)tempSetting, (uint8_t)(tempSetting*100)%100);
-					error = copy_str_to_buffer(tempSettingBuffer, (char*)LCD_buffer[Row3], 7u, strlen(tempSettingBuffer));
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_auxiliaryBattery.batteryHighVoltageAlarmThreshold = tempSetting;
-
-						union32bitVar.f32bit = CAR_auxiliaryBattery.batteryHighVoltageAlarmThreshold;
-
-						EEPROMData.size = FLOAT_SIZE;
-						EEPROMData.memAddress = AUXILIARY_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS;
-						EEPROMData.data = &(union32bitVar.u8bit[0]);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryLowVoltageAlarmOn:
-				{
-					error = copy_str_to_buffer("Aux Battery low Vol", (char*)LCD_buffer[Row1], 0u, 19u);
-					error = copy_str_to_buffer("Alarm On/Off", (char*)LCD_buffer[Row2], 4u, 12u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_auxiliaryBattery.lowVoltageAlarmOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_auxiliaryBattery.lowVoltageAlarmOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_auxiliaryBattery.allSettings);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryHighVoltageAlarmOn:
-				{
-					error = copy_str_to_buffer("Aux Battery high Vol", (char*)LCD_buffer[Row1], 0u, 20u);
-					error = copy_str_to_buffer("Alarm On/Off", (char*)LCD_buffer[Row2], 4u, 12u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_auxiliaryBattery.highVoltageAlarmOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_auxiliaryBattery.highVoltageAlarmOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_auxiliaryBattery.allSettings);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryAlarmBuzzerOn:
-				{
-					error = copy_str_to_buffer("Aux Battery Voltage", (char*)LCD_buffer[Row1], 0u, 19u);
-					error = copy_str_to_buffer("Alarm Buzzer On/Off", (char*)LCD_buffer[Row2], 0u, 19u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_auxiliaryBattery.VoltageAlarmBuzzerOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_auxiliaryBattery.VoltageAlarmBuzzerOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_auxiliaryBattery.allSettings);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryLowVoltageSnapshotOn:
-				{
-					error = copy_str_to_buffer("Aux Battery low Vol", (char*)LCD_buffer[Row1], 0u, 19u);
-					error = copy_str_to_buffer("Alarm Snapshot", (char*)LCD_buffer[Row2], 3u, 14u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_auxiliaryBattery.lowVoltageAlarmSnapshotOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_auxiliaryBattery.lowVoltageAlarmSnapshotOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_auxiliaryBattery.allSettings);
-					}
-
-					break;
-				}
-				case /* CarSettings_Layer -> AuxBatterySettings_Layer -> */AuxBatteryHighVoltageSnapshotOn:
-				{
-					error = copy_str_to_buffer("Aux Battery high Vol", (char*)LCD_buffer[Row1], 0u, 20u);
-					error = copy_str_to_buffer("Alarm Snapshot", (char*)LCD_buffer[Row2], 3u, 14u);
-
-					if(FALSE == *doneOnce)
-					{
-						tempState = CAR_auxiliaryBattery.highVoltageAlarmSnapshotOn;	//Read the actual value on entry
-						*doneOnce = TRUE;
-					}
-
-					if(0 != EncoderCounterDiff)
-					{
-						tempState ^= 0b1;	//Toggling the bit with encoder
-					}
-
-					error = copy_str_to_buffer((tempState ? "ON " : "OFF"), (char*)LCD_buffer[Row3], 9u, 3u);
-
-					if(ENC_button.shortPressDetected)
-					{
-						writeToEEPROM = TRUE;
-						CAR_auxiliaryBattery.highVoltageAlarmSnapshotOn = tempState;
-
-						EEPROMData.size = UINT8_T_SIZE;
-						EEPROMData.memAddress = AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS;
-						EEPROMData.data = &(CAR_auxiliaryBattery.allSettings);
-					}
-
-					break;
-				}
-				default:
-				{
-					error = LCD__LAYER_CHOICE_FAILURE;
-					break;
-				}
-			}//switch(currentBoard->layer)
-			break;
-		}//case AuxBatterySettings_Layer:
-		/* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *//* *** *** *** *** *** *** *** *** *** *** *** *** *** *** */
-
-
-
-
-
+		}
+		case _void_type_:
 		default:
 		{
 			break;
 		}
-	}//switch(currentBoard->layerPrevious)
+	}//switch(currentBoard->valueType)
 
+	if(NO_ERROR != error) my_error_handler(error);
 
-	if(TRUE == writeToEEPROM)	/* Parameters are set in the switch aboe */
+	if(TRUE == enterAction_save)
 	{
+		uint16_t i = 0u;
+		boolean EEPROMerrorFlag = FALSE;
+
+		if(currentBoard->EEPROMParameters)
+			EEPROMData.EEPROMParameters = currentBoard->EEPROMParameters;
+		else
+			error = EEPROM__PARAMETERS_POINTER_IS_NULL;
+		if(currentBoard->EEPROM_memAddress)
+			EEPROMData.memAddress = currentBoard->EEPROM_memAddress;
+		else
+			error = EEPROM__ADDRESS_POINTER_IS_NULL;
+
+		if(NO_ERROR != error) my_error_handler(error);
+
 		xQueueSend(Queue_EEPROM_writeHandle, &EEPROMData, (TickType_t)100U/*100ms wait time if the queue is full*/);
 
-		vTaskDelay((TickType_t)MAX_WAIT_TIME_FOR_EEPROM);	/* wait for xx ms for EEPROM to be able to process that */
-
-		if(DATA_READY == (*EEPROMData.isReadyPtr))
+		while(DATA_READY != (*EEPROMData.isReadyPtr))
 		{
-			*displayDoneFlag = TRUE;
+			++i;
+			vTaskDelay((TickType_t)1);	/* wait for 1 ms for EEPROM to process that */
+			if(MAX_WAIT_TIME_FOR_EEPROM < i)
+			{
+				EEPROMerrorFlag = TRUE;
+				break;
+			}
+		}
+
+		if(TRUE == EEPROMerrorFlag)
+		{
+			EEPROMData.data = NULL;
+			error = copy_str_to_buffer("ERROR!", (char*)LCD_buffer[Row4], 7u, 6u);
 		}
 		else
 		{
-			*displayErrorFlag = TRUE;
+			error = copy_str_to_buffer("DONE!", (char*)LCD_buffer[Row4], 7u, 5u);
 		}
+
+		vTaskDelay((TickType_t)ERROR_DONE_DISPLAY_TIME);
+		enterAction_save = FALSE;
 	}
 
-	EncoderCounterDiff = 0;	//Set to 0 after using the value
-	return error;
+
 }
+
+
+
+static void ScrollForward(LCD_board* displayTable[NUMBER_OF_SCROLLED_LINES], int8_t diff)
+{
+	LCD_board* tempBoardPtr = NULL;
+
+	for(int8_t i = 0; i < diff; ++i)
+	{
+		if(displayTable[LINE3]) /* Check if line 3 even exists (there might be only 1 or 2 positions in this menu) */
+		{
+			tempBoardPtr = displayTable[LINE3]; /* save the 3rd line */
+
+			displayTable[LINE1] = displayTable[LINE2]; /* Move second line to first line */
+			displayTable[LINE2] = tempBoardPtr;	/* Move third line (from tempBoardPtr) to the second line */
+
+			if(displayTable[LINE3]->nextLayer_ptr) /* Check if next line exists */
+			{
+				displayTable[LINE3] = displayTable[LINE3]->nextLayer_ptr; /* If exists - write next line to the 3rd one */
+			}
+			else
+			{
+				displayTable[LINE3] = NULL;
+				break; /* If there is no next line then break the loop and exit */
+			}
+		}//if(displayTable[LINE3])
+	}//for
+}
+
+
+
+static void ScrollBack(LCD_board* displayTable[NUMBER_OF_SCROLLED_LINES], int8_t diff)
+{
+	LCD_board* tempBoardPtr = NULL;
+
+	for(int8_t i = 0; i < (-diff); ++i)
+	{
+		if(displayTable[LINE1]) /* Check if line 1 even exists (there might be only 1 position in this menu) */
+		{
+			tempBoardPtr = displayTable[LINE1]; /* save the 1st line */
+
+			displayTable[LINE3] = displayTable[LINE2];	/* Move second line to the third line */
+			displayTable[LINE2] = tempBoardPtr; /* move first line (from tempBoardPtr) to the second line */
+
+			if(displayTable[LINE1]->previousLayer_ptr) /* Check if previous line exists */
+			{
+				displayTable[LINE1] = displayTable[LINE1]->previousLayer_ptr;	/* If exists - write previous line to the 1st one */
+			}
+			else
+			{
+				displayTable[LINE1] = NULL;
+				break; /* If there is no previous line then break the loop and exit */
+			}
+		}//if(displayTable[LINE1])
+	}//for
+}
+
+
 
 
 

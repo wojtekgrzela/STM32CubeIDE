@@ -48,10 +48,6 @@ extern "C" {
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
 
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-typedef uint8_t boolean;
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 typedef enum
@@ -64,7 +60,7 @@ typedef enum
 	Last3Diag_Layer			=	0x05,
 	Last3Err_Layer			=	0x06,
 	CarSettings_Layer		=	0x07,
-	BoardSettings_Layer		=	0x08,
+	JarvisSettings_Layer		=	0x08,
 
 		/* CarSettings_Layer */
 		ClearDiagnosticSnapshots	=	0x71,
@@ -76,9 +72,9 @@ typedef enum
 		MainBatterySettings_Layer	=	0x77,
 		AuxBatterySettings_Layer	=	0x78,
 
-		/* BoardSettings_Layer */
+		/* JarvisSettings_Layer */
 		ClearErrorsSnapshots		=	0x81,
-		AdjTimePoland				=	0x82,
+		AdjPolishTime				=	0x82,
 		AdjTimeZone					=	0x83,
 		InterVoltSettings_Layer		=	0x84,
 		InterTempSettings_Layer		=	0x85,
@@ -140,25 +136,31 @@ typedef enum
 			AuxBatteryLowVoltageSnapshotOn			=	0x786,
 			AuxBatteryHighVoltageSnapshotOn			=	0x787,
 
-			/* BoardSettings_Layer -> InterVoltSettings_Layer */
+			/* JarvisSettings_Layer -> InterVoltSettings_Layer */
 			Supply5VLowThreshold		=	0x841,
 			Supply5VHighThreshold		=	0x842,
 			Supply3V3LowThreshold		=	0x843,
 			Supply3V3HighThreshold		=	0x844,
 			SupplyVinLowThreshold		=	0x845,
+//			Board3V3SupplyAlarmOn		=	0x846,
+//			Board3V3SupplyBuzzerAlarmOn	=	0x847,
+//			Board5VSupplyAlarmOn		=	0x848,
+//			Board5VSupplyBuzzerAlarmON	=	0x849,
+//			BoardVinSupplyAlarmOn		=	0x85A,
+//			BoardVinSupplyBuzzerAlarmOn	=	0x85B,
 
-			/* BoardSettings_Layer -> InterTempSettings_Layer */
+			/* JarvisSettings_Layer -> InterTempSettings_Layer */
 			DCDC3V3HighTempThreshold	=	0x851,
 			DCDC5VHighTempThreshold		=	0x852,
 
-			/* BoardSettings_Layer -> BuzzerSettings_Layer */
+			/* JarvisSettings_Layer -> BuzzerSettings_Layer */
 			BuzzerMainSwitch			=	0x861,
 			BuzzerMainAlarmsSwitch		=	0x862,
 			BuzzerMainButtonsSwitch		=	0x863,
 			BuzzerWhenShortPress		=	0x864,
 			BuzzerWhenLongPress			=	0x865,
 
-			/* BoardSettings_Layer -> LCDSettings_Layer */
+			/* JarvisSettings_Layer -> LCDSettings_Layer */
 			BacklightBrightnessLevel	=	0x871,
 			SecondsToTurnOffBacklight	=	0x872,
 			AutoBacklightOffStartHour	=	0x873,
@@ -197,17 +199,45 @@ typedef enum
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 typedef enum
 {
-	None_ScreenType				=	0x00,
-	NotApplicable_ScreenType	=	0x00,
-	No_ScreenType				=	0x00,
+	_void_type_					=	0,
+	_boolean_type_				=	1,
 
-	OneScreen_ScreenType		=	0x01,
-	ScrollList_ScreenType		=	0x02,
-	YesNo_ScreenType			=	0x03,
-	Ctrl_ScreenType				=	0x04,
+	_carTemperature_type_		=	10,
+	_carOilAnalogPressure_type_	=	11,
+	_carOilBinaryPressure_type_	=	12,
+	_cafFuelLevel_type_			=	13,
+	_carVoltage_type_			=	14,
 
-	Alarm_ScreenType			=	0xFF
-}Enum_ScreenType;
+	_boardVoltage_type_			=	20,
+	_boardTemperature_type_		=	21
+}Enum_valueType;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef enum
+{
+	StepNotApplicable	=	0,
+	StepByToogling		=	1,
+	StepByOne			=	1,
+	StepByOneTen		=	10,
+	StepByOneHundred	=	100
+}Enum_valueStepSize;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+//typedef enum
+//{
+//	None_ScreenType				=	0x00,
+//	NotApplicable_ScreenType	=	0x00,
+//	No_ScreenType				=	0x00,
+//
+//	OneScreen_ScreenType		=	0x01,
+//	ScrollList_ScreenType		=	0x02,
+//	YesNo_ScreenType			=	0x03,
+//	Ctrl_ScreenType				=	0x04,
+//
+//	Alarm_ScreenType			=	0xFF
+//}Enum_ScreenType;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -243,10 +273,11 @@ typedef enum
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-typedef uint8_t carTemperature_type;
+typedef float carTemperature_type;
 typedef float carVoltage_type;
-typedef uint8_t cafFuelLevel_type;
-typedef uint8_t carOilPressure_type;
+typedef float cafFuelLevel_type;
+typedef float carOilAnalogPressure_type;
+typedef boolean carOilBinaryPressure_type;
 
 typedef float boardTemperature_type;
 typedef float boardVoltage_type;
@@ -257,7 +288,7 @@ typedef float boardVoltage_type;
 typedef struct
 {
 	Diagnostic_Code snapshotIdentificator;				//4 bytes total
-	uint16_t value;										//8 bytes total (2 unused)
+	float value;										//8 bytes total
 
 }Diagnostic_Snapshot_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -380,8 +411,8 @@ typedef struct
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 typedef struct
 {
-	carOilPressure_type oilHighPressureAlarmThreshold;
-	carOilPressure_type oilLowPressureAlarmThreshold;
+	carOilAnalogPressure_type oilHighPressureAlarmThreshold;
+	carOilAnalogPressure_type oilLowPressureAlarmThreshold;
 
 	union
 	{
@@ -519,18 +550,6 @@ typedef struct
 }BOARD_EEPROM_counters_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-typedef struct
-{
-	char name[21];		/* 20 for string, 21 for '\0', to be able to fill whole line in LCD */
-	uint8_t nameActualSize;	/* Actual length of the name */
-
-	Enum_Layer layer;	/* Layer number as enum for cleaner code */
-	Enum_ActionForEnter actionForEnter;	/* specifies type of action for short button click */
-	Enum_ScreenType screenType;	/* Type of the screen (one board, list to scroll etc.) */
-
-	Enum_Layer layerPrevious;	/* to know where to get back when long press is detected */
-}LCDBoard;
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 

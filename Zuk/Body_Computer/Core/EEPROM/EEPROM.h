@@ -11,6 +11,7 @@
 
 
 #include "main.h"
+#include "defines.h"
 #include "../ErrorCodes/ErrorCodes.h"
 
 
@@ -60,6 +61,14 @@ typedef union data32bit_union
 	int32_t i32bit;
 
 	float f32bit;
+
+	carTemperature_type carTemperature;
+	carOilAnalogPressure_type carAnalogPressure;
+	cafFuelLevel_type carFuelLevel;
+	carVoltage_type carVoltage;
+
+	boardVoltage_type boardVoltage;
+	boardTemperature_type boardTemperature;
 } data32bit_union;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*** A structure with all the info for diagnostic snapshot ***/

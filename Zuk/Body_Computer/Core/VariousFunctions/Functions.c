@@ -75,7 +75,7 @@ Error_Code copy_buffer_to_str(const char *const source, char* destiny, const uin
  * @param NTC: a pointer to the NTC structure with NTC parameters
  * @retval Error_Code: gives a value of error if one occurs
  */
-Error_Code calculate_NTC_temperature(int16_t *temperature, const uint16_t ADC_value, const NTC_parameters_struct *const NTC)
+Error_Code calculate_NTC_temperature(boardTemperature_type *temperature, const uint16_t ADC_value, const NTC_parameters_struct *const NTC)
 {
 	/*********************************************************************************************************
 	 * 					Beta * T25									beta_x_T25
@@ -102,7 +102,7 @@ Error_Code calculate_NTC_temperature(int16_t *temperature, const uint16_t ADC_va
 
 		int32_t step2 = log(((float)(R / coeff) / NTC->R25)) * coeff;
 
-		*temperature = (int16_t)((((NTC->beta_x_T25) * coeff) / ((step2 * NTC->T25) + (NTC->Beta * coeff))) - 273);
+		*temperature = ((((NTC->beta_x_T25) * coeff) / ((step2 * NTC->T25) + (NTC->Beta * coeff))) - 273);
 	}
 
 	return error;
@@ -301,73 +301,73 @@ int16_t find_nearest_symbol(const char symbol, const char *const str,
  * 			function to pass the info of the currently chosen submenu
  * @retval error: the error code
  */
-Error_Code scroll_list(const LCDBoard* const boardList, uint8_t boardListSize, const LCDBoard* const currentBoard, uint8_t BufferForLCD[NO_OF_ROWS_IN_LCD][NO_OF_COLUMNS_IN_LCD], int8_t* ENCDiffptr, int32_t* externalIterator)
-{
-	Error_Code error = NO_ERROR;
-	uint8_t doneFLAG = FALSE;
-	static int32_t iterator = 0;
-	int8_t ENCDiff = *ENCDiffptr;
-
-	if(0 > *externalIterator)
-	{
-		iterator = 0;
-	}
-
-	if((0 == boardListSize) && (FALSE == doneFLAG))
-	{
-		error = copy_str_to_buffer("Nothing here", (char*)BufferForLCD[Row3], 1, boardList[iterator].nameActualSize);
-		doneFLAG = TRUE;
-	}
-
-	if((1 == boardListSize) && (FALSE == doneFLAG))
-	{
-		iterator = 0;
-		error = copy_str_to_buffer(">", (char*)BufferForLCD[Row3], 0, 1);
-		error = copy_str_to_buffer(boardList[iterator].name, (char*)BufferForLCD[Row3], 1, boardList[iterator].nameActualSize);
-		doneFLAG = TRUE;
-	}
-
-	if(FALSE == doneFLAG)
-	{
-		iterator += ENCDiff;
-	}
-
-	if((0 > (iterator - 1)) && (FALSE == doneFLAG))
-	{
-		iterator = 0;
-		error = copy_str_to_buffer(">", (char*)BufferForLCD[Row3], 0, 1);
-		error = copy_str_to_buffer(boardList[iterator].name, (char*)BufferForLCD[Row3], 1, boardList[iterator].nameActualSize);
-
-		if((boardListSize - 1) >= (iterator + 1))
-		{
-			error = copy_str_to_buffer(boardList[iterator+1].name, (char*)BufferForLCD[Row4], 1, boardList[iterator+1].nameActualSize);
-		}
-		doneFLAG = TRUE;
-	}
-
-	if(((boardListSize - 1) <= iterator) && (FALSE == doneFLAG))
-	{
-		iterator = boardListSize-1;
-		error = copy_str_to_buffer(boardList[iterator-1].name, (char*)BufferForLCD[Row2], 1, boardList[iterator-1].nameActualSize);
-		error = copy_str_to_buffer(">", (char*)BufferForLCD[Row3], 0, 1);
-		error = copy_str_to_buffer(boardList[iterator].name, (char*)BufferForLCD[Row3], 1, boardList[iterator].nameActualSize);
-		doneFLAG = TRUE;
-	}
-
-	if(FALSE == doneFLAG)
-	{
-		error = copy_str_to_buffer(boardList[iterator-1].name, (char*)BufferForLCD[Row2], 1, boardList[iterator-1].nameActualSize);
-		error = copy_str_to_buffer(">", (char*)BufferForLCD[Row3], 0, 1);
-		error = copy_str_to_buffer(boardList[iterator].name, (char*)BufferForLCD[Row3], 1, boardList[iterator].nameActualSize);
-		error = copy_str_to_buffer(boardList[iterator+1].name, (char*)BufferForLCD[Row4], 1, boardList[iterator+1].nameActualSize);
-		doneFLAG = TRUE;
-	}
-
-	*ENCDiffptr = 0;
-	*externalIterator = iterator;
-
-	return error;
-}
+//Error_Code scroll_list(const LCDBoard* const boardList, uint8_t boardListSize, const LCDBoard* const currentBoard, uint8_t BufferForLCD[NO_OF_ROWS_IN_LCD][NO_OF_COLUMNS_IN_LCD], int8_t* ENCDiffptr, int32_t* externalIterator)
+//{
+//	Error_Code error = NO_ERROR;
+//	uint8_t doneFLAG = FALSE;
+//	static int32_t iterator = 0;
+//	int8_t ENCDiff = *ENCDiffptr;
+//
+//	if(0 > *externalIterator)
+//	{
+//		iterator = 0;
+//	}
+//
+//	if((0 == boardListSize) && (FALSE == doneFLAG))
+//	{
+//		error = copy_str_to_buffer("Nothing here", (char*)BufferForLCD[Row3], 1, boardList[iterator].nameActualSize);
+//		doneFLAG = TRUE;
+//	}
+//
+//	if((1 == boardListSize) && (FALSE == doneFLAG))
+//	{
+//		iterator = 0;
+//		error = copy_str_to_buffer(">", (char*)BufferForLCD[Row3], 0, 1);
+//		error = copy_str_to_buffer(boardList[iterator].name, (char*)BufferForLCD[Row3], 1, boardList[iterator].nameActualSize);
+//		doneFLAG = TRUE;
+//	}
+//
+//	if(FALSE == doneFLAG)
+//	{
+//		iterator += ENCDiff;
+//	}
+//
+//	if((0 > (iterator - 1)) && (FALSE == doneFLAG))
+//	{
+//		iterator = 0;
+//		error = copy_str_to_buffer(">", (char*)BufferForLCD[Row3], 0, 1);
+//		error = copy_str_to_buffer(boardList[iterator].name, (char*)BufferForLCD[Row3], 1, boardList[iterator].nameActualSize);
+//
+//		if((boardListSize - 1) >= (iterator + 1))
+//		{
+//			error = copy_str_to_buffer(boardList[iterator+1].name, (char*)BufferForLCD[Row4], 1, boardList[iterator+1].nameActualSize);
+//		}
+//		doneFLAG = TRUE;
+//	}
+//
+//	if(((boardListSize - 1) <= iterator) && (FALSE == doneFLAG))
+//	{
+//		iterator = boardListSize-1;
+//		error = copy_str_to_buffer(boardList[iterator-1].name, (char*)BufferForLCD[Row2], 1, boardList[iterator-1].nameActualSize);
+//		error = copy_str_to_buffer(">", (char*)BufferForLCD[Row3], 0, 1);
+//		error = copy_str_to_buffer(boardList[iterator].name, (char*)BufferForLCD[Row3], 1, boardList[iterator].nameActualSize);
+//		doneFLAG = TRUE;
+//	}
+//
+//	if(FALSE == doneFLAG)
+//	{
+//		error = copy_str_to_buffer(boardList[iterator-1].name, (char*)BufferForLCD[Row2], 1, boardList[iterator-1].nameActualSize);
+//		error = copy_str_to_buffer(">", (char*)BufferForLCD[Row3], 0, 1);
+//		error = copy_str_to_buffer(boardList[iterator].name, (char*)BufferForLCD[Row3], 1, boardList[iterator].nameActualSize);
+//		error = copy_str_to_buffer(boardList[iterator+1].name, (char*)BufferForLCD[Row4], 1, boardList[iterator+1].nameActualSize);
+//		doneFLAG = TRUE;
+//	}
+//
+//	*ENCDiffptr = 0;
+//	*externalIterator = iterator;
+//
+//	return error;
+//}
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -379,59 +379,59 @@ Error_Code scroll_list(const LCDBoard* const boardList, uint8_t boardListSize, c
  * @param boardListSize: the length of the list
  * @retval error: the error code
  */
-Error_Code shortButtonPressDetected_LCD(const LCDBoard* const currentBoard, const LCDBoard* const boardList, Enum_Layer* layerSwitchVariable, int32_t* submenuIterator)
-{
-	Error_Code error = NO_ERROR;
-	EncoderCounterDiff = 0;
-
-	switch(currentBoard->actionForEnter)
-	{
-		case YesNo_EnterAction:
-		{
-			ENC_button.longPressDetected = FALSE;
-			ENC_button.shortPressDetected = FALSE;
-			*layerSwitchVariable = YesNo_Layer;
-			*submenuIterator = -1;
-			break;
-		}
-		case GoInto_EnterAction:
-		{
-			ENC_button.longPressDetected = FALSE;
-			ENC_button.shortPressDetected = FALSE;
-			*layerSwitchVariable = boardList[*submenuIterator].layer;
-			*submenuIterator = -1;
-			break;
-		}
-		case OnOff_EnterAction:	//TODO
-		{
-			ENC_button.longPressDetected = FALSE;
-			ENC_button.shortPressDetected = FALSE;
-			break;
-		}
-		case Ctrl_EnterAction:	//TODO
-		{
-			ENC_button.longPressDetected = FALSE;
-			ENC_button.shortPressDetected = FALSE;
-			break;
-		}
-		case Done_EnterAction:
-		{
-			ENC_button.longPressDetected = FALSE;
-			ENC_button.shortPressDetected = FALSE;
-			*layerSwitchVariable = currentBoard->layerPrevious;
-			break;
-		}
-		case 0x00:	/* None_EnterAction / NotApplicable_EnterAction / No_EnterAction */
-		default:
-		{
-			ENC_button.longPressDetected = FALSE;
-			ENC_button.shortPressDetected = FALSE;
-			break;
-		}
-	}
-
-	return error;
-}
+//Error_Code shortButtonPressDetected_LCD(const LCDBoard* const currentBoard, const LCDBoard* const boardList, Enum_Layer* layerSwitchVariable, int32_t* submenuIterator)
+//{
+//	Error_Code error = NO_ERROR;
+//	EncoderCounterDiff = 0;
+//
+//	switch(currentBoard->actionForEnter)
+//	{
+//		case YesNo_EnterAction:
+//		{
+//			ENC_button.longPressDetected = FALSE;
+//			ENC_button.shortPressDetected = FALSE;
+//			*layerSwitchVariable = YesNo_Layer;
+//			*submenuIterator = -1;
+//			break;
+//		}
+//		case GoInto_EnterAction:
+//		{
+//			ENC_button.longPressDetected = FALSE;
+//			ENC_button.shortPressDetected = FALSE;
+//			*layerSwitchVariable = boardList[*submenuIterator].layer;
+//			*submenuIterator = -1;
+//			break;
+//		}
+//		case OnOff_EnterAction:	//TODO
+//		{
+//			ENC_button.longPressDetected = FALSE;
+//			ENC_button.shortPressDetected = FALSE;
+//			break;
+//		}
+//		case Ctrl_EnterAction:	//TODO
+//		{
+//			ENC_button.longPressDetected = FALSE;
+//			ENC_button.shortPressDetected = FALSE;
+//			break;
+//		}
+//		case Done_EnterAction:
+//		{
+//			ENC_button.longPressDetected = FALSE;
+//			ENC_button.shortPressDetected = FALSE;
+//			*layerSwitchVariable = currentBoard->layerPrevious;
+//			break;
+//		}
+//		case 0x00:	/* None_EnterAction / NotApplicable_EnterAction / No_EnterAction */
+//		default:
+//		{
+//			ENC_button.longPressDetected = FALSE;
+//			ENC_button.shortPressDetected = FALSE;
+//			break;
+//		}
+//	}
+//
+//	return error;
+//}
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -444,18 +444,18 @@ Error_Code shortButtonPressDetected_LCD(const LCDBoard* const currentBoard, cons
  * @param boardListSize: the length of the list
  * @retval error: the error code
  */
-Error_Code longButtonPressDetected_LCD(const LCDBoard* const currentBoard, Enum_Layer* layerSwitchVariable, int32_t* submenuIterator)
-{
-	Error_Code error = NO_ERROR;
-
-	ENC_button.longPressDetected = FALSE;
-	ENC_button.shortPressDetected = FALSE;
-	EncoderCounterDiff = 0;
-	*layerSwitchVariable = currentBoard->layerPrevious;
-	*submenuIterator = -1;
-
-	return error;
-}
+//Error_Code longButtonPressDetected_LCD(const LCDBoard* const currentBoard, Enum_Layer* layerSwitchVariable, int32_t* submenuIterator)
+//{
+//	Error_Code error = NO_ERROR;
+//
+//	ENC_button.longPressDetected = FALSE;
+//	ENC_button.shortPressDetected = FALSE;
+//	EncoderCounterDiff = 0;
+//	*layerSwitchVariable = currentBoard->layerPrevious;
+//	*submenuIterator = -1;
+//
+//	return error;
+//}
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 

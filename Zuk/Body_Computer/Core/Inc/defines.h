@@ -9,6 +9,10 @@
 #define INC_DEFINES_H_
 
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef uint8_t boolean;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #define RUNTIME_STATS_AND_DEBUG
@@ -31,8 +35,9 @@
 #define MY_TASK_250_MS_TIME_PERIOD			(TickType_t)(250)
 #define MY_TASK_500_MS_TIME_PERIOD			(TickType_t)(500)
 #define MY_TASK_1000_MS_TIME_PERIOD			(TickType_t)(1000)
+#define MY_DIAG_CHECK_TASK_TIME_PERIOD		(TickType_t)(1000)
 
-#define DEBOUNCING_TIME_FOR_ENCODER_BUTTON	((uint32_t)(20))	/* Value in milliseconds */
+#define DEBOUNCING_TIME_FOR_ENCODER_BUTTON	((uint32_t)(50))	/* Value in milliseconds */
 #define ENC_BUTTON_LONG_PRESS_TIME			((uint32_t)(1000))	/* Value in milliseconds */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -119,44 +124,46 @@
 #define MAX_DIAGNOSTIC_SNAPSHOT_SIZE				(EEPROM_PAGE_SIZE)
 #define MAX_ERROR_SNAPSHOT_SIZE						((uint16_t)(10u))
 
+#define NO_ADDRESS									((uint16_t)(0u))
+
 /* EEPROM CAR ADDRESSES AND SETTINGS */
 #define TOTAL_SNAPSHOTS_NUMBER_ADDRESS							((uint16_t)(64))	/* 8 bit counter - 0-255 snapshots */
-#define NUMBER_OF_DIAGNOSTIC_SNAPSHOTS_OVERFLOWED_ADDRESS		((uint16_t)(65))	/* indicates if the counter overflowed */
+#define NUMBER_OF_DIAGNOSTIC_SNAPSHOTS_OVERFLOWED_ADDRESS		((uint16_t)(68))	/* indicates if the counter overflowed */
 #define DIAGNOSTIC_SNAPSHOTS_START_ADDRESS						((uint16_t)(1024))	/* Max 255 diagnostic snapshots due to 8bit counter (add: 1024 - 17280) */
 
-#define TOTAL_MILEAGE_START_ADDRESS					((uint16_t)(128))
-#define TRIP_MILEAGE_START_ADDRESS					((uint16_t)(132))
+#define TOTAL_MILEAGE_START_ADDRESS					((uint16_t)(128))	/* 4 bytes value! (uint32) */
+#define TRIP_MILEAGE_START_ADDRESS					((uint16_t)(132))	/* 4 bytes value! (uint32) */
 #define CAR_MILEAGE_TABLE_SIZE						((uint8_t)(10))
 
 
-#define WATER_HIGH_TEMP_WARNING_THRESHOLD_ADDRESS	((uint16_t)(768))
-#define WATER_HIGH_TEMP_ALARM_THRESHOLD_ADDRESS		((uint16_t)(769))
-#define WATER_HIGH_TEMP_FAN_ON_THRESHOLD_ADDRESS	((uint16_t)(770))
-#define WATER_HIGH_TEMP_FAN_OFF_THRESHOLD_ADDRESS	((uint16_t)(771))
-#define WATER_TEMP_ALL_SETTINGS_ADDRESS				((uint16_t)(772))
+#define WATER_HIGH_TEMP_WARNING_THRESHOLD_ADDRESS	((uint16_t)(768))	/* 4 bytes value! (float) */
+#define WATER_HIGH_TEMP_ALARM_THRESHOLD_ADDRESS		((uint16_t)(772))	/* 4 bytes value! (float) */
+#define WATER_HIGH_TEMP_FAN_ON_THRESHOLD_ADDRESS	((uint16_t)(776))	/* 4 bytes value! (float) */
+#define WATER_HIGH_TEMP_FAN_OFF_THRESHOLD_ADDRESS	((uint16_t)(780))	/* 4 bytes value! (float) */
+#define WATER_TEMP_ALL_SETTINGS_ADDRESS				((uint16_t)(784))
 
-#define OIL_HIGH_TEMP_WARNING_THRESHOLD_ADDRESS		((uint16_t)(778))
-#define OIL_HIGH_TEMP_ALARM_THRESHOLD_ADDRESS		((uint16_t)(779))
-#define OIL_TEMP_ALL_SETTINGS_ADDRESS				((uint16_t)(780))
+#define OIL_HIGH_TEMP_WARNING_THRESHOLD_ADDRESS		((uint16_t)(788))	/* 4 bytes value! (float) */
+#define OIL_HIGH_TEMP_ALARM_THRESHOLD_ADDRESS		((uint16_t)(792))	/* 4 bytes value! (float) */
+#define OIL_TEMP_ALL_SETTINGS_ADDRESS				((uint16_t)(796))
 
-#define MAIN_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS		((uint16_t)(788))	/* 4 bytes value! (float) */
-#define MAIN_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS		((uint16_t)(792))	/* 4 bytes value! (float) */
-#define MAIN_BATTERY_ALL_SETTINGS_ADDRESS						((uint16_t)(796))
+#define MAIN_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS		((uint16_t)(800))	/* 4 bytes value! (float) */
+#define MAIN_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS		((uint16_t)(804))	/* 4 bytes value! (float) */
+#define MAIN_BATTERY_ALL_SETTINGS_ADDRESS						((uint16_t)(808))
 
-#define AUXILIARY_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS	((uint16_t)(798))	/* 4 bytes value! (float) */
-#define AUXILIARY_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS	((uint16_t)(802))	/* 4 bytes value! (float) */
-#define AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS					((uint16_t)(806))
+#define AUXILIARY_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS	((uint16_t)(812))	/* 4 bytes value! (float) */
+#define AUXILIARY_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS	((uint16_t)(816))	/* 4 bytes value! (float) */
+#define AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS					((uint16_t)(820))
 
-#define FUEL_LOW_LEVEL_WARNING_THRESHOLD_ADDRESS				((uint16_t)(808))
-#define FUEL_ALL_SETTINGS_ADDRESS								((uint16_t)(810))
+#define FUEL_LOW_LEVEL_WARNING_THRESHOLD_ADDRESS				((uint16_t)(824))	/* 4 bytes value! (float) */
+#define FUEL_ALL_SETTINGS_ADDRESS								((uint16_t)(828))
 
-#define OIL_HIGH_PRESSURE_ALARM_THRESHOLD_ADDRESS				((uint16_t)(818))
-#define OIL_LOW_PRESSURE_ALARM_THRESHOLD_ADDRESS				((uint16_t)(819))
-#define OIL_PRESSURE_ALL_SETTINGS_ADDRESS						((uint16_t)(820))
+#define OIL_HIGH_PRESSURE_ALARM_THRESHOLD_ADDRESS				((uint16_t)(832))	/* 4 bytes value! (float) */
+#define OIL_LOW_PRESSURE_ALARM_THRESHOLD_ADDRESS				((uint16_t)(836))	/* 4 bytes value! (float) */
+#define OIL_PRESSURE_ALL_SETTINGS_ADDRESS						((uint16_t)(840))
 
 /* EEPROM BOARD ADDRESSES AND SETTINGS */
 #define NUMBER_OF_ERROR_SNAPSHOTS							((uint16_t)(64))	/* 8 bit counter - 0-255 snapshots */
-#define NUMBER_OF_ERROR_SNAPSHOTS_OVERFLOWED_ADDRESS		((uint16_t)(65))	/* indicates if the counter overflowed */
+#define NUMBER_OF_ERROR_SNAPSHOTS_OVERFLOWED_ADDRESS		((uint16_t)(68))	/* indicates if the counter overflowed */
 #define ERROR_SNAPSHOTS_START_ADDRESS						((uint16_t)(1024))	/* Max 255 error snapshots due to 8bit counter (add: 1024 - 17280) */
 
 #define HOME_LATITUDE_ADDRESS								((uint16_t)(128))	/* (float) Home GPS coordinates as a float (8 bytes for potential "double" usage) */
@@ -164,26 +171,26 @@
 #define TIME_ZONE_ADJ_POLAND_ADDRESS						((uint16_t)(144))	/* "1" in winter and "2" in summer (time adjustment for UTC+0 */
 #define TIME_MANUAL_ADJUSTMENT_ADDRESS						((uint16_t)(148))	/* "+-12h" in order to be able to adjust to the time zone */
 
-#define BOARD_5V_SUPPLY_LOW_THRESHOLD_ADDRESS					((uint16_t)(256))
-#define BOARD_5V_SUPPLY_HIGH_THRESHOLD_ADDRESS					((uint16_t)(260))
-#define BOARD_3V3_SUPPLY_LOW_THRESHOLD_ADDRESS					((uint16_t)(264))
-#define BOARD_3V3_SUPPLY_HIGH_THRESHOLD_ADDRESS					((uint16_t)(268))
-#define BOARD_VIN_SUPPLY_LOW_THRESHOLD_ADDRESS					((uint16_t)(272))
+#define BOARD_5V_SUPPLY_LOW_THRESHOLD_ADDRESS					((uint16_t)(256))	/* 4 bytes value! (float) */
+#define BOARD_5V_SUPPLY_HIGH_THRESHOLD_ADDRESS					((uint16_t)(260))	/* 4 bytes value! (float) */
+#define BOARD_3V3_SUPPLY_LOW_THRESHOLD_ADDRESS					((uint16_t)(264))	/* 4 bytes value! (float) */
+#define BOARD_3V3_SUPPLY_HIGH_THRESHOLD_ADDRESS					((uint16_t)(268))	/* 4 bytes value! (float) */
+#define BOARD_VIN_SUPPLY_LOW_THRESHOLD_ADDRESS					((uint16_t)(272))	/* 4 bytes value! (float) */
 #define BOARD_VOLTAGE_ALL_SETTINGS_ADDRESS						((uint16_t)(276))
 
-#define BOARD_5V_TEMPERATURE_THRESHOLD_ADDRESS					((uint16_t)(280))
-#define BOARD_3V3_TEMPERATURE_THRESHOLD_ADDRESS					((uint16_t)(284))
+#define BOARD_5V_TEMPERATURE_THRESHOLD_ADDRESS					((uint16_t)(280))	/* 4 bytes value! (float) */
+#define BOARD_3V3_TEMPERATURE_THRESHOLD_ADDRESS					((uint16_t)(284))	/* 4 bytes value! (float) */
 #define BOARD_TEMPERATURE_ALL_SETTINGS_ADDRESS					((uint16_t)(288))
 
 #define BOARD_BUZZER_ALL_SETTINGS_ADDRESS						((uint16_t)(300))
 
 #define BOARD_LCD_HOME_SCREEN_ADDRESS							((uint16_t)(320))
-#define BOARD_LCD_AUTO_HOME_RETURN_TIME_ADDRESS					((uint16_t)(321))
-#define BOARD_LCD_BACKLIGHT_LEVEL_ADDRESS						((uint16_t)(322))
-#define BOARD_LCD_SECONDS_TO_AUTO_TURN_OFF_BACKLIGHT_ADDRESS	((uint16_t)(323))
-#define BOARD_LCD_AUTO_BACKLIGHT_OFF_HOUR_START_ADDRESS			((uint16_t)(324))
-#define BOARD_LCD_AUTO_BACKLIGHT_OFF_HOUR_END_ADDRESS			((uint16_t)(325))
-#define BOARD_LCD_ALL_SETTINGS_ADDRESS							((uint16_t)(330))
+#define BOARD_LCD_AUTO_HOME_RETURN_TIME_ADDRESS					((uint16_t)(324))
+#define BOARD_LCD_BACKLIGHT_LEVEL_ADDRESS						((uint16_t)(328))
+#define BOARD_LCD_SECONDS_TO_AUTO_TURN_OFF_BACKLIGHT_ADDRESS	((uint16_t)(332))
+#define BOARD_LCD_AUTO_BACKLIGHT_OFF_HOUR_START_ADDRESS			((uint16_t)(336))
+#define BOARD_LCD_AUTO_BACKLIGHT_OFF_HOUR_END_ADDRESS			((uint16_t)(340))
+#define BOARD_LCD_ALL_SETTINGS_ADDRESS							((uint16_t)(400))
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -194,7 +201,7 @@
 
 #define MAX_WAIT_TIME_FOR_EEPROM	((uint32_t)(500U))
 #define ERROR_DONE_DISPLAY_TIME		((TickType_t)(2000U))
-#define HELLO_MESSAGE_DISPLAY_TIME	((TickType_t)(5000U))
+#define HELLO_MESSAGE_DISPLAY_TIME	((TickType_t)(3000U))
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */

@@ -32,7 +32,7 @@ extern buzzerMainSettings_struct BUZZER_settings;
 extern LCDMainSettings_struct LCD_MainSettings;
 
 extern GPS_data_struct GPS;
-extern uint8_t TimeZoneManualAdj;
+extern int8_t TimeZoneManualAdj;
 
 
 Error_Code EraseWholeEEPROM(EEPROM_parameters_struct * EEPROMParameters);

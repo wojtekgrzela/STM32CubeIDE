@@ -173,6 +173,7 @@ int main(void)
 		my_error_handler(error);
 	}
 #endif
+  /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
   /* USER CODE END 2 */
 
@@ -310,7 +311,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	/* Checking if interrupt is from ENC_BUTTON pin */
 	if(ENC_BUTTON_Pin == GPIO_Pin)
 	{
-		if((Tim7_Counter_100us - lastTimerCounter) > (DEBOUNCING_TIME_FOR_ENCODER_BUTTON * 10) /*10ms*/)
+		if((Tim7_Counter_100us - lastTimerCounter) > (DEBOUNCING_TIME_FOR_ENCODER_BUTTON * 10) /*ms*/)
 		{
 			if(GPIO_PIN_SET == HAL_GPIO_ReadPin(ENC_BUTTON_GPIO_Port, ENC_BUTTON_Pin))	/*Button Pushed In*/
 			{
