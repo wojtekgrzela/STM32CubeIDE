@@ -144,16 +144,20 @@ typedef enum
 			Supply3V3LowThreshold		=	0x843,
 			Supply3V3HighThreshold		=	0x844,
 			SupplyVinLowThreshold		=	0x845,
-//			Board3V3SupplyAlarmOn		=	0x846,
-//			Board3V3SupplyBuzzerAlarmOn	=	0x847,
-//			Board5VSupplyAlarmOn		=	0x848,
-//			Board5VSupplyBuzzerAlarmON	=	0x849,
-//			BoardVinSupplyAlarmOn		=	0x85A,
-//			BoardVinSupplyBuzzerAlarmOn	=	0x85B,
+			Board3V3SupplyAlarmOn		=	0x846,
+			Board3V3SupplyBuzzerAlarmOn	=	0x847,
+			Board5VSupplyAlarmOn		=	0x848,
+			Board5VSupplyBuzzerAlarmOn	=	0x849,
+			BoardVinSupplyAlarmOn		=	0x85A,
+			BoardVinSupplyBuzzerAlarmOn	=	0x85B,
 
 			/* JarvisSettings_Layer -> InterTempSettings_Layer */
-			DCDC3V3HighTempThreshold	=	0x851,
-			DCDC5VHighTempThreshold		=	0x852,
+			DCDC5VHighTempThreshold		=	0x851,
+			DCDC3V3HighTempThreshold	=	0x852,
+			DCDC5VTempHighAlarmOn		=	0x853,
+			DCDC5VTempeHighBuzzAlarmOn	=	0x854,
+			DCDC3V3TempHighAlarmOn		=	0x855,
+			DCDC3V3TempHighBuzzAlarmOn	=	0x856,
 
 			/* JarvisSettings_Layer -> BuzzerSettings_Layer */
 			BuzzerMainSwitch			=	0x861,
@@ -172,9 +176,7 @@ typedef enum
 			AutoBacklightOff			=	0x877,
 
 	AreYouSure_Layer		=	0xF000,
-	Ctrl_Layer				=	0xF100,
-
-	Alarm_Layer				=	0xFFFF
+	Alarm_Layer				=	0xFFFFFFFF
 }Enum_Layer;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -211,7 +213,10 @@ typedef enum
 	_carVoltage_type_			=	14,
 
 	_boardVoltage_type_			=	20,
-	_boardTemperature_type_		=	21
+	_boardTemperature_type_		=	21,
+
+	_LCDSettings_type_			=	22,
+	_LCD_Enum_Layer_type_		=	23
 }Enum_valueType;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -283,6 +288,7 @@ typedef boolean carOilBinaryPressure_type;
 
 typedef float boardTemperature_type;
 typedef float boardVoltage_type;
+typedef uint8_t LCDSettings_type;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -498,7 +504,7 @@ typedef struct
 			uint8_t board5VDCDCTemperatureHighAlarmON			:1;
 			uint8_t board5VDCDCTemperatureHighBuzzerAlarmOn		:1;
 			uint8_t board3V3DCDCTemperatureHighAlarmOn			:1;
-			uint8_t oard3V3DCDCTemperatureHighBuzzerAlarmOn	:1;
+			uint8_t oard3V3DCDCTemperatureHighBuzzerAlarmOn		:1;
 			/* 4 more free bits here */
 		};
 	};
@@ -527,11 +533,11 @@ typedef struct
 typedef struct
 {
 	Enum_Layer homeScreen;	// should be 4 bytes
-	uint8_t autoHomeReturnTime;
-	uint8_t backlightLevel;
-	uint8_t secondsToAutoTurnOffBacklight;
-	uint8_t autoBacklightOffHourStart;
-	uint8_t autoBacklightOffHourEnd;
+	LCDSettings_type autoHomeReturnTime;
+	LCDSettings_type backlightLevel;
+	LCDSettings_type secondsToAutoTurnOffBacklight;
+	LCDSettings_type autoBacklightOffHourStart;
+	LCDSettings_type autoBacklightOffHourEnd;
 
 	union
 	{

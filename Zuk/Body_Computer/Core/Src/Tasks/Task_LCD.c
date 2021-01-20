@@ -33,6 +33,7 @@
 #define STRING_BAR					"bar"
 #define STRING_LITERS				"liters"
 #define STRING_V					"V"
+#define STRING_SEC					"sec"
 
 typedef struct LCD_board
 {
@@ -121,6 +122,9 @@ extern batterySettings_struct CAR_mainBattery;
 extern batterySettings_struct CAR_auxiliaryBattery;
 
 extern boardVoltagesSettings_struct BOARD_voltage;
+extern boardTemperaturesSettings_struct BOARD_temperature;
+extern buzzerMainSettings_struct BUZZER_settings;
+extern LCDMainSettings_struct LCD_MainSettings;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -158,11 +162,12 @@ uint8_t LCD_buffer[NO_OF_ROWS_IN_LCD][NO_OF_COLUMNS_IN_LCD];
 /* Buffer for degree symbol with "C" letter: "*C" */
 uint8_t degreeSymbolCharacter[3] = "";
 
-static LCD_board* currentBoard = NULL;
+static LCD_board* CurrentBoard_global = NULL;
 static LCD_board* scrollList_currentlyPointedBoard = NULL;
 static boolean scrollList_doneOnce = FALSE;
 static boolean displayAndControlValue_doneOnce = FALSE;
 static boolean enterAction_save = FALSE;
+static boolean EEPROM_Success_Failure_Message = FALSE;
 
 
 
@@ -492,7 +497,7 @@ static LCD_board LCD_WaterHighTempAlarmThreshold = {.name="High Temp Alarm Thr",
 						.thisLayer 			= WaterHighTempAlarmThreshold,
 						.RunningFunction 	= RUNNING_DisplayAndControlValue,
 						.EnterFunction 		= ENTER_SaveToEEPROM,
-						.value_ptr 			= &(CAR_waterTemp.waterHighTempWarningThreshold),
+						.value_ptr 			= &(CAR_waterTemp.waterHighTempAlarmThreshold),
 						.valueType 			= _carTemperature_type_,
 						.valueStepSize 		= StepByOne,
 						.unit 				= NULL,
@@ -1100,7 +1105,406 @@ static LCD_board LCD_AuxBatteryHighVoltageSnapshotOnOff = {.name="High Vol Alarm
 						.EEPROMParameters	= &EEPROM_car,
 						.EEPROM_memAddress	= AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS };
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Internal Voltages Settings Boards */
+static LCD_board LCD_Jarvis5VSupplyLowThreshold = {.name="5V Low Threshold",
+						.firstRow 			= "5V Supply Voltage",
+						.secondRow 			= "Too Low Threshold",
+						.thisLayer 			= Supply5VLowThreshold,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(BOARD_voltage.board5VSupplyLowThreshold),
+						.valueType 			= _boardVoltage_type_,
+						.valueStepSize 		= StepByOneHundred,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_5V_SUPPLY_LOW_THRESHOLD_ADDRESS };
 
+static LCD_board LCD_Jarvis5VSupplyHighThreshold = {.name="5V High Threshold",
+						.firstRow 			= "5V Supply Voltage",
+						.secondRow 			= "Too High Threshold",
+						.thisLayer 			= Supply5VHighThreshold,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(BOARD_voltage.board5VSupplyHighThreshold),
+						.valueType 			= _boardVoltage_type_,
+						.valueStepSize 		= StepByOneHundred,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_5V_SUPPLY_HIGH_THRESHOLD_ADDRESS };
+
+static LCD_board LCD_Jarvis3V3SupplyLowThreshold = {.name="3V3 Low Threshold",
+						.firstRow 			= "3V3 Supply Voltage",
+						.secondRow 			= "Too Low Threshold",
+						.thisLayer 			= Supply3V3LowThreshold,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(BOARD_voltage.board3V3SupplyLowThreshold),
+						.valueType 			= _boardVoltage_type_,
+						.valueStepSize 		= StepByOneHundred,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_3V3_SUPPLY_LOW_THRESHOLD_ADDRESS };
+
+static LCD_board LCD_Jarvis3V3SupplyHighThreshold = {.name="3V3 High Threshold",
+						.firstRow 			= "3V3 Supply Voltage",
+						.secondRow 			= "Too High Threshold",
+						.thisLayer 			= Supply3V3HighThreshold,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(BOARD_voltage.board3V3SupplyHighThreshold),
+						.valueType 			= _boardVoltage_type_,
+						.valueStepSize 		= StepByOneHundred,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_3V3_SUPPLY_HIGH_THRESHOLD_ADDRESS };
+
+static LCD_board LCD_JarvisVinSupplyLowThreshold = {.name="Vin Low Threshold",
+						.firstRow 			= "Vin Supply Voltage",
+						.secondRow 			= "Too Low Threshold",
+						.thisLayer 			= SupplyVinLowThreshold,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(BOARD_voltage.boardVinSupplyLowThreshold),
+						.valueType 			= _boardVoltage_type_,
+						.valueStepSize 		= StepByOneHundred,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_VIN_SUPPLY_LOW_THRESHOLD_ADDRESS };
+
+static LCD_board LCD_Jarvis3V3SupplyAlarmOnOff = {.name="3V3 Alarm On/Off",
+						.firstRow 			= "3V3 Supply Voltage",
+						.secondRow 			= "Alarm On/Off",
+						.thisLayer 			= Board3V3SupplyAlarmOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(BOARD_voltage.allSettings),
+						.settingsMask		= 0b00000001,	/* first bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_VOLTAGE_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_Jarvis3V3SupplyAlarmBuzzerOnOff = {.name="3V3 Alarm Buzzer",
+						.firstRow 			= "3V3 Supply Voltage",
+						.secondRow 			= "Alarm Buzzer On/Off",
+						.thisLayer 			= Board3V3SupplyBuzzerAlarmOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(BOARD_voltage.allSettings),
+						.settingsMask		= 0b00000010,	/* second bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_VOLTAGE_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_Jarvis5VSupplyAlarmOnOff = {.name="5V Alarm On/Off",
+						.firstRow 			= "5V Supply Voltage",
+						.secondRow 			= "Alarm On/Off",
+						.thisLayer 			= Board5VSupplyAlarmOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(BOARD_voltage.allSettings),
+						.settingsMask		= 0b00000100,	/* third bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_VOLTAGE_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_Jarvis5VSupplyAlarmBuzzerOnOff = {.name="5V Alarm Buzzer",
+						.firstRow 			= "5V Supply Voltage",
+						.secondRow 			= "Alarm Buzzer On/Off",
+						.thisLayer 			= Board5VSupplyBuzzerAlarmOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(BOARD_voltage.allSettings),
+						.settingsMask		= 0b00001000,	/* fourth bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_VOLTAGE_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_JarvisVinSupplyAlarmOnOff = {.name="Vin Alarm On/Off",
+						.firstRow 			= "Vin Supply Voltage",
+						.secondRow 			= "Alarm On/Off",
+						.thisLayer 			= BoardVinSupplyAlarmOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(BOARD_voltage.allSettings),
+						.settingsMask		= 0b00010000,	/* fifth bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_VOLTAGE_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_JarvisVinSupplyAlarmBuzzerOnOff = {.name="Vin Alarm Buzzer",
+						.firstRow 			= "Vin Supply Voltage",
+						.secondRow 			= "Alarm Buzzer On/Off",
+						.thisLayer 			= BoardVinSupplyBuzzerAlarmOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(BOARD_voltage.allSettings),
+						.settingsMask		= 0b00100000,	/* sixth bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_VOLTAGE_ALL_SETTINGS_ADDRESS };
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Internal Temperatures Settings Boards */
+static LCD_board LCD_DCDC5VHighTemperatureThreshold = {.name="DCDC 5V H. T. Thr.",
+						.firstRow 			= "5V DCDC High",
+						.secondRow 			= "Temp. Threshold",
+						.thisLayer 			= DCDC5VHighTempThreshold,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(BOARD_temperature.board5VDCDCTemperatureHighThreshold),
+						.valueType 			= _boardTemperature_type_,
+						.valueStepSize 		= StepByOne,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_5V_TEMPERATURE_THRESHOLD_ADDRESS };
+
+static LCD_board LCD_DCDC3V3HighTemperatureThreshold = {.name="DCDC 3V3 H. T. Thr.",
+						.firstRow 			= "3V3 DCDC High",
+						.secondRow 			= "Temp. Threshold",
+						.thisLayer 			= DCDC3V3HighTempThreshold,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(BOARD_temperature.board3V3DCDCTemperatureHighThreshold),
+						.valueType 			= _boardTemperature_type_,
+						.valueStepSize 		= StepByOne,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_3V3_TEMPERATURE_THRESHOLD_ADDRESS };
+
+static LCD_board LCD_DCDC5VHighTemperatureAlarmOnOff = {.name="DCDC 5V H. T. Alarm",
+						.firstRow 			= "5V DCDC High Temp.",
+						.secondRow 			= "Alarm On/Off",
+						.thisLayer 			= DCDC5VTempHighAlarmOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(BOARD_temperature.allSettings),
+						.settingsMask		= 0b00000001,	/* first bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_TEMPERATURE_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_DCDC5VHighTemperatureAlarmBuzzerOnOff = {.name="DCDC 5V Alarm Buzz.",
+						.firstRow 			= "5V DCDC High Temp.",
+						.secondRow 			= "Alarm Buzzer On/Off",
+						.thisLayer 			= DCDC5VTempeHighBuzzAlarmOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(BOARD_temperature.allSettings),
+						.settingsMask		= 0b00000010,	/* second bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_TEMPERATURE_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_DCDC3V3HighTemperatureAlarmOnOff = {.name="DCDC 3V3 H. T. Alar",
+						.firstRow 			= "3V3 DCDC High Temp.",
+						.secondRow 			= "Alarm On/Off",
+						.thisLayer 			= DCDC3V3TempHighAlarmOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(BOARD_temperature.allSettings),
+						.settingsMask		= 0b00000100,	/* third bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_TEMPERATURE_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_DCDC3V3HighTemperatureAlarmBuzzerOnOff = {.name="DCDC 3V3 Alarm Buzz",
+						.firstRow 			= "3V3 DCDC High Temp.",
+						.secondRow 			= "Alarm Buzzer On/Off",
+						.thisLayer 			= DCDC3V3TempHighBuzzAlarmOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(BOARD_temperature.allSettings),
+						.settingsMask		= 0b00001000,	/* fourth bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_TEMPERATURE_ALL_SETTINGS_ADDRESS };
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Buzzer Settings Boards */
+static LCD_board LCD_BuzzerMainSwitchOnOff = {.name="Main Buzzer On/Off",
+						.firstRow 			= "Buzzer Main Switch",
+						.secondRow 			= "All On/Off",
+						.thisLayer 			= BuzzerMainSwitch,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(BUZZER_settings.allSettings),
+						.settingsMask		= 0b00000001,	/* first bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_BUZZER_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_BuzzerMainAlarmsSwitchOnOff = {.name="Main Alarms On/Off",
+						.firstRow 			= "Buzzer Main Switch",
+						.secondRow 			= "All Alarms On/Off",
+						.thisLayer 			= BuzzerMainAlarmsSwitch,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(BUZZER_settings.allSettings),
+						.settingsMask		= 0b00000010,	/* second bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_BUZZER_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_BuzzerMainButtonsSwitchOnOff = {.name="Main Buttons On/Off",
+						.firstRow 			= "Buzzer Main Switch",
+						.secondRow 			= "All Buttons On/Off",
+						.thisLayer 			= BuzzerMainButtonsSwitch,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(BUZZER_settings.allSettings),
+						.settingsMask		= 0b00000100,	/* third bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_BUZZER_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_BuzzerWhenShortPressOnOff = {.name="Short Button Buzzer",
+						.firstRow 			= "Buzzer Short Button",
+						.secondRow 			= "Press On/Off",
+						.thisLayer 			= BuzzerWhenShortPress,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(BUZZER_settings.allSettings),
+						.settingsMask		= 0b00001000,	/* fourth bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_BUZZER_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_BuzzerWhenLongPressOnOff = {.name="Long Button Buzzer",
+						.firstRow 			= "Buzzer Long Button",
+						.secondRow 			= "Press On/Off",
+						.thisLayer 			= BuzzerWhenLongPress,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(BUZZER_settings.allSettings),
+						.settingsMask		= 0b00010000,	/* fifth bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_BUZZER_ALL_SETTINGS_ADDRESS };
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* LCD Settings Boards */
+static LCD_board LCD_BacklightBrightnessLevel = {.name="Backlight Level",
+						.firstRow 			= "Backlight LCD",
+						.secondRow 			= "Brightness Level",
+						.thisLayer 			= BacklightBrightnessLevel,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(LCD_MainSettings.backlightLevel),
+						.valueType 			= _LCDSettings_type_,
+						.valueStepSize 		= StepByOne,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_LCD_BACKLIGHT_LEVEL_ADDRESS };
+
+static LCD_board LCD_SecondsToTurnLCDBacklightOff = {.name="Seconds to LCD Off",
+						.firstRow 			= "Seconds to turn LCD",
+						.secondRow 			= "Backlight Off",
+						.thisLayer 			= SecondsToTurnOffBacklight,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(LCD_MainSettings.secondsToAutoTurnOffBacklight),
+						.valueType 			= _LCDSettings_type_,
+						.valueStepSize 		= StepByOne,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_LCD_SECONDS_TO_AUTO_TURN_OFF_BACKLIGHT_ADDRESS };
+
+static LCD_board LCD_AutoBacklightOffStartHour = {.name="LCD Off Start Hour",
+						.firstRow 			= "Auto Backlight Off",
+						.secondRow 			= "Start Hour",
+						.thisLayer 			= AutoBacklightOffStartHour,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(LCD_MainSettings.autoBacklightOffHourStart),
+						.valueType 			= _LCDSettings_type_,
+						.valueStepSize 		= StepByOne,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_LCD_AUTO_BACKLIGHT_OFF_HOUR_START_ADDRESS };
+
+static LCD_board LCD_AutoBacklightOffEndHour = {.name="LCD Off End Hour",
+						.firstRow 			= "Auto Backlight Off",
+						.secondRow 			= "End Hour",
+						.thisLayer 			= AutoBacklightOffEndHour,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(LCD_MainSettings.autoBacklightOffHourEnd),
+						.valueType 			= _LCDSettings_type_,
+						.valueStepSize 		= StepByOne,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_LCD_AUTO_BACKLIGHT_OFF_HOUR_END_ADDRESS };
+
+static LCD_board LCD_HomeScreenChoice = {.name="Home Screen",
+						.firstRow 			= "Choose The Main",
+						.secondRow 			= "(Home) Screen",
+						.thisLayer 			= HomeScreen,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(LCD_MainSettings.homeScreen),
+						.valueType 			= _LCD_Enum_Layer_type_,
+						.valueStepSize 		= StepByOne,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_LCD_HOME_SCREEN_ADDRESS };
+
+static LCD_board LCD_AutoHomeReturnTime = {.name="Auto Home Ret. Time",
+						.firstRow 			= "Auto Home Return",
+						.secondRow 			= "Time",
+						.thisLayer 			= AutoHomeReturnTime,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(LCD_MainSettings.autoHomeReturnTime),
+						.valueType 			= _LCDSettings_type_,
+						.valueStepSize 		= StepByOne,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_LCD_AUTO_HOME_RETURN_TIME_ADDRESS };
+
+static LCD_board LCD_AutoLCDBacklightTurningOffOnOff = {.name="Auto LCD Off On/Off",
+						.firstRow 			= "Auto LCD Backlight",
+						.secondRow 			= "Turning Off On/Off",
+						.thisLayer 			= AutoBacklightOff,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(LCD_MainSettings.allSettings),
+						.settingsMask		= 0b00000001,	/* first bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_LCD_ALL_SETTINGS_ADDRESS };
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -1135,6 +1539,17 @@ void StartTaskLCD(void const * argument)
 	LCD_AuxBatteryLowVoltageAlarmThreshold.unit		= STRING_V;
 	LCD_AuxBatteryHighVoltageAlarmThreshold.unit	= STRING_V;
 
+	LCD_Jarvis5VSupplyLowThreshold.unit				= STRING_V;
+	LCD_Jarvis5VSupplyHighThreshold.unit			= STRING_V;
+	LCD_Jarvis3V3SupplyLowThreshold.unit			= STRING_V;
+	LCD_Jarvis3V3SupplyHighThreshold.unit			= STRING_V;
+	LCD_JarvisVinSupplyLowThreshold.unit			= STRING_V;
+
+	LCD_DCDC5VHighTemperatureThreshold.unit			= (char*)degreeSymbolCharacter;
+	LCD_DCDC3V3HighTemperatureThreshold.unit		= (char*)degreeSymbolCharacter;
+
+	LCD_SecondsToTurnLCDBacklightOff.unit			= STRING_SEC;
+	LCD_AutoHomeReturnTime.unit						= STRING_SEC;
 
 	/* Prepare LCD boards to be used - calculate sizes (See Macro definition) */
 	PREPARE_LCD_board(LCD_MainMenu);
@@ -1214,6 +1629,39 @@ void StartTaskLCD(void const * argument)
 	PREPARE_LCD_board(LCD_AuxBatteryHighVoltageAlarmBuzzerOnOff);
 	PREPARE_LCD_board(LCD_AuxBatteryLowVoltageSnapshotOnOff);
 	PREPARE_LCD_board(LCD_AuxBatteryHighVoltageSnapshotOnOff);
+
+	PREPARE_LCD_board(LCD_Jarvis5VSupplyLowThreshold);
+	PREPARE_LCD_board(LCD_Jarvis5VSupplyHighThreshold);
+	PREPARE_LCD_board(LCD_Jarvis3V3SupplyLowThreshold);
+	PREPARE_LCD_board(LCD_Jarvis3V3SupplyHighThreshold);
+	PREPARE_LCD_board(LCD_JarvisVinSupplyLowThreshold);
+	PREPARE_LCD_board(LCD_Jarvis3V3SupplyAlarmOnOff);
+	PREPARE_LCD_board(LCD_Jarvis3V3SupplyAlarmBuzzerOnOff);
+	PREPARE_LCD_board(LCD_Jarvis5VSupplyAlarmOnOff);
+	PREPARE_LCD_board(LCD_Jarvis5VSupplyAlarmBuzzerOnOff);
+	PREPARE_LCD_board(LCD_JarvisVinSupplyAlarmOnOff);
+	PREPARE_LCD_board(LCD_JarvisVinSupplyAlarmBuzzerOnOff);
+
+	PREPARE_LCD_board(LCD_DCDC5VHighTemperatureThreshold);
+	PREPARE_LCD_board(LCD_DCDC3V3HighTemperatureThreshold);
+	PREPARE_LCD_board(LCD_DCDC5VHighTemperatureAlarmOnOff);
+	PREPARE_LCD_board(LCD_DCDC5VHighTemperatureAlarmBuzzerOnOff);
+	PREPARE_LCD_board(LCD_DCDC3V3HighTemperatureAlarmOnOff);
+	PREPARE_LCD_board(LCD_DCDC3V3HighTemperatureAlarmBuzzerOnOff);
+
+	PREPARE_LCD_board(LCD_BuzzerMainSwitchOnOff);
+	PREPARE_LCD_board(LCD_BuzzerMainAlarmsSwitchOnOff);
+	PREPARE_LCD_board(LCD_BuzzerMainButtonsSwitchOnOff);
+	PREPARE_LCD_board(LCD_BuzzerWhenShortPressOnOff);
+	PREPARE_LCD_board(LCD_BuzzerWhenLongPressOnOff);
+
+	PREPARE_LCD_board(LCD_BacklightBrightnessLevel);
+	PREPARE_LCD_board(LCD_SecondsToTurnLCDBacklightOff);
+	PREPARE_LCD_board(LCD_AutoBacklightOffStartHour);
+	PREPARE_LCD_board(LCD_AutoBacklightOffEndHour);
+	PREPARE_LCD_board(LCD_HomeScreenChoice);
+	PREPARE_LCD_board(LCD_AutoHomeReturnTime);
+	PREPARE_LCD_board(LCD_AutoLCDBacklightTurningOffOnOff);
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -1425,6 +1873,94 @@ void StartTaskLCD(void const * argument)
 	LCD_AuxBatteryHighVoltageSnapshotOnOff.previousLayer_ptr	= &LCD_AuxBatteryLowVoltageSnapshotOnOff;
 	LCD_AuxBatteryHighVoltageSnapshotOnOff.upperLayer_ptr		= &LCD_AuxBattSettings;
 
+	/* JarvisSettings_Layer -> InterVoltSettings_Layer */
+	LCD_Jarvis5VSupplyLowThreshold.upperLayer_ptr				= &LCD_JarvisSettings;
+	LCD_Jarvis5VSupplyLowThreshold.nextLayer_ptr				= &LCD_Jarvis5VSupplyHighThreshold;
+	LCD_Jarvis5VSupplyHighThreshold.previousLayer_ptr			= &LCD_Jarvis5VSupplyLowThreshold;
+	LCD_Jarvis5VSupplyHighThreshold.upperLayer_ptr				= &LCD_JarvisSettings;
+	LCD_Jarvis5VSupplyHighThreshold.nextLayer_ptr				= &LCD_Jarvis3V3SupplyLowThreshold;
+	LCD_Jarvis3V3SupplyLowThreshold.previousLayer_ptr			= &LCD_Jarvis5VSupplyHighThreshold;
+	LCD_Jarvis3V3SupplyLowThreshold.upperLayer_ptr				= &LCD_JarvisSettings;
+	LCD_Jarvis3V3SupplyLowThreshold.nextLayer_ptr				= &LCD_Jarvis3V3SupplyHighThreshold;
+	LCD_Jarvis3V3SupplyHighThreshold.previousLayer_ptr			= &LCD_Jarvis3V3SupplyLowThreshold;
+	LCD_Jarvis3V3SupplyHighThreshold.upperLayer_ptr				= &LCD_JarvisSettings;
+	LCD_Jarvis3V3SupplyHighThreshold.nextLayer_ptr				= &LCD_JarvisVinSupplyLowThreshold;
+	LCD_JarvisVinSupplyLowThreshold.previousLayer_ptr			= &LCD_Jarvis3V3SupplyHighThreshold;
+	LCD_JarvisVinSupplyLowThreshold.upperLayer_ptr				= &LCD_JarvisSettings;
+	LCD_JarvisVinSupplyLowThreshold.nextLayer_ptr				= &LCD_Jarvis3V3SupplyAlarmOnOff;
+	LCD_Jarvis3V3SupplyAlarmOnOff.previousLayer_ptr				= &LCD_JarvisVinSupplyLowThreshold;
+	LCD_Jarvis3V3SupplyAlarmOnOff.upperLayer_ptr				= &LCD_JarvisSettings;
+	LCD_Jarvis3V3SupplyAlarmOnOff.nextLayer_ptr					= &LCD_Jarvis3V3SupplyAlarmBuzzerOnOff;
+	LCD_Jarvis3V3SupplyAlarmBuzzerOnOff.previousLayer_ptr		= &LCD_Jarvis3V3SupplyAlarmOnOff;
+	LCD_Jarvis3V3SupplyAlarmBuzzerOnOff.upperLayer_ptr			= &LCD_JarvisSettings;
+	LCD_Jarvis3V3SupplyAlarmBuzzerOnOff.nextLayer_ptr			= &LCD_Jarvis5VSupplyAlarmOnOff;
+	LCD_Jarvis5VSupplyAlarmOnOff.previousLayer_ptr				= &LCD_Jarvis3V3SupplyAlarmBuzzerOnOff;
+	LCD_Jarvis5VSupplyAlarmOnOff.upperLayer_ptr					= &LCD_JarvisSettings;
+	LCD_Jarvis5VSupplyAlarmOnOff.nextLayer_ptr					= &LCD_Jarvis5VSupplyAlarmBuzzerOnOff;
+	LCD_Jarvis5VSupplyAlarmBuzzerOnOff.previousLayer_ptr		= &LCD_Jarvis5VSupplyAlarmOnOff;
+	LCD_Jarvis5VSupplyAlarmBuzzerOnOff.upperLayer_ptr			= &LCD_JarvisSettings;
+	LCD_Jarvis5VSupplyAlarmBuzzerOnOff.nextLayer_ptr			= &LCD_JarvisVinSupplyAlarmOnOff;
+	LCD_JarvisVinSupplyAlarmOnOff.previousLayer_ptr				= &LCD_Jarvis5VSupplyAlarmBuzzerOnOff;
+	LCD_JarvisVinSupplyAlarmOnOff.upperLayer_ptr				= &LCD_JarvisSettings;
+	LCD_JarvisVinSupplyAlarmOnOff.nextLayer_ptr					= &LCD_JarvisVinSupplyAlarmBuzzerOnOff;
+	LCD_JarvisVinSupplyAlarmBuzzerOnOff.previousLayer_ptr		= &LCD_JarvisVinSupplyAlarmOnOff;
+	LCD_JarvisVinSupplyAlarmBuzzerOnOff.upperLayer_ptr			= &LCD_JarvisSettings;
+
+	/* JarvisSettings_Layer -> InterTempSettings_Layer */
+	LCD_DCDC5VHighTemperatureThreshold.upperLayer_ptr			= &LCD_JarvisSettings;
+	LCD_DCDC5VHighTemperatureThreshold.nextLayer_ptr			= &LCD_DCDC3V3HighTemperatureThreshold;
+	LCD_DCDC3V3HighTemperatureThreshold.previousLayer_ptr		= &LCD_DCDC5VHighTemperatureThreshold;
+	LCD_DCDC3V3HighTemperatureThreshold.upperLayer_ptr			= &LCD_JarvisSettings;
+	LCD_DCDC3V3HighTemperatureThreshold.nextLayer_ptr			= &LCD_DCDC5VHighTemperatureAlarmOnOff;
+	LCD_DCDC5VHighTemperatureAlarmOnOff.previousLayer_ptr		= &LCD_DCDC3V3HighTemperatureThreshold;
+	LCD_DCDC5VHighTemperatureAlarmOnOff.upperLayer_ptr			= &LCD_JarvisSettings;
+	LCD_DCDC5VHighTemperatureAlarmOnOff.nextLayer_ptr			= &LCD_DCDC5VHighTemperatureAlarmBuzzerOnOff;
+	LCD_DCDC5VHighTemperatureAlarmBuzzerOnOff.previousLayer_ptr	= &LCD_DCDC5VHighTemperatureAlarmOnOff;
+	LCD_DCDC5VHighTemperatureAlarmBuzzerOnOff.upperLayer_ptr	= &LCD_JarvisSettings;
+	LCD_DCDC5VHighTemperatureAlarmBuzzerOnOff.nextLayer_ptr		= &LCD_DCDC3V3HighTemperatureAlarmOnOff;
+	LCD_DCDC3V3HighTemperatureAlarmOnOff.previousLayer_ptr		= &LCD_DCDC5VHighTemperatureAlarmBuzzerOnOff;
+	LCD_DCDC3V3HighTemperatureAlarmOnOff.upperLayer_ptr			= &LCD_JarvisSettings;
+	LCD_DCDC3V3HighTemperatureAlarmOnOff.nextLayer_ptr			= &LCD_DCDC3V3HighTemperatureAlarmBuzzerOnOff;
+	LCD_DCDC3V3HighTemperatureAlarmBuzzerOnOff.previousLayer_ptr= &LCD_DCDC3V3HighTemperatureAlarmOnOff;
+	LCD_DCDC3V3HighTemperatureAlarmBuzzerOnOff.upperLayer_ptr	= &LCD_JarvisSettings;
+
+	/* JarvisSettings_Layer -> BuzzerSettings_Layer */
+	LCD_BuzzerMainSwitchOnOff.upperLayer_ptr					= &LCD_JarvisSettings;
+	LCD_BuzzerMainSwitchOnOff.nextLayer_ptr						= &LCD_BuzzerMainAlarmsSwitchOnOff;
+	LCD_BuzzerMainAlarmsSwitchOnOff.previousLayer_ptr			= &LCD_BuzzerMainSwitchOnOff;
+	LCD_BuzzerMainAlarmsSwitchOnOff.upperLayer_ptr				= &LCD_JarvisSettings;
+	LCD_BuzzerMainAlarmsSwitchOnOff.nextLayer_ptr				= &LCD_BuzzerMainButtonsSwitchOnOff;
+	LCD_BuzzerMainButtonsSwitchOnOff.previousLayer_ptr			= &LCD_BuzzerMainAlarmsSwitchOnOff;
+	LCD_BuzzerMainButtonsSwitchOnOff.upperLayer_ptr				= &LCD_JarvisSettings;
+	LCD_BuzzerMainButtonsSwitchOnOff.nextLayer_ptr				= &LCD_BuzzerWhenShortPressOnOff;
+	LCD_BuzzerWhenShortPressOnOff.previousLayer_ptr				= &LCD_BuzzerMainButtonsSwitchOnOff;
+	LCD_BuzzerWhenShortPressOnOff.upperLayer_ptr				= &LCD_JarvisSettings;
+	LCD_BuzzerWhenShortPressOnOff.nextLayer_ptr					= &LCD_BuzzerWhenLongPressOnOff;
+	LCD_BuzzerWhenLongPressOnOff.previousLayer_ptr				= &LCD_BuzzerWhenShortPressOnOff;
+	LCD_BuzzerWhenLongPressOnOff.upperLayer_ptr					= &LCD_JarvisSettings;
+
+	/* JarvisSettings_Layer -> LCDSettings_Layer */
+	LCD_BacklightBrightnessLevel.upperLayer_ptr					= &LCD_JarvisSettings;
+	LCD_BacklightBrightnessLevel.nextLayer_ptr					= &LCD_SecondsToTurnLCDBacklightOff;
+	LCD_SecondsToTurnLCDBacklightOff.previousLayer_ptr			= &LCD_BacklightBrightnessLevel;
+	LCD_SecondsToTurnLCDBacklightOff.upperLayer_ptr				= &LCD_JarvisSettings;
+	LCD_SecondsToTurnLCDBacklightOff.nextLayer_ptr				= &LCD_AutoBacklightOffStartHour;
+	LCD_AutoBacklightOffStartHour.previousLayer_ptr				= &LCD_SecondsToTurnLCDBacklightOff;
+	LCD_AutoBacklightOffStartHour.upperLayer_ptr				= &LCD_JarvisSettings;
+	LCD_AutoBacklightOffStartHour.nextLayer_ptr					= &LCD_AutoBacklightOffEndHour;
+	LCD_AutoBacklightOffEndHour.previousLayer_ptr				= &LCD_AutoBacklightOffStartHour;
+	LCD_AutoBacklightOffEndHour.upperLayer_ptr					= &LCD_JarvisSettings;
+	LCD_AutoBacklightOffEndHour.nextLayer_ptr					= &LCD_HomeScreenChoice;
+	LCD_HomeScreenChoice.previousLayer_ptr						= &LCD_AutoBacklightOffEndHour;
+	LCD_HomeScreenChoice.upperLayer_ptr							= &LCD_JarvisSettings;
+	LCD_HomeScreenChoice.nextLayer_ptr							= &LCD_AutoHomeReturnTime;
+	LCD_AutoHomeReturnTime.previousLayer_ptr					= &LCD_HomeScreenChoice;
+	LCD_AutoHomeReturnTime.upperLayer_ptr						= &LCD_JarvisSettings;
+	LCD_AutoHomeReturnTime.nextLayer_ptr						= &LCD_AutoLCDBacklightTurningOffOnOff;
+	LCD_AutoLCDBacklightTurningOffOnOff.previousLayer_ptr		= &LCD_AutoHomeReturnTime;
+	LCD_AutoLCDBacklightTurningOffOnOff.upperLayer_ptr			= &LCD_JarvisSettings;
+
+
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -1433,7 +1969,7 @@ void StartTaskLCD(void const * argument)
 
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-	currentBoard = &LCD_Desktop;
+	CurrentBoard_global = &LCD_Desktop;
 
 	/* Setting " " in the whole buffer */
 	memset(LCD_buffer, SPACE_IN_ASCII, (LCD.noOfRowsLCD * LCD.noOfColumnsLCD));
@@ -1494,24 +2030,32 @@ void StartTaskLCD(void const * argument)
 		/** Cleaning the buffer by writing only spaces into it **/
 		memset(LCD_buffer, SPACE_IN_ASCII, (LCD.noOfRowsLCD * LCD.noOfColumnsLCD));
 
+		/* Wait with proceeding if there was a "DONE" or "ERROR" message displayed.
+		 * Flag EEPROM_Success_Failure_Message is set in EEPROMWaitForWriteCheck(...). */
+		if(TRUE == EEPROM_Success_Failure_Message)
+		{
+			vTaskDelay((TickType_t)ERROR_DONE_DISPLAY_TIME);
+			EEPROM_Success_Failure_Message = FALSE;
+		}
+
 		/* Calling a function to run on this LCD board (if one exists) */
-		if(currentBoard->RunningFunction) currentBoard->RunningFunction(currentBoard);
+		if(CurrentBoard_global->RunningFunction) CurrentBoard_global->RunningFunction(CurrentBoard_global);
 
 		if(TRUE == ENC_button.shortPressDetected)
 		{
-			if(currentBoard->EnterFunction)
-				currentBoard->EnterFunction();	/* Execute Enter function pointed by current board (if one exists) */
-			ENC_button.shortPressDetected = FALSE;
-			ENC_button.longPressDetected = FALSE;
+			if(CurrentBoard_global->EnterFunction)
+				CurrentBoard_global->EnterFunction();	/* Execute Enter function pointed by current board (if one exists) */
+			ENC_button.allFlags = FALSE;
+			displayAndControlValue_doneOnce = FALSE;	/* Clean the doneOnce Flag for the RUNNING_DisplayAndControlValue */
 			scrollList_doneOnce = FALSE;	/* Clean the doneOnce Flag for the ScrollList Function */
 		}
 
 		if(TRUE == ENC_button.longPressDetected)
 		{
-			if(currentBoard->upperLayer_ptr)
-				currentBoard = currentBoard->upperLayer_ptr;	/* Go to the upper layer (if one exists) */
-			ENC_button.shortPressDetected = FALSE;
-			ENC_button.longPressDetected = FALSE;
+			if(CurrentBoard_global->upperLayer_ptr)
+				CurrentBoard_global = CurrentBoard_global->upperLayer_ptr;	/* Go to the upper layer (if one exists) */
+			ENC_button.allFlags = FALSE;
+			displayAndControlValue_doneOnce = FALSE;	/* Clean the doneOnce Flag for the RUNNING_DisplayAndControlValue */
 			scrollList_doneOnce = FALSE;	/* Clean the doneOnce Flag for the ScrollList Function */
 		}
 
@@ -1576,7 +2120,7 @@ void StartTaskLCD(void const * argument)
 
 static void ENTER_GoInto(void)
 {
-	if(scrollList_currentlyPointedBoard) currentBoard = scrollList_currentlyPointedBoard;
+	if(scrollList_currentlyPointedBoard) CurrentBoard_global = scrollList_currentlyPointedBoard;
 }
 
 
@@ -1591,7 +2135,7 @@ static void ENTER_SaveToEEPROM(void)
 static void ENTER_ClearDiagnosticSnapshots(void)
 {
 	LCD_AreYouSure.previousLayer_ptr = &LCD_ClearDiagSnaps;
-	currentBoard = &LCD_AreYouSure;
+	CurrentBoard_global = &LCD_AreYouSure;
 }
 
 
@@ -1600,7 +2144,7 @@ static void ENTER_ClearErrorSnapshots(void)
 {
 
 	LCD_AreYouSure.previousLayer_ptr = &LCD_ClearErrorSnap;
-	currentBoard = &LCD_AreYouSure;
+	CurrentBoard_global = &LCD_AreYouSure;
 }
 
 
@@ -1653,6 +2197,7 @@ static void ENTER_AreYouSure(void)
 		EEPROMWaitForWriteCheck(&EEPROMData);
 	}
 
+	CurrentBoard_global = LCD_AreYouSure.previousLayer_ptr;
 }
 
 
@@ -1904,8 +2449,8 @@ static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard)
 				}
 			}//switch(currentBoard->valueStepSize)
 
-			error = copy_str_to_buffer(tempSettingBuffer, (char*)LCD_buffer[Row3], (uint8_t)((20-tempSize-(currentBoard->unitSize))/2), tempSize);
-			error = copy_str_to_buffer(currentBoard->unit, (char*)LCD_buffer[Row3], (uint8_t)((20-(currentBoard->unitSize))/2), currentBoard->unitSize);
+			error = copy_str_to_buffer(tempSettingBuffer, (char*)LCD_buffer[Row3], (uint8_t)(20/2-tempSize), tempSize);
+			error = copy_str_to_buffer(currentBoard->unit, (char*)LCD_buffer[Row3], (uint8_t)(20/2), currentBoard->unitSize);
 
 			if(TRUE == enterAction_save)
 			{
@@ -1948,6 +2493,8 @@ static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard)
 		}
 	}//switch(currentBoard->valueType)
 
+	EncoderCounterDiff = 0;
+
 	if(NO_ERROR != error) my_error_handler(error);
 
 	if(TRUE == enterAction_save)
@@ -1968,6 +2515,7 @@ static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard)
 		EEPROMWaitForWriteCheck(&EEPROMData);
 
 		enterAction_save = FALSE;
+		if(currentBoard->upperLayer_ptr) {CurrentBoard_global = currentBoard->upperLayer_ptr;}
 	}
 }
 
@@ -1979,6 +2527,8 @@ static void RUNNING_AreYouSure(struct LCD_board* currentBoard)
 
 	error = copy_str_to_buffer(currentBoard->name, (char*)LCD_buffer[Row1], (uint8_t)((20-currentBoard->nameSize)/2), currentBoard->nameSize);
 	error = copy_str_to_buffer("Enter to proceed", (char*)LCD_buffer[Row1], 0u, 16u);
+
+
 
 	if(NO_ERROR != error) my_error_handler(error);
 }
@@ -2069,7 +2619,7 @@ static void EEPROMWaitForWriteCheck(EEPROM_data_struct* EEPROMData)
 		(void)copy_str_to_buffer("DONE!", (char*)LCD_buffer[Row4], 7u, 5u);
 	}
 
-	vTaskDelay((TickType_t)ERROR_DONE_DISPLAY_TIME);
+	EEPROM_Success_Failure_Message = TRUE;
 }
 
 
