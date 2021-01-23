@@ -344,18 +344,19 @@ Error_Code InitVariablesFromEEPROMBoard(void)
 		HAL_Delay(delayAfterRead);
 		GPS.homeLongitude= data_union.f32bit;
 
-		EEPROMData.data = &(GPS.TimeZoneAdjPoland);
+		EEPROMData.data = data_union.u8bit;
 		EEPROMData.memAddress = TIME_ZONE_ADJ_POLAND_ADDRESS;
-		EEPROMData.size = UINT8_T_SIZE;
+		EEPROMData.size = INT8_T_SIZE;
 		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
 		HAL_Delay(delayAfterRead);
+		GPS.TimeZoneAdjPoland = data_union.i8bit[0];
 
 		EEPROMData.data = data_union.u8bit;
 		EEPROMData.memAddress = TIME_MANUAL_ADJUSTMENT_ADDRESS;
 		EEPROMData.size = INT8_T_SIZE;
 		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
 		HAL_Delay(delayAfterRead);
-		TimeZoneManualAdj = data_union.i8bit[0];
+		GPS.TimeZoneManualAdj = data_union.i8bit[0];
 	}
 
 	/** Board voltages settings **/

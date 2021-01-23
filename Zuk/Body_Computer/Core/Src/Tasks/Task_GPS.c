@@ -51,7 +51,7 @@ void StartTaskGPS(void const * argument)
 	Error_Code error = NO_ERROR;
 
 #ifdef GPS_LCD_PRINT
-	uint8_t tempHour = '\0';
+	timeHours_type tempHour = '\0';
 	uint8_t tempbuffer[3u] = {'a'};
 
 	GPS.forLCD.hours.messageHandler 				= GPS.message_buffers.hours;
@@ -102,12 +102,18 @@ void StartTaskGPS(void const * argument)
 		if(TRUE == GPS.TimeReady)
 		{
 			error = copy_buffer_to_str((char*)GPS.rawData.UTC, (char*)tempbuffer, 0, 2);
-			tempHour = (uint8_t)atoi((char*)tempbuffer);
+			tempHour = (timeHours_type)atoi((char*)tempbuffer);
 			tempHour += GPS.TimeZoneAdjPoland;
+			tempHour += GPS.TimeZoneManualAdj;
 
 			if(24 <= tempHour)
 			{
 				tempHour -= 24;
+			}
+
+			if(0 > tempHour)
+			{
+				tempHour += 24;
 			}
 
 			if(10 <= tempHour)

@@ -60,7 +60,7 @@ typedef enum
 	Last3Diag_Layer			=	0x05,
 	Last3Err_Layer			=	0x06,
 	CarSettings_Layer		=	0x07,
-	JarvisSettings_Layer		=	0x08,
+	JarvisSettings_Layer	=	0x08,
 
 		/* CarSettings_Layer */
 		ClearDiagnosticSnapshots	=	0x71,
@@ -176,28 +176,8 @@ typedef enum
 			AutoBacklightOff			=	0x877,
 
 	AreYouSure_Layer		=	0xF000,
-	Alarm_Layer				=	0xFFFFFFFF
+	Alarm_Layer				=	0xFFFF
 }Enum_Layer;
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-typedef enum
-{
-	None_EnterAction			=	0x00,
-	NotApplicable_EnterAction	=	0x00,
-	No_EnterAction				=	0x00,
-
-	GoInto_EnterAction			=	0x01,
-	OnOff_EnterAction			=	0x02,
-	YesNo_EnterAction			=	0x03,
-	Ctrl_EnterAction			=	0x04,
-
-	Done_EnterAction			=	0x05,
-
-	WinterSummer_EnterAction	=	0x10,
-
-	Alarm_EnterAction			=	0xFF
-}Enum_ActionForEnter;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -216,7 +196,9 @@ typedef enum
 	_boardTemperature_type_		=	21,
 
 	_LCDSettings_type_			=	22,
-	_LCD_Enum_Layer_type_		=	23
+	_LCD_Enum_Layer_type_		=	23,
+
+	_timeHours_type_			=	24
 }Enum_valueType;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -229,22 +211,6 @@ typedef enum
 	StepByOneTen		=	10,
 	StepByOneHundred	=	100
 }Enum_valueStepSize;
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-//typedef enum
-//{
-//	None_ScreenType				=	0x00,
-//	NotApplicable_ScreenType	=	0x00,
-//	No_ScreenType				=	0x00,
-//
-//	OneScreen_ScreenType		=	0x01,
-//	ScrollList_ScreenType		=	0x02,
-//	YesNo_ScreenType			=	0x03,
-//	Ctrl_ScreenType				=	0x04,
-//
-//	Alarm_ScreenType			=	0xFF
-//}Enum_ScreenType;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -289,6 +255,8 @@ typedef boolean carOilBinaryPressure_type;
 typedef float boardTemperature_type;
 typedef float boardVoltage_type;
 typedef uint8_t LCDSettings_type;
+
+typedef int8_t timeHours_type;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -455,7 +423,7 @@ typedef union
 typedef struct
 {
 	uint8_t diagnosticSnapshotEEPROMIndex;
-	uint8_t didTheNumberOfDiagnosticSnapshotsOverflowed;
+	boolean didTheNumberOfDiagnosticSnapshotsOverflowed;
 	uint8_t mileageEEPROMIndex;
 }CAR_EEPROM_counters_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -559,6 +527,72 @@ typedef struct
 }BOARD_EEPROM_counters_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef struct
+{
+	const timeHours_type polishTimeAdj_min;
+	const timeHours_type polishTimeAdj_max;
+	const timeHours_type timeZoneAdj_min;
+	const timeHours_type timeZoneAdj_max;
+
+	const carTemperature_type waterHighTempWarningThreshold_min;
+	const carTemperature_type waterHighTempWarningThreshold_max;
+	const carTemperature_type waterHighTempAlarmThreshold_min;
+	const carTemperature_type waterHighTempAlarmThreshold_max;
+	const carTemperature_type waterHighTempFanOnThreshold_min;
+	const carTemperature_type waterHighTempFanOnThreshold_max;
+	const carTemperature_type waterHighTempFanOffThreshold_min;
+	const carTemperature_type waterHighTempFanOffThreshold_max;
+
+	const carTemperature_type oilHighTempWarningThreshold_min;
+	const carTemperature_type oilHighTempWarningThreshold_max;
+	const carTemperature_type oilHighTempAlarmThreshold_min;
+	const carTemperature_type oilHighTempAlarmThreshold_max;
+
+	const carOilAnalogPressure_type oilHighPressureAlarmThreshold_min;
+	const carOilAnalogPressure_type oilHighPressureAlarmThreshold_max;
+	const carOilAnalogPressure_type oilLowPressureAlarmThreshold_min;
+	const carOilAnalogPressure_type oilLowPressureAlarmThreshold_max;
+
+	const carVoltage_type batteryLowVoltageAlarmThreshold_min;
+	const carVoltage_type batteryLowVoltageAlarmThreshold_max;
+	const carVoltage_type batteryHighVoltageAlarmThreshold_min;
+	const carVoltage_type batteryHighVoltageAlarmThreshold_max;
+
+	const cafFuelLevel_type fuelLowLevelWarningThreshold_min;
+	const cafFuelLevel_type fuelLowLevelWarningThreshold_max;
+
+	const boardVoltage_type board3V3SupplyLowThreshold_min;
+	const boardVoltage_type board3V3SupplyLowThreshold_max;
+	const boardVoltage_type board3V3SupplyHighThreshold_min;
+	const boardVoltage_type board3V3SupplyHighThreshold_max;
+	const boardVoltage_type board5VSupplyLowThreshold_min;
+	const boardVoltage_type board5VSupplyLowThreshold_max;
+	const boardVoltage_type board5VSupplyHighThreshold_min;
+	const boardVoltage_type board5VSupplyHighThreshold_max;
+	const boardVoltage_type boardVinSupplyLowThreshold_min;
+	const boardVoltage_type boardVinSupplyLowThreshold_max;
+
+	const boardTemperature_type board5VDCDCTemperatureHighThreshold_min;
+	const boardTemperature_type board5VDCDCTemperatureHighThreshold_max;
+	const boardTemperature_type board3V3DCDCTemperatureHighThreshold_min;
+	const boardTemperature_type board3V3DCDCTemperatureHighThreshold_max;
+
+	const Enum_Layer homeScreen_min;
+	const Enum_Layer homeScreen_max;
+	const LCDSettings_type autoHomeReturnTime_min;
+	const LCDSettings_type autoHomeReturnTime_max;
+	const LCDSettings_type backlightLevel_min;
+	const LCDSettings_type backlightLevel_max;
+	const LCDSettings_type secondsToAutoTurnOffBacklight_min;
+	const LCDSettings_type secondsToAutoTurnOffBacklight_max;
+	const LCDSettings_type autoBacklightOffHourStart_min;
+	const LCDSettings_type autoBacklightOffHourStart_max;
+	const LCDSettings_type autoBacklightOffHourEnd_min;
+	const LCDSettings_type autoBacklightOffHourEnd_max;
+
+}GlobalValuesLimits_struct;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 

@@ -82,7 +82,7 @@ volatile uint16_t ADC3Measures[NO_OF_ADC3_MEASURES] = { 0 };
 
 /* For GPS data, buffering, messages for LCD */
 GPS_data_struct GPS =
-{ .TimeZoneAdjPoland = 2,/* .homeLatitude = 52.093731, .homeLongitude = 20.661411,*/
+{ //.TimeZoneAdjPoland = 2,/* .homeLatitude = 52.093731, .homeLongitude = 20.661411,*/
 .forLCD.hours.messageReadyFLAG = FALSE,
 .forLCD.minutes.messageReadyFLAG = FALSE,
 .forLCD.seconds.messageReadyFLAG = FALSE,
@@ -100,8 +100,6 @@ GPS_data_struct GPS =
 /* For LCD parameters and settings */
 LCD_parameters_struct LCD =
 { .addressLCD = 0x27, .noOfRowsLCD = NO_OF_ROWS_IN_LCD, .noOfColumnsLCD = NO_OF_COLUMNS_IN_LCD };
-
-Enum_Layer HOME_SCREEN = Desktop_Layer;
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* For measuring Board temperatures with usage of NTC parameters */
@@ -179,12 +177,75 @@ boardTemperature_type temperature5VDCDC = 0.0;
 LCD_message temperature3V3DCDCForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
 LCD_message temperature5VDCDCForLCD = {.messageHandler = NULL, .size = 0, .messageReadyFLAG = 0};
 
-int8_t TimeZoneManualAdj = 0;		// for manual adjusting the time zone in clock
-
 buzzerMainSettings_struct BUZZER_settings = {0};
 LCDMainSettings_struct LCD_MainSettings = {0};
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Constant value limits and check - hard-coded, to be changed only by recompilation */
+GlobalValuesLimits_struct GlobalValuesLimits = {
+	.polishTimeAdj_min = 1,
+	.polishTimeAdj_max = 2,
+	.timeZoneAdj_min = -12,
+	.timeZoneAdj_max = 12,
+
+	.waterHighTempWarningThreshold_min	= 50,
+	.waterHighTempWarningThreshold_max	= 150,
+	.waterHighTempAlarmThreshold_min	= 50,
+	.waterHighTempAlarmThreshold_max	= 150,
+	.waterHighTempFanOnThreshold_min	= 50,
+	.waterHighTempFanOnThreshold_max	= 150,
+	.waterHighTempFanOffThreshold_min	= 50,
+	.waterHighTempFanOffThreshold_max	= 150,
+
+	.oilHighTempWarningThreshold_min	= 50,
+	.oilHighTempWarningThreshold_max	= 150,
+	.oilHighTempAlarmThreshold_min		= 50,
+	.oilHighTempAlarmThreshold_max		= 150,
+
+	.oilHighPressureAlarmThreshold_min	= 0.1,
+	.oilHighPressureAlarmThreshold_max	= 7.5,
+	.oilLowPressureAlarmThreshold_min	= 0.1,
+	.oilLowPressureAlarmThreshold_max	= 7.5,
+
+	.batteryLowVoltageAlarmThreshold_min	= 8.00,
+	.batteryLowVoltageAlarmThreshold_max	= 18.00,
+	.batteryHighVoltageAlarmThreshold_min	= 8.00,
+	.batteryHighVoltageAlarmThreshold_max	= 18.00,
+
+	.fuelLowLevelWarningThreshold_min	= 5,
+	.fuelLowLevelWarningThreshold_max	= 80,
+
+	.board3V3SupplyLowThreshold_min		= 1.80,
+	.board3V3SupplyLowThreshold_max		= 4.00,
+	.board3V3SupplyHighThreshold_min	= 1.80,
+	.board3V3SupplyHighThreshold_max	= 4.00,
+	.board5VSupplyLowThreshold_min		= 4.00,
+	.board5VSupplyLowThreshold_max		= 6.00,
+	.board5VSupplyHighThreshold_min		= 4.00,
+	.board5VSupplyHighThreshold_max		= 6.00,
+	.boardVinSupplyLowThreshold_min		= 8.00,
+	.boardVinSupplyLowThreshold_max		= 17.00,
+
+	.board5VDCDCTemperatureHighThreshold_min	= 20,
+	.board5VDCDCTemperatureHighThreshold_max	= 150,
+	.board3V3DCDCTemperatureHighThreshold_min	= 20,
+	.board3V3DCDCTemperatureHighThreshold_max	= 150,
+
+	.homeScreen_min						= MainMenu_Layer,
+	.homeScreen_max						= JarvisInfo_Layer,
+	.autoHomeReturnTime_min				= 3,
+	.autoHomeReturnTime_max				= 255,
+	.backlightLevel_min					= 1,
+	.backlightLevel_max					= 10,
+	.secondsToAutoTurnOffBacklight_min	= 2,
+	.secondsToAutoTurnOffBacklight_max	= 255,
+	.autoBacklightOffHourStart_min		= 0,
+	.autoBacklightOffHourStart_max		= 24,
+	.autoBacklightOffHourEnd_min		= 0,
+	.autoBacklightOffHourEnd_max		= 24
+};
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
 /* USER CODE END Variables */

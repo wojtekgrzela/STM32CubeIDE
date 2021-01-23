@@ -37,7 +37,7 @@ typedef uint8_t boolean;
 #define MY_TASK_1000_MS_TIME_PERIOD			(TickType_t)(1000)
 #define MY_DIAG_CHECK_TASK_TIME_PERIOD		(TickType_t)(1000)
 
-#define DEBOUNCING_TIME_FOR_ENCODER_BUTTON	((uint32_t)(100U))	/* Value in milliseconds */
+#define DEBOUNCING_TIME_FOR_ENCODER_BUTTON	((uint32_t)(50U))	/* Value in milliseconds */
 #define ENC_BUTTON_LONG_PRESS_TIME			((uint32_t)(1000U))	/* Value in milliseconds */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -168,7 +168,7 @@ typedef uint8_t boolean;
 
 #define HOME_LATITUDE_ADDRESS								((uint16_t)(128))	/* (float) Home GPS coordinates as a float (8 bytes for potential "double" usage) */
 #define HOME_LONGITUDE_ADDRESS								((uint16_t)(136))	/* (float) Home GPS coordinates as a float (8 bytes for potential "double" usage) */
-#define TIME_ZONE_ADJ_POLAND_ADDRESS						((uint16_t)(144))	/* "1" in winter and "2" in summer (time adjustment for UTC+0 */
+#define TIME_ZONE_ADJ_POLAND_ADDRESS						((uint16_t)(144))	/* "1" in winter and "2" in summer (time adjustment for UTC+0) */
 #define TIME_MANUAL_ADJUSTMENT_ADDRESS						((uint16_t)(148))	/* "+-12h" in order to be able to adjust to the time zone */
 
 #define BOARD_5V_SUPPLY_LOW_THRESHOLD_ADDRESS					((uint16_t)(256))	/* 4 bytes value! (float) */

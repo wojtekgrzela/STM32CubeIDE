@@ -95,14 +95,14 @@ void StartTaskDumpToEEPROM(void const * argument)
 
 		  for(uint8_t i = 0; i<11; ++i)
 		  {
-			  if(6>i)
+			  if(8>i)
 			  {
-			  DiagnosticDataToSend.rawTime[i] = (TRUE == GPS.TimeReady) ? GPS.rawData.UTC[i] : 'x';
+				  DiagnosticDataToSend.clockTime[i] = (TRUE == GPS.TimeReady) ? GPS.forLCD.clock.messageHandler[i] : 'x';
 			  }
 
 			  if(10>i)
 			  {
-			  DiagnosticDataToSend.latitude[i] = (TRUE == GPS.Fix) ? GPS.rawData.Latitude[i] : 'y';
+				  DiagnosticDataToSend.latitude[i] = (TRUE == GPS.Fix) ? GPS.rawData.Latitude[i] : 'y';
 			  }
 
 			  DiagnosticDataToSend.longitude[i] = (TRUE == GPS.Fix) ? GPS.rawData.Longitude[i] : 'z';
@@ -125,6 +125,12 @@ void StartTaskDumpToEEPROM(void const * argument)
 		  if(pdTRUE == xQueueReceive(Queue_error_snapshot_dumpHandle, &(ErrorDataToSend.error_mess_from_queue), (TickType_t)0))
 		  {
 			  *(ErrorDataToSend.ErrorDataForEEPROM.isReadyPtr) = DATA_NOT_READY;
+
+			  for(uint8_t i = 0; i<11; ++i)
+			  {
+				  ErrorDataToSend.clockTime[i] = (TRUE == GPS.TimeReady) ? GPS.forLCD.clock.messageHandler[i] : 'x';
+			  }
+
 			  error = WriteEEPROM(ErrorDataToSend.ErrorDataForEEPROM.EEPROMParameters, &(ErrorDataToSend.ErrorDataForEEPROM));
 			  if(NO_ERROR == error)
 			  {

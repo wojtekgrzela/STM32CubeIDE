@@ -96,6 +96,13 @@ void StartTaskDiagCheck(void const * argument)
 	{
 
 
+
+
+
+
+
+
+
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
 

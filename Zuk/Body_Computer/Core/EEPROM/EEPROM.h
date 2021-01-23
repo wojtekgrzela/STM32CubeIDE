@@ -60,6 +60,7 @@ typedef union data32bit_union
 	int16_t i16bit[2];
 	int32_t i32bit;
 
+	boolean bool8bit[4];
 	float f32bit;
 
 	carTemperature_type carTemperature;
@@ -69,6 +70,10 @@ typedef union data32bit_union
 
 	boardVoltage_type boardVoltage;
 	boardTemperature_type boardTemperature;
+
+	LCDSettings_type LCDSettings;
+	timeHours_type timeHours;
+	Enum_Layer screenLayer;
 } data32bit_union;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*** A structure with all the info for diagnostic snapshot ***/
@@ -80,11 +85,11 @@ typedef struct
 		struct
 		{
 			Diagnostic_Snapshot_struct diag_mess_from_queue;	//8 bytes total
-			uint8_t rawTime[6/*Size of raw time from GPS*/];	//16 bytes total (2 unused)
-			uint8_t latitude[10];								//24 bytes total
-			uint8_t latitudeIndicator;							//28 bytes total (3 unused)
-			uint8_t longitude[11];								//36 bytes total
-			uint8_t longitudeIndicator;							//40 bytes total (3 unused) = 37 bytes of data
+			uint8_t clockTime[8/*Size of clock time from GPS*/];//16 bytes total
+			uint8_t latitude[10];								//26 bytes total
+			uint8_t latitudeIndicator;							//27 bytes total
+			uint8_t longitude[11];								//38 bytes total
+			uint8_t longitudeIndicator;							//39 bytes total
 		};
 	};
 	EEPROM_data_struct DiagnosticDataForEEPROM;
@@ -99,7 +104,7 @@ typedef struct
 		struct
 		{
 			Error_Code error_mess_from_queue;					//4 bytes total
-			uint8_t rawTime[6/*Size of raw time from GPS*/];	//12 bytes total (2 unused) = 10 bytes of data
+			uint8_t clockTime[8/*Size of raw time from GPS*/];	//12 bytes total (2 unused) = 10 bytes of data
 		};
 	};
 	EEPROM_data_struct ErrorDataForEEPROM;
