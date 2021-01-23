@@ -74,22 +74,24 @@ typedef uint8_t boolean;
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Measurements */
-#define NO_OF_ENGINE_WATER_TEMP_MEASUREMENTS_ADDED			((uint8_t)(4))
-#define NO_OF_ENGINE_OIL_TEMP_MEASUREMENTS_ADDED			((uint8_t)(4))
+#define NUMBER_OF_MEASUREMENTS_BEFORE_DIAGNOSTIC			((uint8_t)(8u))
+
+#define NO_OF_ENGINE_WATER_TEMP_MEASUREMENTS_ADDED			((uint8_t)(4u))
+#define NO_OF_ENGINE_OIL_TEMP_MEASUREMENTS_ADDED			((uint8_t)(4u))
 
 #ifdef OIL_PRESSURE_ANALOG_SENSOR
-#define NO_OF_ENGINE_OIL_PRESSURE_MEASUREMENTS_ADDED		((uint8_t)(4))
+#define NO_OF_ENGINE_OIL_PRESSURE_MEASUREMENTS_ADDED		((uint8_t)(4u))
 #endif
 #ifdef OIL_PRESSURE_BINARY_SENSOR
 #define GPIO_PORT_OIL_PRESSURE_SENSOR						(OIL_PRESSURE_BINARY_IN_GPIO_Port)
 #define GPIO_PIN_OIL_PRESSURE_SENSOR						(OIL_PRESSURE_BINARY_IN_Pin)
 #endif
 
-#define NO_OF_MAIN_BATTERY_VOLTAGE_MEASUREMENTS_ADDED		((uint8_t)(4))
-#define MAIN_BATTERY_VOLTAGE_DIVIDER						((float)(1.0))	//TODO
-#define NO_OF_AUXILIARY_BATTERY_VOLTAGE_MEASUREMENTS_ADDED	((uint8_t)(4))	//TODO
-#define AUXILIARY_BATTERY_VOLTAGE_DIVIDER					((float)(1.0))
-#define NO_OF_FUEL_LEVEL_MEASUREMENTS_ADDED					((uint8_t)(5))
+#define NO_OF_MAIN_BATTERY_VOLTAGE_MEASUREMENTS_ADDED		((uint8_t)(4u))
+#define MAIN_BATTERY_VOLTAGE_DIVIDER						((float)(1.0f))	//TODO
+#define NO_OF_AUXILIARY_BATTERY_VOLTAGE_MEASUREMENTS_ADDED	((uint8_t)(4u))	//TODO
+#define AUXILIARY_BATTERY_VOLTAGE_DIVIDER					((float)(1.0f))
+#define NO_OF_FUEL_LEVEL_MEASUREMENTS_ADDED					((uint8_t)(5u))
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */

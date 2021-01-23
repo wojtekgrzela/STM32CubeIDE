@@ -241,9 +241,41 @@ typedef enum
 	LOW_VOLTAGE_AUXILIARY_BATTERY_ALARM			= 40,
 	HIGH_VOLTAGE_AUXILIARY_BATTERY_ALARM		= 41,
 
-	UNKNOWN_ISSUE								= 0xF0F0F0F0
-}Diagnostic_Code;
+	UNKNOWN_ISSUE								= 0xF0F0
+}Enum_DiagnosticCode;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef enum
+{
+	Key_Error		= 0,
+	Key_Out 		= 1,
+	Key_IgnitionOn	= 2,
+	Key_Crank		= 3
+}Enum_KeyState;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef enum
+{
+	EngineState_Error	= 0,
+	EngineState_Off		= 1,
+	EngineState_Crank	= 2,
+	EngineState_Idle	= 3,
+	EngineState_Work	= 4
+}Enum_EngineState;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+typedef struct
+{
+	Enum_KeyState keyState;
+	Enum_EngineState engineState;
+
+	uint32_t RPM;
+	uint32_t SPEED;
+
+	boolean AlternatorCharging :1;
+}CarStateinfo_type;
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 typedef float carTemperature_type;
@@ -260,10 +292,10 @@ typedef int8_t timeHours_type;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/* Diagnostic_Code Snapshot */
+/* Enum_DiagnosticCode Snapshot */
 typedef struct
 {
-	Diagnostic_Code snapshotIdentificator;				//4 bytes total
+	Enum_DiagnosticCode snapshotIdentificator;				//4 bytes total
 	float value;										//8 bytes total
 
 }Diagnostic_Snapshot_struct;

@@ -181,6 +181,9 @@ buzzerMainSettings_struct BUZZER_settings = {0};
 LCDMainSettings_struct LCD_MainSettings = {0};
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/* Car information (Key, Engine status etc.) */
+CarStateinfo_type CarStateInfo = {0};
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Constant value limits and check - hard-coded, to be changed only by recompilation */
 GlobalValuesLimits_struct GlobalValuesLimits = {
@@ -703,6 +706,10 @@ void StartTask250ms(void const * argument)
 	TickType_t xLastWakeTime;
 	const TickType_t xFrequency = MY_TASK_250_MS_TIME_PERIOD;
 	Error_Code error = NO_ERROR;
+	uint8_t firstFewRuns = 0u;
+
+	/* Stop My_DiagCheck Task because measurements are not ready yet! */
+	vTaskSuspend(My_DiagCheckHandle);
 
 	/* For calculating the engine parameters (counting the mean value) */
 	static volatile carTemperature_type EngineWaterTemperatureTable[NO_OF_ENGINE_WATER_TEMP_MEASUREMENTS_ADDED] = {0};
@@ -975,6 +982,9 @@ void StartTask250ms(void const * argument)
 		{
 		  my_error_handler(error);
 		}
+
+		/* Release My_DiagCheck Task after some measurements first */
+		(NUMBER_OF_MEASUREMENTS_BEFORE_DIAGNOSTIC <= firstFewRuns) ? vTaskResume(My_DiagCheckHandle) : ++firstFewRuns;
 
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
