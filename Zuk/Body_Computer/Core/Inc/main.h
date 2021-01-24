@@ -248,10 +248,10 @@ typedef enum
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 typedef enum
 {
-	Key_Error		= 0,
-	Key_Out 		= 1,
-	Key_IgnitionOn	= 2,
-	Key_Crank		= 3
+	KeyState_Error		= 0,
+	KeyState_Out 		= 1,
+	KeyState_IgnitionOn	= 2,
+	KeyState_Crank		= 3
 }Enum_KeyState;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -266,10 +266,22 @@ typedef enum
 }Enum_EngineState;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef enum
+{
+	CarState_Error	= 0,
+	CarState_Off	= 1,
+	CarState_Crank	= 2,
+	CarState_Idle	= 3,
+	CarState_Drive	= 4
+}Enum_CarState;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 typedef struct
 {
 	Enum_KeyState keyState;
 	Enum_EngineState engineState;
+	Enum_CarState carState;
 
 	uint32_t RPM;
 	uint32_t SPEED;

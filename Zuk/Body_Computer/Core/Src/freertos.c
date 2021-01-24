@@ -905,6 +905,7 @@ void StartTask250ms(void const * argument)
 			mainBatteryVoltageValueForLCD.messageReadyFLAG = TRUE;
 
 			i_mainBateryVoltage += 1;
+			tempMainBatteryVoltage = 0;
 		}
 		else
 		{
@@ -936,6 +937,7 @@ void StartTask250ms(void const * argument)
 			auxiliaryBatteryVoltageValueForLCD.messageReadyFLAG = TRUE;
 
 			i_auxBatteryVoltage += 1;
+			tempAuxBatteryVoltage = 0;
 		}
 		else
 		{
