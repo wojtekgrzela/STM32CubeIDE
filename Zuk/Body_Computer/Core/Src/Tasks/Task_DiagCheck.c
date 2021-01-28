@@ -92,6 +92,7 @@ extern CarStateinfo_type CarStateInfo;
 extern osTimerId My_Timer_carWaterTempValueCheckHandle;
 extern osTimerId My_Timer_carOilTempValueCheckHandle;
 extern osTimerId My_Timer_carOilAnalogPressureValueCheckHandle;
+extern osTimerId My_Timer_carOilBinaryPressureValueCheckHandle;
 extern osTimerId My_Timer_carMainBattVoltageValueCheckHandle;
 extern osTimerId My_Timer_carAuxBattVoltageValueCheckHandle;
 extern osTimerId My_Timer_carFuelLevelValueCheckHandle;
@@ -132,8 +133,9 @@ static void Check_BoardTemp();
 
 static void CheckValuesStateAndSendAlarmRequests(void);
 
-static inline boolean IsLower(float value, float threshold);
-static inline boolean IsHigher(float value, float threshold);
+static Error_Code CheckValueAndTimer(Enum_ValueState valState, osTimerId timerId, TickType_t timerSetting);
+static boolean IsLower(float value, float threshold);
+static boolean IsHigher(float value, float threshold);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -164,34 +166,27 @@ void StartTaskDiagCheck(void const * argument)
 		/* Check AlternatorCharging (TRUE, FALSE) */
 		Read_AlternatorCharging();
 
+		/* Always Check Voltages and Temperatures on the board */
+		Check_BoardVoltage();
+		Check_BoardTemp();
+
 		/* In every car state there might be a different set of checks to perform */
 		switch(CarStateInfo.carState)
 		{
 			case CarState_Off:
-			{
-				Check_BoardVoltage();
-				Check_BoardTemp();
-				break;
-			}
 			case CarState_Crank:
 			{
-				Check_BoardVoltage();
-				Check_BoardTemp();
+				/* Set checked values to OK - we do not want to trigger an alarm here */
+				valueStates.carWaterTemp_ValueState = val_OK;
+				valueStates.carOilTemp_ValueState = val_OK;
+				valueStates.carOilAnalogPressure_ValueState = val_OK;
+				valueStates.carOilBinaryPressure_ValueState = val_OK;
+				valueStates.carMainBattVoltage_ValueState = val_OK;
+				valueStates.carAuxBattVoltage_ValueState = val_OK;
+				valueStates.carFuelLevel_ValueState = val_OK;
 				break;
 			}
 			case CarState_Idle:
-			{
-				Check_CarWaterTemp();
-				Check_CarOilTemp();
-				Check_CarOilPressure();
-				Check_CarMainBattVoltage();
-				Check_CarAuxBattVoltage();
-				Check_CarFuelLevel();
-
-				Check_BoardVoltage();
-				Check_BoardTemp();
-				break;
-			}
 			case CarState_Drive:
 			{
 				Check_CarWaterTemp();
@@ -498,27 +493,55 @@ static void Check_BoardTemp()
 
 static void CheckValuesStateAndSendAlarmRequests(void)
 {
-	boolean result = TRUE;
-	if(val_OK != valueStates.carWaterTemp_ValueState)
-	{
-		if(!xTimerIsTimerActive(My_Timer_carWaterTempValueCheckHandle))	/* if timer in NOT active (hence !) */
-		{
-			result = (boolean)xTimerStart(My_Timer_carWaterTempValueCheckHandle, CAR_WATER_TEMP_VALUE_CHECK_TIMER_TIME);
-		}
+	Error_Code result = TRUE;
 
+	if(NO_ERROR == result) result = CheckValueAndTimer(valueStates.carWaterTemp_ValueState, My_Timer_carWaterTempValueCheckHandle, CAR_WATER_TEMP_VALUE_CHECK_TIMER_TIME);
+	if(NO_ERROR == result) result = CheckValueAndTimer(valueStates.carOilTemp_ValueState, My_Timer_carOilTempValueCheckHandle, CAR_OIL_TEMP_VALUE_CHECK_TIMER_TIME);
+	if(NO_ERROR == result) result = CheckValueAndTimer(valueStates.carOilAnalogPressure_ValueState, My_Timer_carOilAnalogPressureValueCheckHandle, CAR_OIL_ANALOG_PRESSURE_VALUE_CHECK_TIMER_TIME);
+	if(NO_ERROR == result) result = CheckValueAndTimer(valueStates.carOilBinaryPressure_ValueState, My_Timer_carOilBinaryPressureValueCheckHandle, CAR_OIL_BINARY_PRESSURE_VALUE_CHECK_TIMER_TIME);
+	if(NO_ERROR == result) result = CheckValueAndTimer(valueStates.carMainBattVoltage_ValueState, My_Timer_carMainBattVoltageValueCheckHandle, CAR_MAIN_BATT_VOLTAGE_VALUE_CHECK_TIMER_TIME);
+	if(NO_ERROR == result) result = CheckValueAndTimer(valueStates.carAuxBattVoltage_ValueState, My_Timer_carAuxBattVoltageValueCheckHandle, CAR_AUX_BATT_VOLTAGE_VALUE_CHECK_TIMER_TIME);
+	if(NO_ERROR == result) result = CheckValueAndTimer(valueStates.carFuelLevel_ValueState, My_Timer_carFuelLevelValueCheckHandle, CAR_FUEL_LEVEL_VALUE_CHECK_TIMER_TIME);
+
+	if(NO_ERROR == result) result = CheckValueAndTimer(valueStates.board3V3Voltage_ValueState, My_Timer_board3V3VoltageValueCheckHandle, BOARD_3V3_VOLTAGE_VALUE_CHECK_TIMER_TIME);
+	if(NO_ERROR == result) result = CheckValueAndTimer(valueStates.board5VVoltage_ValueState, My_Timer_board5VVoltageValueCheckHandle, BOARD_5V_VOLTAGE_VALUE_CHECK_TIMER_TIME);
+	if(NO_ERROR == result) result = CheckValueAndTimer(valueStates.boardVinVoltage_ValueState, My_Timer_boardVinVoltageValueCheckHandle, BOARD_VIN_VOLTAGE_VALUE_CHECK_TIMER_TIME);
+	if(NO_ERROR == result) result = CheckValueAndTimer(valueStates.board3V3Temp_ValueState, My_Timer_board3V3TempValueCheckHandle, BOARD_3V3_TEMP_VALUE_CHECK_TIMER_TIME);
+	if(NO_ERROR == result) result = CheckValueAndTimer(valueStates.board5VTemp_ValueState, My_Timer_board5VTempValueCheckHandle, BOARD_5V_TEMP_VALUE_CHECK_TIMER_TIME);
+
+	if(NO_ERROR != result) my_error_handler(result);
+}
+
+
+static Error_Code CheckValueAndTimer(Enum_ValueState valState, osTimerId timerId, TickType_t timerSetting)
+{
+	Error_Code result = FALSE;
+
+	if(val_OK != valState)
+	{
+		if(!xTimerIsTimerActive(timerId))	/* if timer in NOT active (hence !) */
+		{
+			result = (Error_Code)osTimerStart(timerId, timerSetting);
+		}
 	}
+	else
+	{
+		result = (Error_Code)osTimerStop(timerId);
+	}
+
+	return result;
 }
 
 
 
-static inline boolean IsLower(float value, float threshold)
+static boolean IsLower(float value, float threshold)
 {
 	if(value <= threshold)
 		return TRUE;
 	else
 		return FALSE;
 }
-static inline boolean IsHigher(float value, float threshold)
+static boolean IsHigher(float value, float threshold)
 {
 	if(value >= threshold)
 		return TRUE;
@@ -572,7 +595,10 @@ void Timer_board5VTempValueCheck(void const * argument)
 {
 
 }
+void Timer_carOilBinaryPressureValueCheck(void const * argument)
+{
 
+}
 
 
 

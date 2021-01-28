@@ -279,6 +279,7 @@ osTimerId My_Timer_board5VVoltageValueCheckHandle;
 osTimerId My_Timer_boardVinVoltageValueCheckHandle;
 osTimerId My_Timer_board3V3TempValueCheckHandle;
 osTimerId My_Timer_board5VTempValueCheckHandle;
+osTimerId My_Timer_carOilBinaryPressureValueCheckHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -308,6 +309,7 @@ extern void Timer_board5VVoltageValueCheck(void const * argument);
 extern void Timer_boardVinVoltageValueCheck(void const * argument);
 extern void Timer_board3V3TempValueCheck(void const * argument);
 extern void Timer_board5VTempValueCheck(void const * argument);
+extern void Timer_carOilBinaryPressureValueCheck(void const * argument);
 
 extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -475,6 +477,10 @@ void MX_FREERTOS_Init(void) {
   /* definition and creation of My_Timer_board5VTempValueCheck */
   osTimerDef(My_Timer_board5VTempValueCheck, Timer_board5VTempValueCheck);
   My_Timer_board5VTempValueCheckHandle = osTimerCreate(osTimer(My_Timer_board5VTempValueCheck), osTimerOnce, NULL);
+
+  /* definition and creation of My_Timer_carOilBinaryPressureValueCheck */
+  osTimerDef(My_Timer_carOilBinaryPressureValueCheck, Timer_carOilBinaryPressureValueCheck);
+  My_Timer_carOilBinaryPressureValueCheckHandle = osTimerCreate(osTimer(My_Timer_carOilBinaryPressureValueCheck), osTimerOnce, NULL);
 
   /* USER CODE BEGIN RTOS_TIMERS */
 	/* start timers, add new ones, ... */
