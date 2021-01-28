@@ -36,9 +36,25 @@ typedef uint8_t boolean;
 #define MY_TASK_500_MS_TIME_PERIOD			(TickType_t)(500)
 #define MY_TASK_1000_MS_TIME_PERIOD			(TickType_t)(1000)
 #define MY_DIAG_CHECK_TASK_TIME_PERIOD		(TickType_t)(1000)
+#define MY_ALARM_CONTROL_TASK_TIME_PERIOD	(TickType_t)(1000)
 
 #define DEBOUNCING_TIME_FOR_ENCODER_BUTTON	((uint32_t)(50U))	/* Value in milliseconds */
-#define ENC_BUTTON_LONG_PRESS_TIME			((uint32_t)(1000U))	/* Value in milliseconds */
+
+#define ENC_BUTTON_LONG_PRESS_TIME						((uint32_t)(1000U))	/* Value in milliseconds */
+#define CAR_WATER_TEMP_VALUE_CHECK_TIMER_TIME			((TickType_t)(4000))	/* Value in milliseconds */	/* 4 seconds */
+#define CAR_OIL_TEMP_VALUE_CHECK_TIMER_TIME				((TickType_t)(4000))	/* Value in milliseconds */	/* 4 seconds */
+#define CAR_OIL_ANALOG_PRESSURE_VALUE_CHECK_TIMER_TIME	((TickType_t)(3000))	/* Value in milliseconds */	/* 3 seconds */
+#define CAR_MAIN_BATT_VOLTAGE_VALUE_CHECK_TIMER_TIME	((TickType_t)(5000))	/* Value in milliseconds */	/* 5 seconds */
+#define CAR_AUX_BATT_VOLTAGE_VALUE_CHECK_TIMER_TIME		((TickType_t)(5000))	/* Value in milliseconds */	/* 5 seconds */
+#define CAR_FUEL_LEVEL_VALUE_CHECK_TIMER_TIME			((TickType_t)(30000))	/* Value in milliseconds */	/* 30 seconds */
+#define BOARD_3V3_VOLTAGE_VALUE_CHECK_TIMER_TIME		((TickType_t)(2000))	/* Value in milliseconds */	/* 2 seconds */
+#define BOARD_5V_VOLTAGE_VALUE_CHECK_TIMER_TIME			((TickType_t)(2000))	/* Value in milliseconds */	/* 2 seconds */
+#define BOARD_VIN_VOLTAGE_VALUE_CHECK_TIMER_TIME		((TickType_t)(10000))	/* Value in milliseconds */	/* 10 seconds */
+#define BOARD_3V3_TEMP_VALUE_CHECK_TIMER_TIME			((TickType_t)(4000))	/* Value in milliseconds */	/* 4 seconds */
+#define BOARD_5V_TEMP_VALUE_CHECK_TIMER_TIME			((TickType_t)(4000))	/* Value in milliseconds */	/* 4 seconds */
+
+
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */

@@ -2638,13 +2638,13 @@ static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard)
 				case StepByOneTen:
 				{
 					tempSetting += (float)EncoderCounterDiff/10;
-					tempSize = snprintf(tempSettingBuffer, 10u, "%02d.%01d ", (uint16_t)tempSetting, (uint16_t)(tempSetting*10)%10);
+					tempSize = snprintf(tempSettingBuffer, 10u, "%01d.%01d ", (uint16_t)tempSetting, (uint16_t)(tempSetting*10)%10);
 					break;
 				}
 				case StepByOneHundred:
 				{
 					tempSetting += (float)EncoderCounterDiff/100;
-					tempSize = snprintf(tempSettingBuffer, 10u, "%02d.%02d ", (uint16_t)tempSetting, (uint16_t)(tempSetting*100)%100);
+					tempSize = snprintf(tempSettingBuffer, 10u, "%01d.%02d ", (uint16_t)tempSetting, (uint16_t)(tempSetting*100)%100);
 					break;
 				}
 				default:

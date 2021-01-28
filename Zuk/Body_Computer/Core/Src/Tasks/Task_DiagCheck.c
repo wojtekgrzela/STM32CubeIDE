@@ -35,10 +35,9 @@
 
 typedef enum
 {
-	val_error	= 0,
-	val_OK		= 1,
-	val_warning	= 2,
-	val_alarm	= 3
+	val_OK		= 0,
+	val_warning	= 1,
+	val_alarm	= 2
 }Enum_ValueState;
 
 typedef struct
@@ -64,16 +63,6 @@ typedef struct
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Extern variables */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-extern EEPROM_parameters_struct EEPROM_car;
-extern EEPROM_parameters_struct EEPROM_board;
-extern CAR_EEPROM_counters_struct CAR_EEPROM_counters;
-extern BOARD_EEPROM_counters_struct BOARD_EEPROM_counters;
-
-extern CAR_mileage_struct CAR_mileage;
-
-extern volatile ENCButton_struct ENC_button;
-extern volatile int8_t EncoderCounterDiff;
-
 extern waterTempSettings_struct CAR_waterTemp;
 extern oilTempSettings_struct CAR_oilTemp;
 extern oilPressureSettings_struct CAR_oilPressure;
@@ -99,6 +88,18 @@ extern boardVoltagesSettings_struct BOARD_voltage;
 extern boardTemperaturesSettings_struct BOARD_temperature;
 
 extern CarStateinfo_type CarStateInfo;
+
+extern osTimerId My_Timer_carWaterTempValueCheckHandle;
+extern osTimerId My_Timer_carOilTempValueCheckHandle;
+extern osTimerId My_Timer_carOilAnalogPressureValueCheckHandle;
+extern osTimerId My_Timer_carMainBattVoltageValueCheckHandle;
+extern osTimerId My_Timer_carAuxBattVoltageValueCheckHandle;
+extern osTimerId My_Timer_carFuelLevelValueCheckHandle;
+extern osTimerId My_Timer_board3V3VoltageValueCheckHandle;
+extern osTimerId My_Timer_board5VVoltageValueCheckHandle;
+extern osTimerId My_Timer_boardVinVoltageValueCheckHandle;
+extern osTimerId My_Timer_board3V3TempValueCheckHandle;
+extern osTimerId My_Timer_board5VTempValueCheckHandle;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -111,6 +112,9 @@ static Diagnostic_ValueStates_struct valueStates = {val_OK};
 
 
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Functions prototypes */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 static void Read_KeyState(void);
 static void Read_EngineState(void);
 static void Read_CarState(void);
@@ -126,8 +130,11 @@ static void Check_CarFuelLevel();
 static void Check_BoardVoltage();
 static void Check_BoardTemp();
 
+static void CheckValuesStateAndSendAlarmRequests(void);
+
 static inline boolean IsLower(float value, float threshold);
 static inline boolean IsHigher(float value, float threshold);
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
 
@@ -202,19 +209,14 @@ void StartTaskDiagCheck(void const * argument)
 			{
 				break;
 			}
-		}
+		}//switch(CarStateInfo.carState)
 
-
-
-
-
-
-
+		CheckValuesStateAndSendAlarmRequests();
 
 
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
-
+	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 }
 
 
@@ -494,6 +496,21 @@ static void Check_BoardTemp()
 
 
 
+static void CheckValuesStateAndSendAlarmRequests(void)
+{
+	boolean result = TRUE;
+	if(val_OK != valueStates.carWaterTemp_ValueState)
+	{
+		if(!xTimerIsTimerActive(My_Timer_carWaterTempValueCheckHandle))	/* if timer in NOT active (hence !) */
+		{
+			result = (boolean)xTimerStart(My_Timer_carWaterTempValueCheckHandle, CAR_WATER_TEMP_VALUE_CHECK_TIMER_TIME);
+		}
+
+	}
+}
+
+
+
 static inline boolean IsLower(float value, float threshold)
 {
 	if(value <= threshold)
@@ -508,6 +525,55 @@ static inline boolean IsHigher(float value, float threshold)
 	else
 		return FALSE;
 }
+
+
+
+void Timer_carWaterTempValueCheck(void const * argument)
+{
+
+}
+void Timer_carOilTempValueCheck(void const * argument)
+{
+
+}
+void Timer_carOilAnalogPressureValueCheck(void const * argument)
+{
+
+}
+void Timer_carMainBattVoltageValueCheck(void const * argument)
+{
+
+}
+void Timer_carAuxBattVoltageValueCheck(void const * argument)
+{
+
+}
+void Timer_carFuelLevelValueCheck(void const * argument)
+{
+
+}
+void Timer_board3V3VoltageValueCheck(void const * argument)
+{
+
+}
+void Timer_board5VVoltageValueCheck(void const * argument)
+{
+
+}
+void Timer_boardVinVoltageValueCheck(void const * argument)
+{
+
+}
+void Timer_board3V3TempValueCheck(void const * argument)
+{
+
+}
+void Timer_board5VTempValueCheck(void const * argument)
+{
+
+}
+
+
 
 
 

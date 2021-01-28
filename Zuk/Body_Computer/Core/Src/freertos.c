@@ -227,7 +227,7 @@ GlobalValuesLimits_struct GlobalValuesLimits = {
 	.board5VSupplyLowThreshold_max		= 6.00,
 	.board5VSupplyHighThreshold_min		= 4.00,
 	.board5VSupplyHighThreshold_max		= 6.00,
-	.boardVinSupplyLowThreshold_min		= 8.00,
+	.boardVinSupplyLowThreshold_min		= 6.00,
 	.boardVinSupplyLowThreshold_max		= 17.00,
 
 	.board5VDCDCTemperatureHighThreshold_min	= 20,
@@ -262,11 +262,23 @@ osThreadId My_DumpToSDCardHandle;
 osThreadId My_250ms_TaskHandle;
 osThreadId My_50ms_TaskHandle;
 osThreadId My_DiagCheckHandle;
+osThreadId my_AlarmControlHandle;
 osMessageQId Queue_EEPROM_readHandle;
 osMessageQId Queue_EEPROM_writeHandle;
 osMessageQId Queue_error_snapshot_dumpHandle;
 osMessageQId Queue_diagnostic_snapshot_dumpHandle;
 osTimerId My_Timer_ENC_ButtonHandle;
+osTimerId My_Timer_carWaterTempValueCheckHandle;
+osTimerId My_Timer_carOilTempValueCheckHandle;
+osTimerId My_Timer_carOilAnalogPressureValueCheckHandle;
+osTimerId My_Timer_carMainBattVoltageValueCheckHandle;
+osTimerId My_Timer_carAuxBattVoltageValueCheckHandle;
+osTimerId My_Timer_carFuelLevelValueCheckHandle;
+osTimerId My_Timer_board3V3VoltageValueCheckHandle;
+osTimerId My_Timer_board5VVoltageValueCheckHandle;
+osTimerId My_Timer_boardVinVoltageValueCheckHandle;
+osTimerId My_Timer_board3V3TempValueCheckHandle;
+osTimerId My_Timer_board5VTempValueCheckHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -283,7 +295,19 @@ void StartTaskDumpToSDCard(void const * argument);
 void StartTask250ms(void const * argument);
 void StartTask50ms(void const * argument);
 extern void StartTaskDiagCheck(void const * argument);
+extern void StartTaskAlarmControl(void const * argument);
 void ENC_Button_LongPress_Callback(void const * argument);
+extern void Timer_carWaterTempValueCheck(void const * argument);
+extern void Timer_carOilTempValueCheck(void const * argument);
+extern void Timer_carOilAnalogPressureValueCheck(void const * argument);
+extern void Timer_carMainBattVoltageValueCheck(void const * argument);
+extern void Timer_carAuxBattVoltageValueCheck(void const * argument);
+extern void Timer_carFuelLevelValueCheck(void const * argument);
+extern void Timer_board3V3VoltageValueCheck(void const * argument);
+extern void Timer_board5VVoltageValueCheck(void const * argument);
+extern void Timer_boardVinVoltageValueCheck(void const * argument);
+extern void Timer_board3V3TempValueCheck(void const * argument);
+extern void Timer_board5VTempValueCheck(void const * argument);
 
 extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -408,6 +432,50 @@ void MX_FREERTOS_Init(void) {
   osTimerDef(My_Timer_ENC_Button, ENC_Button_LongPress_Callback);
   My_Timer_ENC_ButtonHandle = osTimerCreate(osTimer(My_Timer_ENC_Button), osTimerOnce, NULL);
 
+  /* definition and creation of My_Timer_carWaterTempValueCheck */
+  osTimerDef(My_Timer_carWaterTempValueCheck, Timer_carWaterTempValueCheck);
+  My_Timer_carWaterTempValueCheckHandle = osTimerCreate(osTimer(My_Timer_carWaterTempValueCheck), osTimerOnce, NULL);
+
+  /* definition and creation of My_Timer_carOilTempValueCheck */
+  osTimerDef(My_Timer_carOilTempValueCheck, Timer_carOilTempValueCheck);
+  My_Timer_carOilTempValueCheckHandle = osTimerCreate(osTimer(My_Timer_carOilTempValueCheck), osTimerOnce, NULL);
+
+  /* definition and creation of My_Timer_carOilAnalogPressureValueCheck */
+  osTimerDef(My_Timer_carOilAnalogPressureValueCheck, Timer_carOilAnalogPressureValueCheck);
+  My_Timer_carOilAnalogPressureValueCheckHandle = osTimerCreate(osTimer(My_Timer_carOilAnalogPressureValueCheck), osTimerOnce, NULL);
+
+  /* definition and creation of My_Timer_carMainBattVoltageValueCheck */
+  osTimerDef(My_Timer_carMainBattVoltageValueCheck, Timer_carMainBattVoltageValueCheck);
+  My_Timer_carMainBattVoltageValueCheckHandle = osTimerCreate(osTimer(My_Timer_carMainBattVoltageValueCheck), osTimerOnce, NULL);
+
+  /* definition and creation of My_Timer_carAuxBattVoltageValueCheck */
+  osTimerDef(My_Timer_carAuxBattVoltageValueCheck, Timer_carAuxBattVoltageValueCheck);
+  My_Timer_carAuxBattVoltageValueCheckHandle = osTimerCreate(osTimer(My_Timer_carAuxBattVoltageValueCheck), osTimerOnce, NULL);
+
+  /* definition and creation of My_Timer_carFuelLevelValueCheck */
+  osTimerDef(My_Timer_carFuelLevelValueCheck, Timer_carFuelLevelValueCheck);
+  My_Timer_carFuelLevelValueCheckHandle = osTimerCreate(osTimer(My_Timer_carFuelLevelValueCheck), osTimerOnce, NULL);
+
+  /* definition and creation of My_Timer_board3V3VoltageValueCheck */
+  osTimerDef(My_Timer_board3V3VoltageValueCheck, Timer_board3V3VoltageValueCheck);
+  My_Timer_board3V3VoltageValueCheckHandle = osTimerCreate(osTimer(My_Timer_board3V3VoltageValueCheck), osTimerOnce, NULL);
+
+  /* definition and creation of My_Timer_board5VVoltageValueCheck */
+  osTimerDef(My_Timer_board5VVoltageValueCheck, Timer_board5VVoltageValueCheck);
+  My_Timer_board5VVoltageValueCheckHandle = osTimerCreate(osTimer(My_Timer_board5VVoltageValueCheck), osTimerOnce, NULL);
+
+  /* definition and creation of My_Timer_boardVinVoltageValueCheck */
+  osTimerDef(My_Timer_boardVinVoltageValueCheck, Timer_boardVinVoltageValueCheck);
+  My_Timer_boardVinVoltageValueCheckHandle = osTimerCreate(osTimer(My_Timer_boardVinVoltageValueCheck), osTimerOnce, NULL);
+
+  /* definition and creation of My_Timer_board3V3TempValueCheck */
+  osTimerDef(My_Timer_board3V3TempValueCheck, Timer_board3V3TempValueCheck);
+  My_Timer_board3V3TempValueCheckHandle = osTimerCreate(osTimer(My_Timer_board3V3TempValueCheck), osTimerOnce, NULL);
+
+  /* definition and creation of My_Timer_board5VTempValueCheck */
+  osTimerDef(My_Timer_board5VTempValueCheck, Timer_board5VTempValueCheck);
+  My_Timer_board5VTempValueCheckHandle = osTimerCreate(osTimer(My_Timer_board5VTempValueCheck), osTimerOnce, NULL);
+
   /* USER CODE BEGIN RTOS_TIMERS */
 	/* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
@@ -473,6 +541,10 @@ void MX_FREERTOS_Init(void) {
   /* definition and creation of My_DiagCheck */
   osThreadDef(My_DiagCheck, StartTaskDiagCheck, osPriorityAboveNormal, 0, 256);
   My_DiagCheckHandle = osThreadCreate(osThread(My_DiagCheck), NULL);
+
+  /* definition and creation of my_AlarmControl */
+  osThreadDef(my_AlarmControl, StartTaskAlarmControl, osPriorityIdle, 0, 256);
+  my_AlarmControlHandle = osThreadCreate(osThread(my_AlarmControl), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
 	/* add threads, ... */
