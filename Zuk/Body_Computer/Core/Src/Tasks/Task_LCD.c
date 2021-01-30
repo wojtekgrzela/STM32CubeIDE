@@ -116,6 +116,12 @@ extern LCD_message waterTemperatureValueForLCD;
 extern LCD_message totalMileageForLCD;
 extern LCD_message tripMileageForLCD;
 
+extern LCD_message voltage3V3ForLCD;
+extern LCD_message voltage5VForLCD;
+extern LCD_message voltageInForLCD;
+extern LCD_message temperature3V3DCDCForLCD;
+extern LCD_message temperature5VDCDCForLCD;
+
 extern waterTempSettings_struct CAR_waterTemp;
 extern oilTempSettings_struct CAR_oilTemp;
 extern oilPressureSettings_struct CAR_oilPressure;
@@ -2483,7 +2489,40 @@ static void RUNNING_CarInfoLayer(struct LCD_board* currentBoard)
 
 static void RUNNING_JarvisInfoLayer(struct LCD_board* currentBoard)
 {
-	(void)copy_str_to_buffer("Nothing yet :)", (char*)LCD_buffer[Row2], 3u, 14u);
+	Error_Code error = NO_ERROR;
+
+	/*** First Row ***/
+		/* Vin - input voltage */
+	error = copy_str_to_buffer((char*)"Vin: ", (char*)LCD_buffer[Row1], 0u, 5u);
+	if(TRUE == voltageInForLCD.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)voltageInForLCD.messageHandler, (char*)LCD_buffer[Row1], 5u, voltageInForLCD.size);
+		/* clock */
+	if((TRUE == GPS.forLCD.hours.messageReadyFLAG) && (TRUE == GPS.forLCD.minutes.messageReadyFLAG))
+	{
+		error = copy_str_to_buffer((char*)GPS.forLCD.hours.messageHandler, (char*)LCD_buffer[Row1], 15, GPS.forLCD.hours.size);
+		error = copy_str_to_buffer(":", (char*)LCD_buffer[Row1], (15+GPS.forLCD.hours.size), 1);
+		error = copy_str_to_buffer((char*)GPS.forLCD.minutes.messageHandler, (char*)LCD_buffer[Row1], (15+GPS.forLCD.hours.size+1), GPS.forLCD.minutes.size);
+	}
+
+	if(NO_ERROR != error) my_error_handler(error);
+
+	/*** Second Row ***/
+		/* 3V3 On Board Voltage and temperature */
+	error = copy_str_to_buffer((char*)"3V3: ", (char*)LCD_buffer[Row2], 0u, 5u);
+	if(TRUE == voltage3V3ForLCD.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)voltage3V3ForLCD.messageHandler, (char*)LCD_buffer[Row2], 5u, voltage3V3ForLCD.size);
+	if(TRUE == temperature3V3DCDCForLCD.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)temperature3V3DCDCForLCD.messageHandler, (char*)LCD_buffer[Row2], (5u + voltage3V3ForLCD.size + 1u), temperature3V3DCDCForLCD.size);
+
+	/*** Third Row ***/
+		/* 5V On Board Voltage and temperature */
+	error = copy_str_to_buffer((char*)"5V: ", (char*)LCD_buffer[Row3], 0u, 4u);
+	if(TRUE == voltage5VForLCD.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)voltage5VForLCD.messageHandler, (char*)LCD_buffer[Row3], 5u, voltage5VForLCD.size);
+	if(TRUE == temperature5VDCDCForLCD.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)temperature5VDCDCForLCD.messageHandler, (char*)LCD_buffer[Row3], (5u + voltage5VForLCD.size + 1u), temperature5VDCDCForLCD.size);
+
+	if(NO_ERROR != error) my_error_handler(error);
 }
 
 
@@ -2692,7 +2731,7 @@ static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard)
 
 			if(TRUE == enterAction_save)
 			{
-				*((float*)(currentBoard->value_ptr)) = tempState;
+				*((boolean*)(currentBoard->value_ptr)) = tempState;
 				dataToSend.bool8bit[0] = tempState;
 				EEPROMData.size = UINT8_T_SIZE;
 			}

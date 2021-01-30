@@ -336,6 +336,8 @@ typedef union
 												interrupt callback that there
 												was a long press detected and
 												not to set the short press on */
+		uint8_t shortPressDetectedBuzzer	:1;
+		uint8_t longPressDetectedBuzzer		:1;
 	};
 }ENCButton_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -495,7 +497,7 @@ typedef struct
 			uint8_t board5VSupplyAlarmOn		:1;
 			uint8_t board5VSupplyBuzzerAlarmON	:1;
 			uint8_t boardVinSupplyAlarmOn		:1;
-			uint8_t oardVinSupplyBuzzerAlarmOn	:1;
+			uint8_t boardVinSupplyBuzzerAlarmOn	:1;
 			/* 2 more free bits here */
 		};
 	};
@@ -569,6 +571,19 @@ typedef struct
 	uint8_t errorSnapshotEEPROMIndex;
 	uint8_t didTheNumberOfErrorSnapshotsOverflowed;
 }BOARD_EEPROM_counters_struct;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef struct
+{
+	boolean signalBuzzerIndication;
+	boolean signalBuzzerDone;
+	boolean signalSnapshotIndication;
+	boolean signalSnapshotDone;
+	boolean* signalSetting1;
+	boolean* signalSetting2;
+	void (*BuzzerSignal)(void);
+}valueSignal_type;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */

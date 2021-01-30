@@ -36,7 +36,7 @@ typedef uint8_t boolean;
 #define MY_TASK_500_MS_TIME_PERIOD			(TickType_t)(500)
 #define MY_TASK_1000_MS_TIME_PERIOD			(TickType_t)(1000)
 #define MY_DIAG_CHECK_TASK_TIME_PERIOD		(TickType_t)(1000)
-#define MY_ALARM_CONTROL_TASK_TIME_PERIOD	(TickType_t)(1000)
+#define MY_ALARM_CONTROL_TASK_TIME_PERIOD	(TickType_t)(250)
 
 #define DEBOUNCING_TIME_FOR_ENCODER_BUTTON	((uint32_t)(50U))	/* Value in milliseconds */
 

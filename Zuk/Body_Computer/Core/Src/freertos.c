@@ -280,6 +280,7 @@ osTimerId My_Timer_boardVinVoltageValueCheckHandle;
 osTimerId My_Timer_board3V3TempValueCheckHandle;
 osTimerId My_Timer_board5VTempValueCheckHandle;
 osTimerId My_Timer_carOilBinaryPressureValueCheckHandle;
+osTimerId My_Timer_BuzzerHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -310,6 +311,7 @@ extern void Timer_boardVinVoltageValueCheck(void const * argument);
 extern void Timer_board3V3TempValueCheck(void const * argument);
 extern void Timer_board5VTempValueCheck(void const * argument);
 extern void Timer_carOilBinaryPressureValueCheck(void const * argument);
+extern void Timer_Buzzer(void const * argument);
 
 extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -481,6 +483,10 @@ void MX_FREERTOS_Init(void) {
   /* definition and creation of My_Timer_carOilBinaryPressureValueCheck */
   osTimerDef(My_Timer_carOilBinaryPressureValueCheck, Timer_carOilBinaryPressureValueCheck);
   My_Timer_carOilBinaryPressureValueCheckHandle = osTimerCreate(osTimer(My_Timer_carOilBinaryPressureValueCheck), osTimerOnce, NULL);
+
+  /* definition and creation of My_Timer_Buzzer */
+  osTimerDef(My_Timer_Buzzer, Timer_Buzzer);
+  My_Timer_BuzzerHandle = osTimerCreate(osTimer(My_Timer_Buzzer), osTimerOnce, NULL);
 
   /* USER CODE BEGIN RTOS_TIMERS */
 	/* start timers, add new ones, ... */
@@ -867,7 +873,8 @@ void StartTask250ms(void const * argument)
 				tempEngineWaterTemp += EngineWaterTemperatureMovingAverage[j];
 			}
 
-			waterTemperatureValue = tempEngineWaterTemp / NO_OF_ENGINE_WATER_TEMP_MEASUREMENTS_ADDED;
+//			waterTemperatureValue = tempEngineWaterTemp / NO_OF_ENGINE_WATER_TEMP_MEASUREMENTS_ADDED;
+//			waterTemperatureValue
 
 			waterTemperatureValueForLCD.messageReadyFLAG = FALSE;
 			snprintf((char*)waterTemperatureValueForLCD.messageHandler, 4, "%3" PRIu16, (uint16_t)waterTemperatureValue);
@@ -1113,8 +1120,11 @@ void ENC_Button_LongPress_Callback(void const * argument)
 {
   /* USER CODE BEGIN ENC_Button_LongPress_Callback */
 
-	ENC_button.allFlags |= 0b00000110; /* Set first and second bit to q to
-	 	 	 	 	 	 	 	 	indicate the long press on both bits */
+	ENC_button.allFlags |= 0b00010110; /* Set 1st, 2nd, 3rd bit to 1 to
+	 	 	 	 	 	 	 	 	indicate the long press on bits:
+	 	 	 	 	 	 	 	 	longPressDetected,
+	 	 	 	 	 	 	 	 	longPressDetectedForISR,
+	 	 	 	 	 	 	 	 	longPressDetectedBuzzer */
 
   /* USER CODE END ENC_Button_LongPress_Callback */
 }
