@@ -857,24 +857,10 @@ void StartTask250ms(void const * argument)
 		/* Water Temperature Value measurement from LM35 */
 		if(NO_OF_ENGINE_WATER_TEMP_MEASUREMENTS_ADDED > i_waterTemp)
 		{
-			error = calculate_LM35_temperature((float*)&(EngineWaterTemperatureTable[i_waterTemp]), ADC1Measures[0]);
-			tempEngineWaterTemp += EngineWaterTemperatureTable[i_waterTemp];
-			i_waterTemp += 1;
-		}
-		else
-		{
-			waterTemperatureValue_beforeMovingAverage = tempEngineWaterTemp / NO_OF_ENGINE_WATER_TEMP_MEASUREMENTS_ADDED;
-			EngineWaterTemperatureMovingAverage[NO_OF_ENGINE_WATER_TEMP_MEASUREMENTS_ADDED-1] = waterTemperatureValue_beforeMovingAverage;
-			tempEngineWaterTemp = waterTemperatureValue_beforeMovingAverage;
+			error = calculate_LM35_temperature((float*)&tempEngineWaterTemp, ADC1Measures[0]);
 
-			for(uint8_t j = 0; j< (NO_OF_ENGINE_WATER_TEMP_MEASUREMENTS_ADDED - 1); ++j)
-			{
-				EngineWaterTemperatureMovingAverage[j] = EngineWaterTemperatureMovingAverage[j+1];
-				tempEngineWaterTemp += EngineWaterTemperatureMovingAverage[j];
-			}
+			waterTemperatureValue = tempEngineWaterTemp;
 
-//			waterTemperatureValue = tempEngineWaterTemp / NO_OF_ENGINE_WATER_TEMP_MEASUREMENTS_ADDED;
-//			waterTemperatureValue
 
 			waterTemperatureValueForLCD.messageReadyFLAG = FALSE;
 			snprintf((char*)waterTemperatureValueForLCD.messageHandler, 4, "%3" PRIu16, (uint16_t)waterTemperatureValue);
@@ -882,7 +868,6 @@ void StartTask250ms(void const * argument)
 			waterTemperatureValueForLCD.messageReadyFLAG = TRUE;
 
 			tempEngineWaterTemp = 0;
-			i_waterTemp = 0;
 		}
 
 		if(NO_ERROR != error)
@@ -1061,8 +1046,8 @@ void StartTask250ms(void const * argument)
 			fuelLevelValueForLCD.size = strlen((char*)fuelLevelValueForLCD.messageHandler);
 			fuelLevelValueForLCD.messageReadyFLAG = TRUE;
 
-			tempEngineWaterTemp = 0;
-			i_waterTemp = 0;
+			tempFuelLevel = 0;
+			i_fuelLevel = 0;
 		}
 
 		if(NO_ERROR != error)
