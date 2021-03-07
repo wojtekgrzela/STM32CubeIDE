@@ -40,7 +40,7 @@ typedef struct
 Error_Code copy_str_to_buffer(const char *const source, char* destiny, const uint8_t startPosition, const uint8_t sourceLength);
 Error_Code copy_buffer_to_str(const char *const source, char* destiny, const uint8_t startPosition, const uint8_t dataLength);
 Error_Code calculate_NTC_temperature(boardTemperature_type *temperature, const uint16_t ADC_value, const NTC_parameters_struct *const NTC);
-Error_Code calculate_LM35_temperature(float *temperature, const uint16_t ADC_value);
+Error_Code calculate_LM35_temperature(float *temperature, const int16_t ADC_value);
 Error_Code calculate_EngineOilPressure(float *oilPressure, const uint16_t ADC_value);
 Error_Code calculate_voltage(float *result, const uint16_t measure, const float voltageDivider);
 Error_Code calculate_fuelLevel(float *result, const uint16_t measure);

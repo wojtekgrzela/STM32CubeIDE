@@ -117,17 +117,18 @@ Error_Code calculate_NTC_temperature(boardTemperature_type *temperature, const u
  * @param ADC_value: a value from ADC
  * @retval Error_Code: gives a value of error if one occurs
  */
-Error_Code calculate_LM35_temperature(float *temperature, const uint16_t ADC_value)
+Error_Code calculate_LM35_temperature(float *temperature, const int16_t ADC_value)
 {
 	Error_Code error = NO_ERROR;
+	static const float LM35_TEMPERATURE_TO_VOLTAGE_RATIO = 100.0f;
 
-	if((MIN_ADC_VALUE > ADC_value) || (MAX_ADC_VALUE < ADC_value))
+	if((MIN_LM35_ADC_VALUE > ADC_value) || (MAX_LM35_ADC_VALUE < ADC_value))
 	{
 		error = ADC__VALUE_INCORRECT;
 	}
 	else
 	{
-		*temperature = (((float)ADC_value) / ADC_RESOLUTION_X_REF_VOLTAGE_float) * 100;
+		*temperature = (((float)ADC_value) / ADC_RESOLUTION_X_REF_VOLTAGE_float) * LM35_TEMPERATURE_TO_VOLTAGE_RATIO;
 	}
 
 	return error;
@@ -197,7 +198,7 @@ Error_Code calculate_voltage(float *result, const uint16_t measure, const float 
  * @param measure: the measured ADC value
  * @retval Error_Code: gives a value of error if one occurs
  */
-Error_Code calculate_fuelLevel(float *result, const uint16_t measure)
+Error_Code calculate_fuelLevel(cafFuelLevel_type *result, const uint16_t measure)
 {
 	Error_Code error = NO_ERROR;
 
@@ -207,7 +208,7 @@ Error_Code calculate_fuelLevel(float *result, const uint16_t measure)
 	}
 	else
 	{
-		*result = 45.0;	//TODO - value just for reference
+		*result = (cafFuelLevel_type)measure / ADC_RESOLUTION_X_REF_VOLTAGE_float * 10;	//TODO - value just for reference
 	}
 
 	return error;

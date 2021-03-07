@@ -62,10 +62,6 @@ Error_Code InitVariablesFromEEPROMCar(void)
 	const uint32_t delayAfterRead = 1U;	/* in milliseconds */
 	data32bit_union data_union = {0};
 
-	uint32_t tempTotalMileage = 0U;
-	uint32_t tempTripMileage = 0U;
-	uint8_t tempIndex = 0u;
-
 	/** Diagnostic Snapshot EEPROM Index **/
 	if(NO_ERROR == error)
 	{
@@ -84,39 +80,6 @@ Error_Code InitVariablesFromEEPROMCar(void)
 		EEPROMData.size = 1u;
 		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
 		HAL_Delay(delayAfterRead);
-	}
-
-	/** Total Mileage and Trip Mileage, Mileage EEPROM Index **/
-	if(NO_ERROR == error)
-	{
-		EEPROMData.data = CAR_mileage.data;
-		EEPROMData.size = 8u;
-
-		for(uint8_t i=0; i< CAR_MILEAGE_TABLE_SIZE; ++i)
-		{
-			EEPROMData.memAddress = TOTAL_MILEAGE_START_ADDRESS + (i * EEPROM_PAGE_SIZE);
-			error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
-			HAL_Delay(delayAfterRead);
-
-			if(NO_ERROR != error)
-			{
-				break;
-			}
-
-			if (CAR_mileage.totalMileage > tempTotalMileage)
-			{
-				tempTotalMileage = CAR_mileage.totalMileage;
-				tempTripMileage = CAR_mileage.tripMileage;
-				tempIndex = i;
-			}
-		}
-	}
-
-	if(NO_ERROR == error)
-	{
-		CAR_mileage.totalMileage = tempTotalMileage;
-		CAR_mileage.tripMileage = tempTripMileage;
-		CAR_EEPROM_counters.mileageEEPROMIndex = tempIndex;
 	}
 
 	/** Water Temperature Settings **/
@@ -489,13 +452,39 @@ Error_Code InitVariablesFromEEPROMBoard(void)
 		HAL_Delay(delayAfterRead);
 	}
 
-
 		return error;
+}
+
+
+
+/**
+ * A function that reads all the values saved in FRAM at start
+ * of the BodyComputer (settings, counters etc.)
+ *
+ * @param void
+ * @retval Error_Code: gives a value of error if one occurs
+ */
+Error_Code InitVariablesFromFRAM(void)
+{
+	Error_Code error = NO_ERROR;
+	CREATE_EEPROM_data_struct(FRAMData);
+	FRAMData.EEPROMParameters = &FRAM_parameters;
+	FRAMData.memAddressSize = FRAM_PAGES_ADDRESS_SIZE;
+
+	const uint32_t delayAfterRead = 1U; /* in milliseconds */
+
+	/** Total Mileage **/
+	if (NO_ERROR == error)
+	{
+		FRAMData.data = CAR_mileage.data;
+		FRAMData.memAddress = TOTAL_MILEAGE_START_ADDRESS; /* We read 8 bytes at once and they
+		 are one after another so no need to read second time with another address */
+		FRAMData.size = 8u; /* 8 bytes is the size of both total and trip mileage */
+		error = ReadEEPROM(FRAMData.EEPROMParameters, &FRAMData);
+		HAL_Delay(delayAfterRead);
 	}
 
-
-
-
-
+	return error;
+}
 
 

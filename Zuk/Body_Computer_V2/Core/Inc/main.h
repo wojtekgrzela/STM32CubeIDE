@@ -276,6 +276,7 @@ typedef enum
 }Enum_CarState;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 typedef struct
 {
 	Enum_KeyState keyState;
@@ -458,8 +459,8 @@ typedef union
 	uint8_t data[8];
 	struct
 	{
-		uint32_t totalMileage;
-		uint32_t tripMileage;
+		uint32_t totalMileage; /* in meters */
+		uint32_t tripMileage;  /* in meters */
 	};
 }CAR_mileage_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -469,7 +470,6 @@ typedef struct
 {
 	uint8_t diagnosticSnapshotEEPROMIndex;
 	boolean didTheNumberOfDiagnosticSnapshotsOverflowed;
-	uint8_t mileageEEPROMIndex;
 }CAR_EEPROM_counters_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -746,14 +746,21 @@ void Error_Handler(void);
 #define EEPROM_WP2_GPIO_Port GPIOB
 #define EEPROM_WP1_Pin GPIO_PIN_11
 #define EEPROM_WP1_GPIO_Port GPIOB
-#define GPS_I2C3_SCL_Pin GPIO_PIN_7
-#define GPS_I2C3_SCL_GPIO_Port GPIOH
-#define GPS_I2C3_SDA_Pin GPIO_PIN_8
-#define GPS_I2C3_SDA_GPIO_Port GPIOH
+#define EEPROM_I2C3_SCL_Pin GPIO_PIN_7
+#define EEPROM_I2C3_SCL_GPIO_Port GPIOH
+#define EEPROM_I2C3_SDA_Pin GPIO_PIN_8
+#define EEPROM_I2C3_SDA_GPIO_Port GPIOH
 #define MICROSD_DETECT_Pin GPIO_PIN_13
 #define MICROSD_DETECT_GPIO_Port GPIOB
+#define SPEED_SIGNAL_Pin GPIO_PIN_4
+#define SPEED_SIGNAL_GPIO_Port GPIOG
+#define SPEED_SIGNAL_EXTI_IRQn EXTI4_IRQn
+#define RPM_SIGNAL_Pin GPIO_PIN_6
+#define RPM_SIGNAL_GPIO_Port GPIOG
+#define RPM_SIGNAL_EXTI_IRQn EXTI9_5_IRQn
 #define ENCODER_1_BUTTON_Pin GPIO_PIN_8
 #define ENCODER_1_BUTTON_GPIO_Port GPIOG
+#define ENCODER_1_BUTTON_EXTI_IRQn EXTI9_5_IRQn
 #define ENCODER_1_A_Pin GPIO_PIN_8
 #define ENCODER_1_A_GPIO_Port GPIOA
 #define ENCODER_1_B_Pin GPIO_PIN_9
@@ -779,34 +786,6 @@ void Error_Handler(void);
 #define POWER_ON_CRUISE_CONTROL_Pin GPIO_PIN_7
 #define POWER_ON_CRUISE_CONTROL_GPIO_Port GPIOI
 /* USER CODE BEGIN Private defines */
-
-
-/* My defines for Pins and Ports */
-#define EEPROM_CAR_BLOCK_PORT				(EEPROM_WP1_GPIO_Port)
-#define EEPROM_BOARD_BLOCK_PORT				(EEPROM_WP2_GPIO_Port)
-#define EEPROM_CAR_BLOCK_PIN				(EEPROM_WP1_Pin)
-#define EEPROM_BOARD_BLOCK_PIN				(EEPROM_WP2_Pin)
-
-#define ENC_BUTTON_MENU_Pin 				(ENCODER_1_BUTTON_Pin)
-#define ENC_BUTTON_MENU_GPIO_Port 			(ENCODER_1_BUTTON_GPIO_Port)
-
-
-#define GPIO_PORT_OIL_PRESSURE_SENSOR		(OIL_PRESSURE_BINARY_GPIO_Port)
-#define GPIO_PIN_OIL_PRESSURE_SENSOR		(OIL_PRESSURE_BINARY_Pin)
-
-
-#define DCDC5V_ENABLE_PIN				(DCDC_5V_ENABLE_Pin)
-#define DCDC5V_ENABLE_PORT				(DCDC_5V_ENABLE_GPIO_Port)
-#define POWER_ON_GPS_PIN				(POWER_ON_GPS_Pin)
-#define POWER_ON_GPS_PORT				(POWER_ON_GPS_GPIO_Port)
-#define POWER_ON_LCD_PIN				(POWER_ON_LCD_Pin)
-#define POWER_ON_LCD_PORT				(POWER_ON_LCD_GPIO_Port)
-#define POWER_ON_MICRO_SD_PIN			(POWER_ON_MICROSD_Pin)
-#define POWER_ON_MICRO_SD_PORT			(POWER_ON_MICROSD_GPIO_Port)
-#define POWER_ON_NODE_MCU_PIN			(POWER_ON_NODEMCU_Pin)
-#define POWER_ON_NODE_MCU_PORT			(POWER_ON_NODEMCU_GPIO_Port)
-#define POWER_ON_CRUISE_CONTROL_PIN		(POWER_ON_CRUISE_CONTROL_Pin)
-#define POWER_ON_CRUISE_CONTROL_PORT	(POWER_ON_CRUISE_CONTROL_GPIO_Port)
 
 /* USER CODE END Private defines */
 

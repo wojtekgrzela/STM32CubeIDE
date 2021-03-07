@@ -115,6 +115,7 @@ extern LCD_message auxiliaryBatteryVoltageValueForLCD;
 extern LCD_message waterTemperatureValueForLCD;
 extern LCD_message totalMileageForLCD;
 extern LCD_message tripMileageForLCD;
+extern LCD_message RPMForLCD;
 
 extern LCD_message voltage3V3ForLCD;
 extern LCD_message voltage5VForLCD;
@@ -1604,7 +1605,7 @@ void StartLCDTask(void const * argument)
 
 	CurrentBoard_global = HomeScreenBoard;
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+// @formatter:off
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 	/* Add units to the proper boards */
 	LCD_WaterHighTempWarningThreshold.unit			= (char*)degreeSymbolCharacter;
@@ -2061,7 +2062,7 @@ void StartLCDTask(void const * argument)
 	LCD_AutoLCDBacklightTurningOffOnOff.previousLayer_ptr		= &LCD_AutoHomeReturnTime;
 	LCD_AutoLCDBacklightTurningOffOnOff.upperLayer_ptr			= &LCD_LCDSettings;
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+// @formatter:on
 
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -2412,8 +2413,8 @@ static void RUNNING_DesktopLayer(struct LCD_board* currentBoard)
 	/*** Fourth Row ***/
 		/* Engine RPM */
 	//TODO
-//				if(TRUE == RPMForLCD.messageReadyFLAG)
-//					error = copy_str_to_buffer((char*)RPMForLCD.messageHandler, (char*)LCD_buffer[Row4], 8, RPM.size);
+	if(TRUE == RPMForLCD.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)RPMForLCD.messageHandler, (char*)LCD_buffer[Row4], 8, RPMForLCD.size);
 	error = copy_str_to_buffer("rpm", (char*)LCD_buffer[Row4], 5, 3);
 		/* Trip Mileage */
 	if(TRUE == tripMileageForLCD.messageReadyFLAG)

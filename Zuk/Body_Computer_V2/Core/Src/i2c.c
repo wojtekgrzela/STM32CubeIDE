@@ -223,7 +223,7 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* i2cHandle)
     PH7     ------> I2C3_SCL
     PH8     ------> I2C3_SDA
     */
-    GPIO_InitStruct.Pin = GPS_I2C3_SCL_Pin|GPS_I2C3_SDA_Pin;
+    GPIO_InitStruct.Pin = EEPROM_I2C3_SCL_Pin|EEPROM_I2C3_SDA_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
@@ -302,9 +302,9 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* i2cHandle)
     PH7     ------> I2C3_SCL
     PH8     ------> I2C3_SDA
     */
-    HAL_GPIO_DeInit(GPS_I2C3_SCL_GPIO_Port, GPS_I2C3_SCL_Pin);
+    HAL_GPIO_DeInit(EEPROM_I2C3_SCL_GPIO_Port, EEPROM_I2C3_SCL_Pin);
 
-    HAL_GPIO_DeInit(GPS_I2C3_SDA_GPIO_Port, GPS_I2C3_SDA_Pin);
+    HAL_GPIO_DeInit(EEPROM_I2C3_SDA_GPIO_Port, EEPROM_I2C3_SDA_Pin);
 
     /* I2C3 interrupt Deinit */
     HAL_NVIC_DisableIRQ(I2C3_EV_IRQn);

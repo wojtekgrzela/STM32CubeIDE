@@ -31,6 +31,8 @@ extern boardTemperaturesSettings_struct BOARD_temperature;
 extern buzzerMainSettings_struct BUZZER_settings;
 extern LCDMainSettings_struct LCD_MainSettings;
 
+extern EEPROM_parameters_struct FRAM_parameters;
+
 extern GPS_data_struct GPS;
 extern int8_t TimeZoneManualAdj;
 
@@ -38,6 +40,7 @@ extern int8_t TimeZoneManualAdj;
 Error_Code EraseWholeEEPROM(EEPROM_parameters_struct * EEPROMParameters);
 Error_Code InitVariablesFromEEPROMCar(void);
 Error_Code InitVariablesFromEEPROMBoard(void);
+Error_Code InitVariablesFromFRAM(void);
 
 
 #endif /* INC_INIT_FUNCTIONS_H_ */

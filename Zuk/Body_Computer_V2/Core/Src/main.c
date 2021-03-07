@@ -57,12 +57,14 @@
 /* USER CODE BEGIN PV */
 
 extern ENCButton_struct ENC_button_menu;
-extern uint16_t ADC1Measures[NO_OF_ADC1_MEASURES];
-extern uint16_t ADC3Measures[NO_OF_ADC3_MEASURES];
+extern volatile uint16_t ADC1Measures[NO_OF_ADC1_MEASURES];
+extern volatile uint16_t ADC3Measures[NO_OF_ADC3_MEASURES];
 extern GPS_data_struct GPS;
-//extern LCD_parameters_struct LCD;
 extern uint64_t Tim7_Counter_100us;
-extern osTimerId My_Timer_ENC_ButtonHandle;
+extern osTimerId My_Timer_ENC_Menu_ButtonHandle;
+
+extern volatile uint32_t RPM_counter;
+extern volatile uint32_t SPEED_counter;
 
 /* USER CODE END PV */
 
@@ -132,12 +134,6 @@ int main(void)
 
 	/* There is no Calibration services in STM32F407IGTx devices */
 	/* HAL_ADCEx_Calibration_Start */
-
-	if (NO_ERROR != error)
-	{
-		error = ADC__CALIBRATION_FAIL;
-		my_error_handler(error);
-	}
 
 	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ADC1Measures, NO_OF_ADC1_MEASURES);
 	HAL_ADC_Start_DMA(&hadc3, (uint32_t*)ADC3Measures, NO_OF_ADC3_MEASURES);
@@ -297,6 +293,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 #endif
 }
 
+
+
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	static uint64_t lastTimerCounter = 0;
@@ -305,13 +303,11 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	/* Checking if interrupt is from ENC_BUTTON pin */
 	if (ENC_BUTTON_MENU_Pin == GPIO_Pin)
 	{
-		if ((Tim7_Counter_100us - lastTimerCounter)
-				> (DEBOUNCING_TIME_FOR_ENCODER_BUTTON * 10U) /*ms*/)
+		if ((Tim7_Counter_100us - lastTimerCounter) > (DEBOUNCING_TIME_FOR_ENCODER_BUTTON * 10U) /*ms*/)
 		{
 			if (GPIO_PIN_SET == HAL_GPIO_ReadPin(ENC_BUTTON_MENU_GPIO_Port, ENC_BUTTON_MENU_Pin)) /*Button Pushed In*/
 			{
-				error = (Error_Code)osTimerStart(My_Timer_ENC_ButtonHandle,
-						ENC_BUTTON_LONG_PRESS_TIME);
+				error = (Error_Code)osTimerStart(My_Timer_ENC_Menu_ButtonHandle, ENC_BUTTON_LONG_PRESS_TIME);
 				if (NO_ERROR != error)
 				{
 					error = OS__STARTING_TIMER_FAILED;
@@ -322,7 +318,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 			{
 				if (FALSE == ENC_button_menu.longPressInfoForISR) /* If long press was NOT detected then it is a short press */
 				{
-					error = (Error_Code)osTimerStop(My_Timer_ENC_ButtonHandle); /* Stop the timer */
+					error = (Error_Code)osTimerStop(My_Timer_ENC_Menu_ButtonHandle); /* Stop the timer */
 					if (NO_ERROR != error)
 					{
 						error = OS__STOPPING_TIMER_FAILED;
@@ -338,6 +334,16 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 			}
 			lastTimerCounter = Tim7_Counter_100us;
 		}
+	}
+
+	if(RPM_SIGNAL_Pin == GPIO_Pin)
+	{
+		++RPM_counter;
+	}
+
+	if(SPEED_SIGNAL_Pin == GPIO_Pin)
+	{
+		++SPEED_counter;
 	}
 }
 

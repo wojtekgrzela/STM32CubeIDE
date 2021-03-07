@@ -58,6 +58,7 @@
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 extern I2C_HandleTypeDef hi2c1;
+extern I2C_HandleTypeDef hi2c3;
 extern TIM_HandleTypeDef htim8;
 extern SD_HandleTypeDef hsd;
 
@@ -72,18 +73,22 @@ extern FATFS SDFatFS;
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* For debugging - task time etc. */
-volatile uint32_t Tim7_Counter_100us;
+volatile uint32_t Tim7_Counter_100us = 0u;
+
+/* Engine and Car Parameters */
+volatile uint32_t RPM_counter = 0u;
+volatile uint32_t SPEED_counter = 0u;
 
 /* For Signaling ENC button and scroll */
 volatile ENCButton_struct ENC_button_menu =
 	{ 0 };
 volatile int8_t EncoderCounterDiff = 0;
 
-/* For measurements from ADC3 */
+/* For measurements from ADC1 and ADC3 */
 volatile uint16_t ADC1Measures[NO_OF_ADC1_MEASURES] =
-	{ 0 };
+	{ 0u };
 volatile uint16_t ADC3Measures[NO_OF_ADC3_MEASURES] =
-	{ 0 };
+	{ 0u };
 
 /* For GPS data, buffering, messages for LCD */
 GPS_data_struct GPS =
@@ -105,12 +110,18 @@ GPS_data_struct GPS =
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* For LCD parameters and settings */
 LCD_parameters_struct LCD =
-	{ .addressLCD = 0x27, .noOfRowsLCD = NO_OF_ROWS_IN_LCD, .noOfColumnsLCD = NO_OF_COLUMNS_IN_LCD };
+	{ 	.addressLCD = 0x27,
+		.noOfRowsLCD = NO_OF_ROWS_IN_LCD,
+		.noOfColumnsLCD = NO_OF_COLUMNS_IN_LCD };
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* For measuring Board temperatures with usage of NTC parameters */
 NTC_parameters_struct NTC =
-	{ .Beta = 4250, .R25 = 100000, .Rgnd = 10000, .T25 = 298, .beta_x_T25 = 1266500 };
+	{ 	.Beta = 4250,
+		.R25 = 100000,
+		.Rgnd = 10000,
+		.T25 = 298,
+		.beta_x_T25 = 1266500 };
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Counter for CAR EEPROM */
@@ -119,60 +130,68 @@ CAR_EEPROM_counters_struct CAR_EEPROM_counters =
 
 /* For CAR EEPROM usage, its addressing and blocking */
 EEPROM_parameters_struct EEPROM_car =
-	{ .EEPROM_hi2c = &hi2c1, .address = EEPROM_CAR_ADDRESS, .pin =
-	EEPROM_CAR_BLOCK_PIN,
+	{ 	.EEPROM_hi2c = &hi2c3,
+		.address = EEPROM_CAR_ADDRESS,
+		.pin = EEPROM_CAR_BLOCK_PIN,
 		.port = EEPROM_CAR_BLOCK_PORT };
 
 /* CAR SETTINGS and VALUES*/
-CAR_mileage_struct CAR_mileage =
-	{ 0 };
-LCD_message totalMileageForLCD =
-	{ .messageHandler = NULL, .size = 0, .messageReadyFLAG = 0 };
-LCD_message tripMileageForLCD =
-	{ .messageHandler = NULL, .size = 0, .messageReadyFLAG = 0 };
-
 waterTempSettings_struct CAR_waterTemp =
 	{ 0 };
 carTemperature_type waterTemperatureValue = 0.0;
 LCD_message waterTemperatureValueForLCD =
-	{ .messageHandler = NULL, .size = 0, .messageReadyFLAG = 0 };
+	{ 	.messageHandler = NULL,
+		.size = 0,
+		.messageReadyFLAG = 0 };
 
 oilTempSettings_struct CAR_oilTemp =
 	{ 0 };
 carTemperature_type oilTemperatureValue = 0.0;
 LCD_message oilTemperatureValueForLCD =
-	{ .messageHandler = NULL, .size = 0, .messageReadyFLAG = 0 };
+	{ 	.messageHandler = NULL,
+		.size = 0,
+		.messageReadyFLAG = 0 };
 
 oilPressureSettings_struct CAR_oilPressure =
 	{ 0 };
 #ifdef OIL_PRESSURE_ANALOG_SENSOR
 carOilAnalogPressure_type oilPressureValue = 0.0;
 LCD_message oilPressureValueForLCD =
-	{ .messageHandler = NULL, .size = 0, .messageReadyFLAG = 0 };
+	{ 	.messageHandler = NULL,
+		.size = 0,
+		.messageReadyFLAG = 0 };
 #endif
 #ifdef OIL_PRESSURE_BINARY_SENSOR
 carOilBinaryPressure_type oilPressureValueBinary = NOK;
 LCD_message oilPressureValueBinaryForLCD =
-	{ .messageHandler = NULL, .size = 0, .messageReadyFLAG = 0 };
+	{ 	.messageHandler = NULL,
+		.size = 0,
+		.messageReadyFLAG = 0 };
 #endif
 
 batterySettings_struct CAR_mainBattery =
 	{ 0 };
 carVoltage_type mainBatteryVoltageValue = 0.0;
 LCD_message mainBatteryVoltageValueForLCD =
-	{ .messageHandler = NULL, .size = 0, .messageReadyFLAG = 0 };
+	{ 	.messageHandler = NULL,
+		.size = 0,
+		.messageReadyFLAG = 0 };
 
 batterySettings_struct CAR_auxiliaryBattery =
 	{ 0 };
 carVoltage_type auxiliaryBatteryVoltageValue = 0.0;
 LCD_message auxiliaryBatteryVoltageValueForLCD =
-	{ .messageHandler = NULL, .size = 0, .messageReadyFLAG = 0 };
+	{ 	.messageHandler = NULL,
+		.size = 0,
+		.messageReadyFLAG = 0 };
 
 fuelSettings_struct CAR_fuel =
 	{ 0 };
 cafFuelLevel_type fuelLevelValue = 0.0;
 LCD_message fuelLevelValueForLCD =
-	{ .messageHandler = NULL, .size = 0, .messageReadyFLAG = 0 };
+	{ 	.messageHandler = NULL,
+		.size = 0,
+		.messageReadyFLAG = 0 };
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -182,8 +201,9 @@ BOARD_EEPROM_counters_struct BOARD_EEPROM_counters =
 
 /* For BOARD EEPROM usage, its addressing and blocking */
 EEPROM_parameters_struct EEPROM_board =
-	{ .EEPROM_hi2c = &hi2c1, .address = EEPROM_BOARD_ADDRESS, .pin =
-	EEPROM_BOARD_BLOCK_PIN,
+	{ 	.EEPROM_hi2c = &hi2c3,
+		.address = EEPROM_BOARD_ADDRESS,
+		.pin = EEPROM_BOARD_BLOCK_PIN,
 		.port = EEPROM_BOARD_BLOCK_PORT };
 
 /* CAR SETTINGS and VALUES*/
@@ -192,21 +212,38 @@ boardVoltagesSettings_struct BOARD_voltage =
 boardVoltage_type voltage3V3 = 0.0;
 boardVoltage_type voltage5V = 0.0;
 boardVoltage_type voltageIn = 0.0;
+
 LCD_message voltage3V3ForLCD =
-	{ .messageHandler = NULL, .size = 0, .messageReadyFLAG = 0 };
+	{ 	.messageHandler = NULL,
+		.size = 0,
+		.messageReadyFLAG = 0 };
 LCD_message voltage5VForLCD =
-	{ .messageHandler = NULL, .size = 0, .messageReadyFLAG = 0 };
+	{ 	.messageHandler = NULL,
+		.size = 0,
+		.messageReadyFLAG = 0 };
 LCD_message voltageInForLCD =
-	{ .messageHandler = NULL, .size = 0, .messageReadyFLAG = 0 };
+	{ 	.messageHandler = NULL,
+		.size = 0,
+		.messageReadyFLAG = 0 };
 
 boardTemperaturesSettings_struct BOARD_temperature =
 	{ 0 };
 boardTemperature_type temperature3V3DCDC = 0.0;
 boardTemperature_type temperature5VDCDC = 0.0;
+boardTemperature_type temperatureHBridge = 0.0;
+
 LCD_message temperature3V3DCDCForLCD =
-	{ .messageHandler = NULL, .size = 0, .messageReadyFLAG = 0 };
+	{ 	.messageHandler = NULL,
+		.size = 0,
+		.messageReadyFLAG = 0 };
 LCD_message temperature5VDCDCForLCD =
-	{ .messageHandler = NULL, .size = 0, .messageReadyFLAG = 0 };
+	{ 	.messageHandler = NULL,
+		.size = 0,
+		.messageReadyFLAG = 0 };
+LCD_message temperatureHBridgeForLCD =
+	{ 	.messageHandler = NULL,
+		.size = 0,
+		.messageReadyFLAG = 0 };
 
 buzzerMainSettings_struct BUZZER_settings =
 	{ 0 };
@@ -214,9 +251,39 @@ LCDMainSettings_struct LCD_MainSettings =
 	{ 0 };
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Counters for FRAM */
+
+/* For FRAMM usage, its addressing and blocking */
+EEPROM_parameters_struct FRAM_parameters =
+	{ 	.EEPROM_hi2c = &hi2c1,
+		.address = FRAM_ADDRESS,
+		.pin = FRAM_BLOCK_PIN,
+		.port = FRAM_BLOCK_PORT };
+
+CAR_mileage_struct CAR_mileage =
+	{ 0 };
+LCD_message totalMileageForLCD =
+	{ 	.messageHandler = NULL,
+		.size = 0,
+		.messageReadyFLAG = 0 };
+LCD_message tripMileageForLCD =
+	{ 	.messageHandler = NULL,
+		.size = 0,
+		.messageReadyFLAG = 0 };
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 /* Car information (Key, Engine status etc.) */
 CarStateinfo_type CarStateInfo =
 	{ 0 };
+LCD_message RPMForLCD =
+	{ 	.messageHandler = NULL,
+		.size = 0,
+		.messageReadyFLAG = 0 };
+LCD_message SPEEDForLCD =
+	{ 	.messageHandler = NULL,
+		.size = 0,
+		.messageReadyFLAG = 0 };
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Constant value limits and check - hard-coded, to be changed only by recompilation */
@@ -285,7 +352,7 @@ GlobalValuesLimits_struct GlobalValuesLimits =
 
 
 /* USER CODE END Variables */
-osThreadId defaultTaskHandle;
+osThreadId My_StartUp_TaskHandle;
 osThreadId My_1000ms_TaskHandle;
 osThreadId My_500ms_TaskHandle;
 osThreadId My_LCD_TaskHandle;
@@ -293,7 +360,7 @@ osThreadId My_GPS_TaskHandle;
 osThreadId My_EEPROM_TaskHandle;
 osThreadId My_DumpToEEPROMHandle;
 osThreadId My_DumpToSDCardHandle;
-osThreadId My_250ms_TaskHandle;
+osThreadId My_Measure_TaskHandle;
 osThreadId My_50ms_TaskHandle;
 osThreadId My_DiagCheck_TaHandle;
 osThreadId My_AlarmControlHandle;
@@ -323,7 +390,7 @@ osTimerId My_Timer_carAuxBattVoltageValueCheckHandle;
 
 /* USER CODE END FunctionPrototypes */
 
-void StartDefaultTask(void const * argument);
+void StartStartUpTask(void const * argument);
 extern void Start1000msTask(void const * argument);
 extern void Start500msTask(void const * argument);
 extern void StartLCDTask(void const * argument);
@@ -331,7 +398,7 @@ extern void StartGPSTask(void const * argument);
 extern void StartEEPROMTask(void const * argument);
 extern void StartDumpToEEPROMTask(void const * argument);
 extern void StartDumpToSDCardTask(void const * argument);
-extern void Start250msTask(void const * argument);
+extern void StartMeasureTask(void const * argument);
 extern void Start50msTask(void const * argument);
 extern void StartDiagCheckTask(void const * argument);
 extern void StartAlarmControlTask(void const * argument);
@@ -544,9 +611,9 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* definition and creation of defaultTask */
-  osThreadDef(defaultTask, StartDefaultTask, osPriorityHigh, 0, 128);
-  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
+  /* definition and creation of My_StartUp_Task */
+  osThreadDef(My_StartUp_Task, StartStartUpTask, osPriorityHigh, 0, 128);
+  My_StartUp_TaskHandle = osThreadCreate(osThread(My_StartUp_Task), NULL);
 
   /* definition and creation of My_1000ms_Task */
   osThreadDef(My_1000ms_Task, Start1000msTask, osPriorityNormal, 0, 256);
@@ -576,9 +643,9 @@ void MX_FREERTOS_Init(void) {
   osThreadDef(My_DumpToSDCard, StartDumpToSDCardTask, osPriorityBelowNormal, 0, 1024);
   My_DumpToSDCardHandle = osThreadCreate(osThread(My_DumpToSDCard), NULL);
 
-  /* definition and creation of My_250ms_Task */
-  osThreadDef(My_250ms_Task, Start250msTask, osPriorityNormal, 0, 256);
-  My_250ms_TaskHandle = osThreadCreate(osThread(My_250ms_Task), NULL);
+  /* definition and creation of My_Measure_Task */
+  osThreadDef(My_Measure_Task, StartMeasureTask, osPriorityNormal, 0, 256);
+  My_Measure_TaskHandle = osThreadCreate(osThread(My_Measure_Task), NULL);
 
   /* definition and creation of My_50ms_Task */
   osThreadDef(My_50ms_Task, Start50msTask, osPriorityNormal, 0, 128);
@@ -598,7 +665,7 @@ void MX_FREERTOS_Init(void) {
   /* Turning off all threads except the default one - there the initialization will take place */
   vTaskSuspend(My_1000ms_TaskHandle);
   vTaskSuspend(My_500ms_TaskHandle);
-  vTaskSuspend(My_250ms_TaskHandle);
+  vTaskSuspend(My_Measure_TaskHandle);
   vTaskSuspend(My_50ms_TaskHandle);
   vTaskSuspend(My_AlarmControlHandle);
   vTaskSuspend(My_DiagCheck_TaHandle);
@@ -612,24 +679,101 @@ void MX_FREERTOS_Init(void) {
 
 }
 
-/* USER CODE BEGIN Header_StartDefaultTask */
+/* USER CODE BEGIN Header_StartStartUpTask */
 /**
- * @brief  Function implementing the defaultTask thread.
- * @param  argument: Not used
- * @retval None
- */
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void const * argument)
+  * @brief  Function implementing the My_StartUp_Task thread.
+  * @param  argument: Not used
+  * @retval None
+  */
+/* USER CODE END Header_StartStartUpTask */
+void StartStartUpTask(void const * argument)
 {
   /* init code for USB_DEVICE */
   MX_USB_DEVICE_Init();
-  /* USER CODE BEGIN StartDefaultTask */
+  /* USER CODE BEGIN StartStartUpTask */
+
+	/* It is unfortunate that USB is the first thing to initialize
+	 * however, this is how the CubeMX does it - no control over
+	 * that I guess.
+	 */
+
+	/***** The following initialization steps are taken: *****\
+	 *
+	 * Step 0: USB initialization - automatically generated
+	 * Step 1: Enable 5V DCDC converter
+	 * Step 2: Start sensors and parameters measurements task
+	 * Step 3: Start handling of EEPROM requests task
+	 * Step 4: Start handling of EEPROM dumps task
+	 * Step 5: Start handling of SDCard dumps (with SD initialization) task
+	 * Step 6: Start the GPS task
+	 * Step 7: Start 1000 milliseconds task
+	 * Step 8: Start 500 milliseconds task
+	 * Step 9: Start 50 milliseconds task
+	 * Step 10: Start LCD task
+	 * Step 11: Start Alarm Control task
+	 *
+	 ***** ***** ***** ***** ***** ***** ***** ***** ***** *****/
+
+	/*** Step 1 ***/
+	(void)enable_5VDCDC(); /* Enable 5V DCDC converter */
+	osDelay(50U); /* Wait 50ms for the voltage to set properly */
+
+	/*** Step 2 ***/
+	vTaskResume(My_EEPROM_TaskHandle); /* Start handling of EEPROM requests */
+	osDelay(50U); /* Wait 50ms for the task to run a bit */
+
+	/*** Step 3 ***/
+	vTaskResume(My_Measure_TaskHandle); /* Start measurements of parameters and sensors */
+	osDelay(50U); /* Wait 50ms for the task to run a bit */
+
+	/*** Step 4 ***/
+	vTaskResume(My_DumpToEEPROMHandle); /* Start handling EEPROM Dumps */
+	osDelay(50U); /* Wait 50ms for the task to run a bit */
+
+	/*** Step 5 ***/
+	vTaskResume(My_DumpToSDCardHandle); /* Start handling SDCard Dumps */
+	osDelay(50U); /* Wait 50ms for the task to run a bit */
+
+	/*** Step 6 ***/
+	(void)turnOnPower_GPS(); /* Turn on the power */
+	vTaskResume(My_GPS_TaskHandle); /* Resume a task */
+	osDelay(50U); /* Wait 50ms for the task to run a bit */
+
+	/*** Step 7 ***/
+	vTaskResume(My_1000ms_TaskHandle); /* Turn on 1000 milliseconds task */
+	osDelay(50U); /* Wait 50ms for the task to run a bit */
+
+	/*** Step 8 ***/
+	vTaskResume(My_500ms_TaskHandle); /* Turn on 500 milliseconds task */
+	osDelay(50U); /* Wait 50ms for the task to run a bit */
+
+	/*** Step 9 ***/
+	vTaskResume(My_50ms_TaskHandle); /* Turn on 50 milliseconds task */
+	osDelay(50U); /* Wait 50ms for the task to run a bit */
+
+	/*** Step 10 ***/
+	vTaskResume(My_LCD_TaskHandle); /* Turn on LCD task */
+	osDelay(50U); /* Wait 50ms for the task to run a bit */
+
+	osDelay(2000U); /* This is to wait for measurements to happen */
+
+	/*** Step 11 ***/
+	vTaskResume(My_AlarmControlHandle); /* Turn on Alarm Control task */
+	osDelay(50U); /* Wait 50ms for the task to run a bit */
+
+	/* After successful start up - suspend the task.
+	 * The task could be destroyed but it may be useful later.
+	 */
+	vTaskSuspend(My_StartUp_TaskHandle);
 	/* Infinite loop */
 	for (;;)
 	{
-		osDelay(1000);
+		/* We should never get here, as the task should be suspended
+		 * before getting to the for loop. Thus error handler. */
+		my_error_handler(OS__FOR_LOOP_REACHED);
+		osDelay(1000); /* Dummy delay - should never be needed. */
 	}
-  /* USER CODE END StartDefaultTask */
+  /* USER CODE END StartStartUpTask */
 }
 
 /* ENC_Menu_Button_LongPress_Callback function */

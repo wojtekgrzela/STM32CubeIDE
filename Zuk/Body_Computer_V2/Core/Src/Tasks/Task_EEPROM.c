@@ -69,74 +69,70 @@ void StartEEPROMTask(void const * argument)
 
 	/* EEPROM Car initialization: */
 	error = InitVariablesFromEEPROMCar();
-
-	if(NO_ERROR != error)
-	{
-		my_error_handler(error);
-	}
+	if(NO_ERROR != error) my_error_handler(error);
 
 	/* EEPROM Board initialization: */
 	error = InitVariablesFromEEPROMBoard();
+	if(NO_ERROR != error) my_error_handler(error);
 
-	if(NO_ERROR != error)
-	{
-		my_error_handler(error);
-	}
+	/* FRAM initialization: */
+	error = InitVariablesFromFRAM();
+	if(NO_ERROR != error) my_error_handler(error);
 
 	xLastWakeTime = xTaskGetTickCount();
+	/* Infinite loop */
+	for (;;)
+	{
+		if (pdTRUE == xQueueReceive(Queue_EEPROM_readHandle, &EEPROMData, (TickType_t)0))
+		{
+			*(EEPROMData.isReadyPtr) = DATA_NOT_READY;
 
-  /* Infinite loop */
-  for(;;)
-  {
-	  if(pdTRUE == xQueueReceive(Queue_EEPROM_readHandle, &EEPROMData, (TickType_t)0))
-	  {
-		  *(EEPROMData.isReadyPtr) = DATA_NOT_READY;
+			error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+			if (NO_ERROR == error)
+			{
+				*(EEPROMData.isReadyPtr) = DATA_READY;    //TODO: mem error dump
+			}
+			else
+			{
+				my_error_handler(error);
+			}
+		}
+		else
+		{
+			if (pdTRUE == xQueueReceive(Queue_EEPROM_writeHandle, &EEPROMData, (TickType_t)0))
+			{
+				*(EEPROMData.isReadyPtr) = DATA_NOT_READY;
+				*(EEPROMData.dataIsCopiedPtr) = DATA_NOT_COPIED;
+				if (0u == EEPROMData.size)
+				{
+					error = EEPROM__SIZE_TO_WRITE_IS_ZERO;
+				}
+				else
+				{
+					for (uint8_t i = 0; i < EEPROMData.size; ++i)
+					{
+						localBuffer[i] = EEPROMData.data[i];
+					}
+					EEPROMData.data = localBuffer;
+					*(EEPROMData.dataIsCopiedPtr) = DATA_COPIED;
+					(void)UnlockEEPROM(EEPROMData.EEPROMParameters);
+					error = WriteEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+				}
 
-		  error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
-		  if(NO_ERROR == error)
-		  {
-			  *(EEPROMData.isReadyPtr) = DATA_READY;//TODO: mem error dump
-		  }
-		  else
-		  {
-			  my_error_handler(error);
-		  }
-	  }
-	  else
-	  {
-		  if(pdTRUE == xQueueReceive(Queue_EEPROM_writeHandle, &EEPROMData, (TickType_t)0))
-		  {
-			  *(EEPROMData.isReadyPtr) = DATA_NOT_READY;
-			  *(EEPROMData.dataIsCopiedPtr) = DATA_NOT_COPIED;
-			  if(0u == EEPROMData.size)
-			  {
-				  error = EEPROM__SIZE_TO_WRITE_IS_ZERO;
-			  }
-			  else
-			  {
-				  for(uint8_t i=0; i < EEPROMData.size; ++i)
-				  {
-					  localBuffer[i] = EEPROMData.data[i];
-				  }
-				  EEPROMData.data = localBuffer;
-				  *(EEPROMData.dataIsCopiedPtr) = DATA_COPIED;
+				if (NO_ERROR == error)
+				{
+					*(EEPROMData.isReadyPtr) = DATA_READY;    //TODO: mem error dump
+				}
+				else
+				{
+					my_error_handler(error);
+				}
+				vTaskDelay(5);
+				(void)LockEEPROM(EEPROMData.EEPROMParameters);
+			}
+		}
 
-				  error = WriteEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
-			  }
-
-			  if(NO_ERROR == error)
-			  {
-				  *(EEPROMData.isReadyPtr) = DATA_READY;//TODO: mem error dump
-			  }
-			  else
-			  {
-				  my_error_handler(error);
-			  }
-			  vTaskDelay(5);
-		  }
-	  }
-
-	  vTaskDelayUntil(&xLastWakeTime, xFrequency);
-  }
-  /* USER CODE END StartTaskEEPROM */
+		vTaskDelayUntil(&xLastWakeTime, xFrequency);
+	}
+	/* USER CODE END StartTaskEEPROM */
 }
