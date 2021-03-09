@@ -1345,6 +1345,21 @@ static LCD_board LCD_DCDC3V3HighTemperatureThreshold = {.name="DCDC 3V3 H. T. Th
 						.minValue			= &(GlobalValuesLimits.board3V3DCDCTemperatureHighThreshold_min),
 						.maxValue			= &(GlobalValuesLimits.board3V3DCDCTemperatureHighThreshold_max) };
 
+static LCD_board LCD_HBridgeHighTemperatureThreshold = {.name="H-Bridge H. T. Thr.",
+						.firstRow 			= "H-Bridge High",
+						.secondRow 			= "Temp. Threshold",
+						.thisLayer 			= HBridgeHighTempThreshold,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(BOARD_temperature.boardHBridgeTemperatureHighThreshold),
+						.valueType 			= _boardTemperature_type_,
+						.valueStepSize 		= StepByOne,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_HBRIDGE_TEMPERATURE_THRESHOLD_ADDRESS,
+						.minValue			= &(GlobalValuesLimits.boardHBridgeTemperatureHighThreshold_min),
+						.maxValue			= &(GlobalValuesLimits.boardHBridgeTemperatureHighThreshold_max) };
+
 static LCD_board LCD_DCDC5VHighTemperatureAlarmOnOff = {.name="DCDC 5V H. T. Alarm",
 						.firstRow 			= "5V DCDC High Temp.",
 						.secondRow 			= "Alarm On/Off",
@@ -1400,6 +1415,34 @@ static LCD_board LCD_DCDC3V3HighTemperatureAlarmBuzzerOnOff = {.name="DCDC 3V3 A
 						.unit 				= NULL,
 						.EEPROMParameters	= &EEPROM_board,
 						.EEPROM_memAddress	= BOARD_TEMPERATURE_ALL_SETTINGS_ADDRESS };
+
+static LCD_board LCD_HBridgeHighTemperatureAlarmOnOff = {.name="H-Bridge H. T. Alar",
+						.firstRow 			= "H-Bridge High Temp.",
+						.secondRow 			= "Alarm On/Off",
+						.thisLayer 			= HBridgeTempHighAlarmOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(BOARD_temperature.allSettings),
+						.settingsMask		= 0b00010000,	/* fifth bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_TEMPERATURE_ALL_SETTINGS_ADDRESS, };
+
+static LCD_board LCD_HBridgeHighTemperatureAlarmBuzzerOnOff = {.name="H-Bridge Alarm buzz",
+						.firstRow 			= "H-Bridge High Temp.",
+						.secondRow 			= "Alarm Buzzer On/Off",
+						.thisLayer 			= HBridgeTempHighBuzzAlarmOn,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(BOARD_temperature.allSettings),
+						.settingsMask		= 0b00100000,	/* sixth bit */
+						.valueType 			= _boolean_type_,
+						.valueStepSize 		= StepByToogling,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_TEMPERATURE_ALL_SETTINGS_ADDRESS, };
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Buzzer Settings Boards */
@@ -1741,6 +1784,8 @@ void StartLCDTask(void const * argument)
 	PREPARE_LCD_board(LCD_DCDC5VHighTemperatureAlarmBuzzerOnOff);
 	PREPARE_LCD_board(LCD_DCDC3V3HighTemperatureAlarmOnOff);
 	PREPARE_LCD_board(LCD_DCDC3V3HighTemperatureAlarmBuzzerOnOff);
+	PREPARE_LCD_board(LCD_HBridgeHighTemperatureAlarmOnOff);
+	PREPARE_LCD_board(LCD_HBridgeHighTemperatureAlarmBuzzerOnOff);
 
 	PREPARE_LCD_board(LCD_BuzzerMainSwitchOnOff);
 	PREPARE_LCD_board(LCD_BuzzerMainAlarmsSwitchOnOff);
@@ -2025,6 +2070,12 @@ void StartLCDTask(void const * argument)
 	LCD_DCDC3V3HighTemperatureAlarmOnOff.nextLayer_ptr			= &LCD_DCDC3V3HighTemperatureAlarmBuzzerOnOff;
 	LCD_DCDC3V3HighTemperatureAlarmBuzzerOnOff.previousLayer_ptr= &LCD_DCDC3V3HighTemperatureAlarmOnOff;
 	LCD_DCDC3V3HighTemperatureAlarmBuzzerOnOff.upperLayer_ptr	= &LCD_InternalTempSett;
+	LCD_DCDC3V3HighTemperatureAlarmBuzzerOnOff.nextLayer_ptr	= &LCD_HBridgeHighTemperatureAlarmOnOff;
+	LCD_HBridgeHighTemperatureAlarmOnOff.previousLayer_ptr		= &LCD_DCDC3V3HighTemperatureAlarmBuzzerOnOff;
+	LCD_HBridgeHighTemperatureAlarmOnOff.upperLayer_ptr			= &LCD_InternalTempSett;
+	LCD_HBridgeHighTemperatureAlarmOnOff.nextLayer_ptr			= &LCD_HBridgeHighTemperatureAlarmBuzzerOnOff;
+	LCD_HBridgeHighTemperatureAlarmBuzzerOnOff.previousLayer_ptr= &LCD_HBridgeHighTemperatureAlarmOnOff;
+	LCD_HBridgeHighTemperatureAlarmBuzzerOnOff.upperLayer_ptr	= &LCD_InternalTempSett;
 
 	/* JarvisSettings_Layer -> BuzzerSettings_Layer */
 	LCD_BuzzerMainSwitchOnOff.upperLayer_ptr					= &LCD_BuzzerSettings;

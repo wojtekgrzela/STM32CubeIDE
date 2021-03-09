@@ -335,6 +335,8 @@ GlobalValuesLimits_struct GlobalValuesLimits =
 		.board5VDCDCTemperatureHighThreshold_max = 150,
 		.board3V3DCDCTemperatureHighThreshold_min = 20,
 		.board3V3DCDCTemperatureHighThreshold_max = 150,
+		.boardHBridgeTemperatureHighThreshold_min = 20,
+		.boardHBridgeTemperatureHighThreshold_max = 150,
 
 		.homeScreen_min = MainMenu_Layer,
 		.homeScreen_max = JarvisInfo_Layer,

@@ -153,10 +153,13 @@ typedef enum
 			/* JarvisSettings_Layer -> InterTempSettings_Layer */
 			DCDC5VHighTempThreshold		=	0x851,
 			DCDC3V3HighTempThreshold	=	0x852,
-			DCDC5VTempHighAlarmOn		=	0x853,
-			DCDC5VTempeHighBuzzAlarmOn	=	0x854,
-			DCDC3V3TempHighAlarmOn		=	0x855,
-			DCDC3V3TempHighBuzzAlarmOn	=	0x856,
+			HBridgeHighTempThreshold	=	0x853,
+			DCDC5VTempHighAlarmOn		=	0x854,
+			DCDC5VTempeHighBuzzAlarmOn	=	0x855,
+			DCDC3V3TempHighAlarmOn		=	0x856,
+			DCDC3V3TempHighBuzzAlarmOn	=	0x857,
+			HBridgeTempHighAlarmOn		= 	0x858,
+			HBridgeTempHighBuzzAlarmOn	=	0x859,
 
 			/* JarvisSettings_Layer -> BuzzerSettings_Layer */
 			BuzzerMainSwitch			=	0x861,
@@ -508,6 +511,7 @@ typedef struct
 {
 	boardTemperature_type board5VDCDCTemperatureHighThreshold;
 	boardTemperature_type board3V3DCDCTemperatureHighThreshold;
+	boardTemperature_type boardHBridgeTemperatureHighThreshold;
 
 	union
 	{
@@ -517,7 +521,9 @@ typedef struct
 			uint8_t board5VDCDCTemperatureHighAlarmON			:1;
 			uint8_t board5VDCDCTemperatureHighBuzzerAlarmOn		:1;
 			uint8_t board3V3DCDCTemperatureHighAlarmOn			:1;
-			uint8_t oard3V3DCDCTemperatureHighBuzzerAlarmOn		:1;
+			uint8_t board3V3DCDCTemperatureHighBuzzerAlarmOn	:1;
+			uint8_t boardHBridgeTemperatureHighAlarmOn			:1;
+			uint8_t boardHBridgeTemperatureHighBuzzerAlarmOn	:1;
 			/* 4 more free bits here */
 		};
 	};
@@ -635,6 +641,8 @@ typedef struct
 	const boardTemperature_type board5VDCDCTemperatureHighThreshold_max;
 	const boardTemperature_type board3V3DCDCTemperatureHighThreshold_min;
 	const boardTemperature_type board3V3DCDCTemperatureHighThreshold_max;
+	const boardTemperature_type boardHBridgeTemperatureHighThreshold_min;
+	const boardTemperature_type boardHBridgeTemperatureHighThreshold_max;
 
 	const Enum_Layer homeScreen_min;
 	const Enum_Layer homeScreen_max;
@@ -752,9 +760,15 @@ void Error_Handler(void);
 #define EEPROM_I2C3_SDA_GPIO_Port GPIOH
 #define MICROSD_DETECT_Pin GPIO_PIN_13
 #define MICROSD_DETECT_GPIO_Port GPIOB
+#define KEY_CRANKING_Pin GPIO_PIN_2
+#define KEY_CRANKING_GPIO_Port GPIOG
+#define KEY_IGNITION_Pin GPIO_PIN_3
+#define KEY_IGNITION_GPIO_Port GPIOG
 #define SPEED_SIGNAL_Pin GPIO_PIN_4
 #define SPEED_SIGNAL_GPIO_Port GPIOG
 #define SPEED_SIGNAL_EXTI_IRQn EXTI4_IRQn
+#define ALTERNATOR_CHARGING_Pin GPIO_PIN_5
+#define ALTERNATOR_CHARGING_GPIO_Port GPIOG
 #define RPM_SIGNAL_Pin GPIO_PIN_6
 #define RPM_SIGNAL_GPIO_Port GPIOG
 #define RPM_SIGNAL_EXTI_IRQn EXTI9_5_IRQn

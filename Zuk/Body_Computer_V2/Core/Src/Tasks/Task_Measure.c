@@ -142,6 +142,12 @@ void StartMeasureTask(void const *argument)
 	FRAMData.size = 8u; /* 8 bytes is the size of both total and trip mileage */
 
 	// @formatter:off
+	CarStateInfo.keyState 		= KeyState_Out;
+	CarStateInfo.engineState 	= EngineState_Off;
+	CarStateInfo.carState 		= CarState_Off;
+	CarStateInfo.AlternatorCharging = FALSE;
+
+
 	static uint32_t TenSeconds_iteration = ITERATION_1;
 	static uint32_t OneSecond_iteration  = ITERATION_1;
 	static uint32_t TwoSeconds_iteration = ITERATION_1;
@@ -255,6 +261,14 @@ void StartMeasureTask(void const *argument)
 	voltage5VForLCD.messageHandler 	= voltage5V_message;
 	voltageInForLCD.messageHandler 	= voltageIn_message;
 // @formatter:on
+
+	/***** Initialization of buffers start *****/
+	(void)calculate_CarfuelLevel(&carFuelLevel_NewValue);
+	for (uint16_t i = 0; i < NO_OF_FUEL_LEVEL_MEASUREMENTS_ADDED; ++i)
+	{
+		carFuelLevelTable[i] = carFuelLevel_NewValue;
+	}
+	/***** Initialization of buffers end *****/
 
 	xLastWakeTime = xTaskGetTickCount();
 	/* Infinite loop */
@@ -547,6 +561,16 @@ void StartMeasureTask(void const *argument)
 		/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 		/* Measurements not related directly to sensors, not needing filtering and averaging */
 
+		/* Check keyState (Out, IgnitionOn, Crank) */
+		Read_KeyState();
+		/* Check engineState (Off, Crank, Idle, Work) */
+		Read_EngineState();
+		/* Check carState (Off, Crank, Idle, Drive) */
+		Read_CarState();
+		/* Check AlternatorCharging (TRUE, FALSE) */
+		Read_AlternatorCharging();
+
+
 		if (halfSecond_FLAG)
 		{
 			temp_mileage = temp_SPEED_counter * HOW_MANY_METERS_IN_ONE_PULSE; /* pulse counter * meters in one pulse */
@@ -594,9 +618,11 @@ void StartMeasureTask(void const *argument)
 			xQueueSend(Queue_EEPROM_writeHandle, &FRAMData, (TickType_t)0u/*NONE wait time if the queue is full*/);
 		}
 
+		/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
-
+		/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+		/***** Iteration counters managing start *****/
 		if (tenSeconds_FLAG) /* Managing 10 seconds interval */
 		{
 			TenSeconds_iteration = ITERATION_1;
@@ -632,6 +658,8 @@ void StartMeasureTask(void const *argument)
 		{
 			++HalfSecond_iteration;
 		}
+		/***** Iteration counters managing end *****/
+		/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
@@ -671,6 +699,12 @@ static inline Error_Code calculate_oilPressure(carOilAnalogPressure_type *oilPre
 static inline Error_Code check_oilBinaryPressure(carOilBinaryPressure_type *oilPressure)
 {
 	Error_Code error = NO_ERROR;
+	/* The Sensor works this way:
+	 * Oil pressure OK: sensor is open (no connection to GND) - thus there is +12V on the sensor.
+	 * Oil pressure NOK: sensor is tied to the GND - thus there is 0V on the sensor.
+	 *
+	 * That is why there is no need to over-complicate: HIGH = OK, LOW = NOK
+	 */
 	*oilPressure = (boolean)HAL_GPIO_ReadPin(GPIO_PORT_OIL_PRESSURE_SENSOR, GPIO_PIN_OIL_PRESSURE_SENSOR);
 	return error;
 }
@@ -754,6 +788,95 @@ static inline Error_Code calculate_HBridgeTemperature(boardTemperature_type *tem
 	Error_Code error = NO_ERROR;
 	error = calculate_NTC_temperature(temperature, BOARD_TEMPERATURE_HBRIDGE_ADC_VALUE, &NTC);
 	return error;
+}
+
+
+
+/* Check in what state is the key in the car (out, on ignition, cranking) */
+static void Read_KeyState(void)
+{
+	if (GPIO_PIN_SET == HAL_GPIO_ReadPin(KEY_CRANKING_GPIO_Port, KEY_CRANKING_Pin))
+	{
+		CarStateInfo.keyState = KeyState_Crank;
+	}
+	else if (GPIO_PIN_SET == HAL_GPIO_ReadPin(KEY_IGNITION_GPIO_Port, KEY_IGNITION_Pin))
+	{
+		CarStateInfo.keyState = KeyState_IgnitionOn;
+	}
+	else
+	{
+		CarStateInfo.keyState = KeyState_Out;
+	}
+}
+
+
+
+/* Check the state of the engine (off, cranking, idling, working). */
+static void Read_EngineState(void)
+{
+	if(RPM_ENGINE_OFF_MAX_THRESHOLD > CarStateInfo.RPM) /* if RPM are higher than the threshold */
+	{
+		CarStateInfo.engineState = EngineState_Off;
+	}
+	else if((RPM_ENGINE_CRANK_MIN_THRESHOLD < CarStateInfo.RPM) &&	/* if RPM are higher than minimal threshold and */
+			(RPM_ENGINE_CRANK_MAX_THRESHOLD > CarStateInfo.RPM) &&	/* if RPM are lower than maximum threshold */
+			(KeyState_Crank == CarStateInfo.keyState))
+	{
+		CarStateInfo.engineState = EngineState_Crank;
+	}
+	else if((RPM_ENGINE_IDLE_MIN_THRESHOLD < CarStateInfo.RPM) &&	/* if RPM are higher than minimal threshold and */
+			(RPM_ENGINE_IDLE_MAX_THRESHOLD > CarStateInfo.RPM) &&	/* if RPM are lower than maximum threshold and */
+			(SPEED_ENGINE_IDLE_MAX_THRESHOLD > CarStateInfo.SPEED))	/* if speed is lower than maximum threshold */
+	{
+		CarStateInfo.engineState = EngineState_Idle;
+	}
+	else
+	{
+		CarStateInfo.engineState = EngineState_Work;
+	}
+}
+
+
+
+/* Check the car state basing on the key and engine status (off, cranking, idling, driving). */
+static void Read_CarState(void)
+{
+	if (EngineState_Off == CarStateInfo.engineState)
+	{
+		CarStateInfo.carState = CarState_Off;
+	}
+	/* If key is in crank position OR engine is cranking. */
+	else if ((KeyState_Crank == CarStateInfo.keyState) || (EngineState_Crank == CarStateInfo.engineState))
+	{
+		CarStateInfo.carState = CarState_Crank;
+	}
+	/* If key is in ignition state AND engine is in idle/ */
+	else if ((KeyState_IgnitionOn == CarStateInfo.keyState) && (EngineState_Idle == CarStateInfo.engineState))
+	{
+		CarStateInfo.carState = CarState_Idle;
+	}
+	/* If key is in Ignition state and engine is in work */
+	else if ((KeyState_IgnitionOn == CarStateInfo.keyState) && (EngineState_Work == CarStateInfo.engineState))
+	{
+		CarStateInfo.carState = CarState_Drive;
+	}
+	/* If no previous option matches then something is wrong (for example the key was taken out while engine running. */
+	else
+	{
+		CarStateInfo.carState = CarState_Error;
+	}
+}
+
+
+/* This function reads the pin state which is connected to the 12V line signal from alternator
+ * (the same signal as for the icon of lack of charging) */
+static void Read_AlternatorCharging(void)
+{
+	/* Possible states:
+	 * LOW - alternator charging NOK
+	 * HIGH - alternator charging OK
+	 */
+	CarStateInfo.AlternatorCharging = (boolean)HAL_GPIO_ReadPin(ALTERNATOR_CHARGING_GPIO_Port, ALTERNATOR_CHARGING_Pin);
 }
 
 

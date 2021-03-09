@@ -315,7 +315,8 @@ typedef uint8_t boolean;
 
 #define BOARD_5V_TEMPERATURE_THRESHOLD_ADDRESS					((uint16_t)(280))	/* 4 bytes value! (float) */
 #define BOARD_3V3_TEMPERATURE_THRESHOLD_ADDRESS					((uint16_t)(284))	/* 4 bytes value! (float) */
-#define BOARD_TEMPERATURE_ALL_SETTINGS_ADDRESS					((uint16_t)(288))
+#define BOARD_HBRIDGE_TEMPERATURE_THRESHOLD_ADDRESS				((uint16_t)(288))	/* 4 bytes value! (float) */
+#define BOARD_TEMPERATURE_ALL_SETTINGS_ADDRESS					((uint16_t)(292))
 
 #define BOARD_BUZZER_ALL_SETTINGS_ADDRESS						((uint16_t)(300))
 

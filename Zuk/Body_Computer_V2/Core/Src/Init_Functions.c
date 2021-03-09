@@ -388,6 +388,13 @@ Error_Code InitVariablesFromEEPROMBoard(void)
 		HAL_Delay(delayAfterRead);
 		BOARD_temperature.board3V3DCDCTemperatureHighThreshold = data_union.boardTemperature;
 
+		EEPROMData.data = data_union.u8bit;
+		EEPROMData.memAddress = BOARD_HBRIDGE_TEMPERATURE_THRESHOLD_ADDRESS;
+		EEPROMData.size = boardTemperatureSize;
+		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
+		HAL_Delay(delayAfterRead);
+		BOARD_temperature.boardHBridgeTemperatureHighThreshold = data_union.boardTemperature;
+
 		EEPROMData.data = &(BOARD_temperature.allSettings);
 		EEPROMData.memAddress = BOARD_TEMPERATURE_ALL_SETTINGS_ADDRESS;
 		EEPROMData.size = UINT8_T_SIZE;

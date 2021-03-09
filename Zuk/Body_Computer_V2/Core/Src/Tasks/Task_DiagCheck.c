@@ -59,6 +59,7 @@ typedef struct
 	Enum_ValueState boardVinVoltage_ValueState;
 	Enum_ValueState board3V3Temp_ValueState;
 	Enum_ValueState board5VTemp_ValueState;
+	Enum_ValueState boardHBridgeTemp_ValueState;
 }Diagnostic_ValueStates_struct;
 
 typedef struct
@@ -176,26 +177,11 @@ void StartDiagCheckTask(void const * argument)
 	TickType_t xLastWakeTime;
 	const TickType_t xFrequency = MY_DIAG_CHECK_TASK_TIME_PERIOD;
 
-	CarStateInfo.keyState = KeyState_Out;
-	CarStateInfo.engineState = EngineState_Off;
-	CarStateInfo.carState = CarState_Off;
-	CarStateInfo.AlternatorCharging = FALSE;
-
 	xLastWakeTime = xTaskGetTickCount();
-
 	/* Infinite loop */
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 	for (;;)
 	{
-		/* Check keyState (Out, IgnitionOn, Crank) */
-		Read_KeyState();
-		/* Check engineState (Off, Crank, Idle, Work) */
-		Read_EngineState();
-		/* Check carState (Off, Crank, Idle, Drive) */
-		Read_CarState();
-		/* Check AlternatorCharging (TRUE, FALSE) */
-		Read_AlternatorCharging();
-
 		/* Always Check Voltages and Temperatures on the board */
 		Check_BoardVoltage();
 		Check_BoardTemp();
@@ -225,9 +211,6 @@ void StartDiagCheckTask(void const * argument)
 				Check_CarMainBattVoltage();
 				Check_CarAuxBattVoltage();
 				Check_CarFuelLevel();
-
-				Check_BoardVoltage();
-				Check_BoardTemp();
 				break;
 			}
 			default:
@@ -245,98 +228,6 @@ void StartDiagCheckTask(void const * argument)
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-}
-
-
-
-/* Check in what state is the key in the car (out, on ignition, cranking) */
-static void Read_KeyState(void)
-{
-//	if(GPIO_PIN_SET == HAL_GPIO_ReadPin(KeyCrank_PORT, KeyCrank_PIN))	//TODO
-//	{
-//		CarStateInfo.keyState = KeyState_Crank;
-//	}
-//	else if(GPIO_PIN_SET == HAL_GPIO_ReadPin(KeyIgnition_PORT, KeyIgnition_PIN))
-//	{
-//		CarStateInfo.keyState = KeyState_IgnitionOn;
-//	}
-//	else
-//	{
-//		CarStateInfo.keyState = KeyState_Out;
-//	}
-}
-
-
-
-/* Check the state of the engine (off, cranking, idling, working). */
-static void Read_EngineState(void)
-{
-	if(RPM_ENGINE_OFF_MAX_THRESHOLD > CarStateInfo.RPM) /* if RPM are higher than the threshold */
-	{
-		CarStateInfo.engineState = EngineState_Off;
-	}
-	else if((RPM_ENGINE_CRANK_MIN_THRESHOLD < CarStateInfo.RPM) &&	/* if RPM are higher than minimal threshold and */
-			(RPM_ENGINE_CRANK_MAX_THRESHOLD > CarStateInfo.RPM) &&	/* if RPM are lower than maximum threshold */
-			(KeyState_Crank == CarStateInfo.keyState))
-	{
-		CarStateInfo.engineState = EngineState_Crank;
-	}
-	else if((RPM_ENGINE_IDLE_MIN_THRESHOLD < CarStateInfo.RPM) &&	/* if RPM are higher than minimal threshold and */
-			(RPM_ENGINE_IDLE_MAX_THRESHOLD > CarStateInfo.RPM) &&	/* if RPM are lower than maximum threshold and */
-			(SPEED_ENGINE_IDLE_MAX_THRESHOLD > CarStateInfo.SPEED))	/* if speed is lower than maximum threshold */
-	{
-		CarStateInfo.engineState = EngineState_Idle;
-	}
-	else
-	{
-		CarStateInfo.engineState = EngineState_Work;
-	}
-}
-
-
-
-/* Check the car state basing on the key and engine status (off, cranking, idling, driving). */
-static void Read_CarState(void)
-{
-	if(EngineState_Off == CarStateInfo.engineState)
-	{
-		CarStateInfo.carState = CarState_Off;
-	}
-	/* If key is in crank position OR engine is cranking. */
-	else if((KeyState_Crank == CarStateInfo.keyState) || (EngineState_Crank == CarStateInfo.engineState))
-	{
-		CarStateInfo.carState = CarState_Crank;
-	}
-	/* If key is in ignition state AND engine is in idle/ */
-	else if((KeyState_IgnitionOn == CarStateInfo.keyState) && (EngineState_Idle == CarStateInfo.engineState))
-	{
-		CarStateInfo.carState = CarState_Idle;
-	}
-	/* If key is in Ignition state and engine is in work */
-	else if((KeyState_IgnitionOn == CarStateInfo.keyState) && (EngineState_Work == CarStateInfo.engineState))
-	{
-		CarStateInfo.carState = CarState_Drive;
-	}
-	/* If no previous option matches then something is wrong (for example the key was taken out while engine running. */
-	else
-	{
-		CarStateInfo.carState = CarState_Error;
-	}
-}
-
-
-/* This function reads the pin state which is connected to the 12V line signal from alternator
- * (the same signal as for the icon of lack of charging) */
-static void Read_AlternatorCharging(void)
-{
-//	if(GPIO_PIN_SET == HAL_GPIO_ReadPin(AlternatorCharging_PORT, AlternatorCharging_PIN))	//TODO
-//	{
-//		CarStateInfo.AlternatorCharging = TRUE;
-//	}
-//	else
-//	{
-//		CarStateInfo.AlternatorCharging = FALSE;
-//	}
 }
 
 
@@ -549,6 +440,17 @@ static void Check_BoardTemp()
 	else
 	{
 		valueStates.board5VTemp_ValueState = val_OK;	/* Set value in OK state. */
+		board5VTemp_alarm.signalBuzzerIndication = FALSE;		/* Set signal indication to FALSE - turn off alarm as the value is OK. */
+	}
+
+	/* 5V Check */
+	if(IsHigher((float)temperatureHBridge, (float)BOARD_temperature.board5VDCDCTemperatureHighThreshold))
+	{
+		valueStates.boardHBridgeTemp_ValueState = val_alarm;	/* Set value in alarm. */
+	}
+	else
+	{
+		valueStates.boardHBridgeTemp_ValueState = val_OK;	/* Set value in OK state. */
 		board5VTemp_alarm.signalBuzzerIndication = FALSE;		/* Set signal indication to FALSE - turn off alarm as the value is OK. */
 	}
 }
