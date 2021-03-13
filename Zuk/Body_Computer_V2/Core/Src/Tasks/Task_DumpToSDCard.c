@@ -67,11 +67,14 @@ void StartDumpToSDCardTask(void const *argument)
 	char ReadBuffer[100] = "";
 	uint32_t NoOfReadBytes = 0;
 
+	/* Turn on power for MicroSD */
+	turnOnPower_MicroSD();
+
 	/* Check if SD card is ready to be used */
-	while (HAL_SD_STATE_READY != hsd.State)
-	{
-		vTaskDelay((TickType_t)100);
-	}
+//	while (HAL_SD_STATE_READY != hsd.State)
+//	{
+//		vTaskDelay((TickType_t)100);
+//	}
 
 	result = BSP_SD_Init();
 

@@ -27,12 +27,12 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 typedef struct
 {
-	int32_t R25;
-	int32_t Rgnd;
-	int32_t Beta;
-	int32_t T25;
+	float R25;
+	float Rgnd;
+	float Beta;
+	float T25;
 
-	int32_t beta_x_T25;
+	float beta_x_T25;
 } NTC_parameters_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 

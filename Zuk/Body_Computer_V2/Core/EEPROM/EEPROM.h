@@ -28,8 +28,8 @@ typedef struct
 	uint16_t address;
 	uint16_t pin;
 	GPIO_TypeDef *port;
-	uint8_t	isLocked :1;
-}EEPROM_parameters_struct;
+	boolean isLocked;
+} EEPROM_parameters_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -40,11 +40,11 @@ typedef struct
 	uint16_t size;
 	boolean isReady;
 	boolean dataIsCopied;
-	boolean* isReadyPtr;
-	boolean* dataIsCopiedPtr;
-	uint8_t* data;
+	boolean *isReadyPtr;
+	boolean *dataIsCopiedPtr;
+	uint8_t *data;
 	EEPROM_parameters_struct *EEPROMParameters;
-}EEPROM_data_struct;
+} EEPROM_data_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -115,15 +115,16 @@ typedef struct
 									X.isReadyPtr = &(X.isReady);\
 									X.dataIsCopiedPtr = &(X.dataIsCopied);\
 									*(X.isReadyPtr) = DATA_NOT_READY;\
-									*(X.dataIsCopiedPtr) = DATA_NOT_COPIED;
+									*(X.dataIsCopiedPtr) = DATA_NOT_COPIED;\
+									X.EEPROMParameters = NULL;
 
 #define INITIALIZE_EEPROM_data_struct(X) X.isReadyPtr = &(X.isReady);\
 									X.dataIsCopiedPtr = &(X.dataIsCopied);\
 									*(X.isReadyPtr) = DATA_NOT_READY;\
 									*(X.dataIsCopiedPtr) = DATA_NOT_COPIED;
 
-Error_Code LockEEPROM(EEPROM_parameters_struct *const EEPROM);
-Error_Code UnlockEEPROM(EEPROM_parameters_struct *const EEPROM);
+Error_Code LockEEPROM(EEPROM_parameters_struct *EEPROM);
+Error_Code UnlockEEPROM(EEPROM_parameters_struct *EEPROM);
 
 Error_Code ReadEEPROM(const EEPROM_parameters_struct *const EEPROM, EEPROM_data_struct *const data);
 Error_Code WriteEEPROM(const EEPROM_parameters_struct *const EEPROM, EEPROM_data_struct *const data);

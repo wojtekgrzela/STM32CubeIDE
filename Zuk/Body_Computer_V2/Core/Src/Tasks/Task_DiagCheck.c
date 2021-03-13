@@ -22,14 +22,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Defines */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define RPM_ENGINE_OFF_MAX_THRESHOLD		(uint32_t)(50U)
-#define RPM_ENGINE_CRANK_MIN_THRESHOLD		(uint32_t)(50U)
-#define RPM_ENGINE_CRANK_MAX_THRESHOLD		(uint32_t)(600U)
-#define RPM_ENGINE_IDLE_MIN_THRESHOLD		(uint32_t)(600U)
-#define RPM_ENGINE_IDLE_MAX_THRESHOLD		(uint32_t)(1000U)
-
-#define SPEED_ENGINE_IDLE_MAX_THRESHOLD		(uint32_t)(5U)
-
 typedef enum
 {
 	val_OK		= 0,
@@ -98,6 +90,7 @@ extern boardVoltage_type voltage5V;
 extern boardVoltage_type voltageIn;
 extern boardTemperature_type temperature3V3DCDC;
 extern boardTemperature_type temperature5VDCDC;
+extern boardTemperature_type temperatureHBridge;
 
 extern boardVoltagesSettings_struct BOARD_voltage;
 extern boardTemperaturesSettings_struct BOARD_temperature;
@@ -148,11 +141,6 @@ static Diagnostic_ValueTooLowHigh_struct valueStatesLowHigh = {val_notApplicable
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Functions prototypes */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-static void Read_KeyState(void);
-static void Read_EngineState(void);
-static void Read_CarState(void);
-static void Read_AlternatorCharging(void);
-
 static void Check_CarWaterTemp();
 static void Check_CarOilTemp();
 static void Check_CarOilPressure();

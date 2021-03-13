@@ -88,19 +88,19 @@ Error_Code calculate_NTC_temperature(boardTemperature_type *temperature, const u
 	 *********************************************************************************************************/
 
 	Error_Code error = NO_ERROR;
-	int32_t coeff = 1000;
+//	int32_t coeff = 1000;
 
-	if((MIN_ADC_VALUE >= ADC_value) || (MAX_ADC_VALUE < ADC_value))
+	if((MIN_ADC_VALUE > ADC_value) || (MAX_ADC_VALUE < ADC_value))
 	{
 		error = ADC__VALUE_INCORRECT;
 	}
 	else
 	{
-		int32_t R = NTC->Rgnd * (((MAX_ADC_VALUE * coeff) / (uint32_t)ADC_value) - 1 * coeff);
+		float R = NTC->Rgnd * (((float)(MAX_ADC_VALUE) / (float)ADC_value) - 1.0);
 
-		int32_t step2 = log(((float)(R / coeff) / NTC->R25)) * coeff;
+		float step2 = log((R / NTC->R25));
 
-		*temperature = ((((NTC->beta_x_T25) * coeff) / ((step2 * NTC->T25) + (NTC->Beta * coeff))) - 273);
+		*temperature = (((NTC->beta_x_T25) / ((step2 * NTC->T25) + NTC->Beta)) - 273);
 	}
 
 	return error;
@@ -175,7 +175,7 @@ Error_Code calculate_voltage(float *result, const uint16_t measure, const float 
 {
 	Error_Code error = NO_ERROR;
 
-	if((MIN_ADC_VALUE >= measure) || (MAX_ADC_VALUE < measure))
+	if((MIN_ADC_VALUE > measure) || (MAX_ADC_VALUE < measure))
 	{
 		error = ADC__VALUE_INCORRECT;
 	}
@@ -202,7 +202,7 @@ Error_Code calculate_fuelLevel(cafFuelLevel_type *result, const uint16_t measure
 {
 	Error_Code error = NO_ERROR;
 
-	if((MIN_ADC_VALUE >= measure) || (MAX_ADC_VALUE < measure))
+	if((MIN_ADC_VALUE > measure) || (MAX_ADC_VALUE < measure))
 	{
 		error = ADC__VALUE_INCORRECT;
 	}

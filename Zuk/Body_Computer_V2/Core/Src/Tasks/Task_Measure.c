@@ -34,6 +34,7 @@
 /* Extern variables */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 extern osMessageQId Queue_EEPROM_writeHandle;
+extern EEPROM_parameters_struct FRAM_parameters;
 
 extern waterTempSettings_struct CAR_waterTemp;
 extern oilTempSettings_struct CAR_oilTemp;
@@ -122,6 +123,11 @@ static inline Error_Code calculate_VinVoltage(boardVoltage_type *voltage);
 static inline Error_Code calculate_3V3DCDCTemperatur(boardTemperature_type *temperature);
 static inline Error_Code calculate_5VDCDCTemperature(boardTemperature_type *temperature);
 static inline Error_Code calculate_HBridgeTemperature(boardTemperature_type *temperature);
+
+static void Read_KeyState(void);
+static void Read_EngineState(void);
+static void Read_CarState(void);
+static void Read_AlternatorCharging(void);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -140,6 +146,7 @@ void StartMeasureTask(void const *argument)
 	/* We write 8 bytes at once and they are one after another so no need to write second time with another address */
 	FRAMData.memAddress = TOTAL_MILEAGE_START_ADDRESS;
 	FRAMData.size = 8u; /* 8 bytes is the size of both total and trip mileage */
+	FRAMData.EEPROMParameters = &FRAM_parameters;
 
 	// @formatter:off
 	CarStateInfo.keyState 		= KeyState_Out;
@@ -362,17 +369,17 @@ void StartMeasureTask(void const *argument)
 			error = check_oilBinaryPressure(&carOilBinaryPressure_NewValue); /* This value is not filtered */
 
 		if (NO_ERROR == error)
-			error = calculate_3V3Voltage(&temperature3V3DCDC_NewValue);
+			error = calculate_3V3Voltage(&voltage3V3_NewValue);
 		if (NO_ERROR == error)
-			error = calculate_5VVoltage(&temperature5VDCDC_NewValue);
+			error = calculate_5VVoltage(&voltage5V_NewValue);
 		if (NO_ERROR == error)
-			error = calculate_VinVoltage(&temperatureHBridge_NewValue);
+			error = calculate_VinVoltage(&voltageIn_NewValue);
 		if (NO_ERROR == error)
-			error = calculate_3V3DCDCTemperatur(&voltage3V3_NewValue);
+			error = calculate_3V3DCDCTemperatur(&temperature3V3DCDC_NewValue);
 		if (NO_ERROR == error)
-			error = calculate_5VDCDCTemperature(&voltage5V_NewValue);
+			error = calculate_5VDCDCTemperature(&temperature5VDCDC_NewValue);
 		if (NO_ERROR == error)
-			error = calculate_HBridgeTemperature(&voltageIn_NewValue);
+			error = calculate_HBridgeTemperature(&temperatureHBridge_NewValue);
 
 		if (NO_ERROR != error)
 			my_error_handler(error); /* In case of an error go to the error handler function */
@@ -487,12 +494,12 @@ void StartMeasureTask(void const *argument)
 		/* Here we make the string from our official variables */
 		/*** Car water temperature ***/
 		waterTemperatureValueForLCD.messageReadyFLAG = FALSE;
-		snprintf((char*)waterTemperatureValueForLCD.messageHandler, 4, "%3" PRIu16, (uint16_t)waterTemperatureValue);
+		snprintf((char*)waterTemperatureValueForLCD.messageHandler, 4, "%3" PRIi16, (int16_t)waterTemperatureValue);
 		waterTemperatureValueForLCD.size = strlen((char*)waterTemperatureValueForLCD.messageHandler);
 		waterTemperatureValueForLCD.messageReadyFLAG = TRUE;
 		/*** Car oil temperature ***/
 		oilTemperatureValueForLCD.messageReadyFLAG = FALSE;
-		snprintf((char*)oilTemperatureValueForLCD.messageHandler, 4, "%3" PRIu16, (uint16_t)oilTemperatureValue);
+		snprintf((char*)oilTemperatureValueForLCD.messageHandler, 4, "%3" PRIi16, (int16_t)oilTemperatureValue);
 		oilTemperatureValueForLCD.size = strlen((char*)oilTemperatureValueForLCD.messageHandler);
 		oilTemperatureValueForLCD.messageReadyFLAG = TRUE;
 		/*** Car oil analog pressure ***/
@@ -528,17 +535,17 @@ void StartMeasureTask(void const *argument)
 		}
 		/*** Board 3V3 DCDC temperature ***/
 		temperature3V3DCDCForLCD.messageReadyFLAG = FALSE;
-		snprintf((char*)temperature3V3DCDCForLCD.messageHandler, 6, "%" PRIi16 "%cC", (uint16_t)temperature3V3DCDC, DEGREE_SYMBOL_LCD);
+		snprintf((char*)temperature3V3DCDCForLCD.messageHandler, 6, "%" PRIi16 "%cC", (int16_t)temperature3V3DCDC, DEGREE_SYMBOL_LCD);
 		temperature3V3DCDCForLCD.size = strlen((char*)temperature3V3DCDCForLCD.messageHandler);
 		temperature3V3DCDCForLCD.messageReadyFLAG = TRUE;
 		/*** Board 5V DCDC temperature ***/
 		temperature5VDCDCForLCD.messageReadyFLAG = FALSE;
-		snprintf((char*)temperature5VDCDCForLCD.messageHandler, 6, "%" PRIi16 "%cC", (uint16_t)temperature5VDCDC, DEGREE_SYMBOL_LCD);
+		snprintf((char*)temperature5VDCDCForLCD.messageHandler, 6, "%" PRIi16 "%cC", (int16_t)temperature5VDCDC, DEGREE_SYMBOL_LCD);
 		temperature5VDCDCForLCD.size = strlen((char*)temperature5VDCDCForLCD.messageHandler);
 		temperature5VDCDCForLCD.messageReadyFLAG = TRUE;
 		/*** Board H Bridge temperature ***/
 		temperatureHBridgeForLCD.messageReadyFLAG = FALSE;
-		snprintf((char*)temperatureHBridgeForLCD.messageHandler, 6, "%" PRIi16 "%cC", (uint16_t)temperatureHBridge, DEGREE_SYMBOL_LCD);
+		snprintf((char*)temperatureHBridgeForLCD.messageHandler, 6, "%" PRIi16 "%cC", (int16_t)temperatureHBridge, DEGREE_SYMBOL_LCD);
 		temperatureHBridgeForLCD.size = strlen((char*)temperatureHBridgeForLCD.messageHandler);
 		temperatureHBridgeForLCD.messageReadyFLAG = TRUE;
 		/*** Board 3V3 DCDC voltage ***/

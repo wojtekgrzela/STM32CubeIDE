@@ -96,19 +96,26 @@ typedef uint8_t boolean;
 #define RANK_13		((uint8_t)(12))
 
 
+#define MAIN_BATT_VAOLTAGE_MANUAL_ADJUSTMENT		((float)(0.9865))	/* This is for manual adjustment of the values of voltage divider */
+#define AUX_BATT_VAOLTAGE_MANUAL_ADJUSTMENT			((float)(0.9810))	/* This is for manual adjustment of the values of voltage divider */
+#define MEASURE_3V3_VOLTAGE_MANUAL_ADJUSTMENT		((float)(0.9790))	/* This is for manual adjustment of the values of voltage divider */
+#define MEASURE_5V_VOLTAGE_MANUAL_ADJUSTMENT		((float)(0.9820))	/* This is for manual adjustment of the values of voltage divider */
+#define MEASURE_VIN_VOLTAGE_MANUAL_ADJUSTMENT		((float)(0.9840))	/* This is for manual adjustment of the values of voltage divider */
+
 #define MIN_ADC_VALUE							((uint16_t)(0))
 #define MAX_ADC_VALUE							((uint16_t)(4095))
 #define MIN_LM35_ADC_VALUE						((int16_t)(-400)) 	/* This value corresponds to the -0.4V under the negative line (~-40*C) */
-#define MAX_LM35_ADC_VALUE						((int16_t)(2482)) 	/* This value corresponds to the 2V over the negative line (~+200*C) */
+//#define MAX_LM35_ADC_VALUE						((int16_t)(2482)) 	/* This value corresponds to the 2V over the negative line (~+200*C) */
+#define MAX_LM35_ADC_VALUE						((int16_t)(5000)) 	/* This value corresponds to the 2V over the negative line (~+200*C) */
 #define REFERENCE_VOLTAGE						((float)(3.3))
 #define NO_OF_ADC1_MEASURES						((uint32_t)(13))
 #define NO_OF_ADC3_MEASURES						((uint32_t)(12))
-#define MEASURE_VIN_VOLTAGE_DIVIDER				((float)(0.175438))		/* R1/(R1+R2) = 1k / (1k + 4k7) = 0.17543859649122807017543859649123 */
-#define MEASURE_5V_VOLTAGE_DIVIDER				((float)(0.5))			/* R1/(R1+R2) = 4k7 / (4k7 + 4k7) = 0.50 */
-#define MEASURE_3V3_VOLTAGE_DIVIDER				((float)(0.5))			/* R1/(R1+R2) = 4k7 / (4k7 + 4k7) = 0.50 */
+#define MEASURE_VIN_VOLTAGE_DIVIDER				((float)(0.175438)*MEASURE_VIN_VOLTAGE_MANUAL_ADJUSTMENT)		/* R1/(R1+R2) = 1k / (1k + 4k7) = 0.17543859649122807017543859649123 */
+#define MEASURE_5V_VOLTAGE_DIVIDER				((float)(0.500000)*MEASURE_5V_VOLTAGE_MANUAL_ADJUSTMENT)		/* R1/(R1+R2) = 4k7 / (4k7 + 4k7) = 0.50 */
+#define MEASURE_3V3_VOLTAGE_DIVIDER				((float)(0.500000)*MEASURE_3V3_VOLTAGE_MANUAL_ADJUSTMENT)		/* R1/(R1+R2) = 4k7 / (4k7 + 4k7) = 0.50 */
 
-#define MAIN_BATTERY_VOLTAGE_DIVIDER			((float)(0.175438))		/* R1/(R1+R2) = 1k / (1k + 4k7) = 0.17543859649122807017543859649123 */
-#define AUXILIARY_BATTERY_VOLTAGE_DIVIDER		((float)(0.175438))		/* R1/(R1+R2) = 1k / (1k + 4k7) = 0.17543859649122807017543859649123 */
+#define MAIN_BATTERY_VOLTAGE_DIVIDER			((float)(0.175438)*MAIN_BATT_VAOLTAGE_MANUAL_ADJUSTMENT)	/* R1/(R1+R2) = 1k / (1k + 4k7) = 0.17543859649122807017543859649123 */
+#define AUXILIARY_BATTERY_VOLTAGE_DIVIDER		((float)(0.175438)*AUX_BATT_VAOLTAGE_MANUAL_ADJUSTMENT)		/* R1/(R1+R2) = 1k / (1k + 4k7) = 0.17543859649122807017543859649123 */
 
 #define ADC_RESOLUTION_X_REF_VOLTAGE_uint		(uint32_t)(1241)		/* 4095 / 3.3 ~ 1241 */
 #define ADC_RESOLUTION_X_REF_VOLTAGE_float		((float)(1240.9091))	/* 4095 / 3.3 ~ 1240.9091 */
@@ -219,7 +226,7 @@ typedef uint8_t boolean;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Measurements */
 #define NO_OF_ENGINE_TEMPERATURE_MEASUREMENTS_ADDED			((uint8_t)(4u))
-#define NO_OF_CAR_VOLTAGES_MEASUREMENTS_ADDED				((uint8_t)(4u))
+#define NO_OF_CAR_VOLTAGES_MEASUREMENTS_ADDED				((uint8_t)(8u))
 #define NO_OF_FUEL_LEVEL_MEASUREMENTS_ADDED					((uint8_t)(10u))
 
 #define NO_OF_BOARD_TEMPERATURES_MEASUREMENTS_ADDED			((uint8_t)(4u))
@@ -229,6 +236,14 @@ typedef uint8_t boolean;
 #define METERS_IN_KILOMETER									((uint32_t)(1000))
 #define HOW_MANY_METERS_IN_ONE_PULSE						((float)(10))	/* Value calculated for Buba */
 #define HOW_MANY_RPMS_PER_ONE_PULSE							((float)(10))	/* Value calculated for Buba */
+
+#define RPM_ENGINE_OFF_MAX_THRESHOLD		(uint32_t)(50U)
+#define RPM_ENGINE_CRANK_MIN_THRESHOLD		(uint32_t)(50U)
+#define RPM_ENGINE_CRANK_MAX_THRESHOLD		(uint32_t)(600U)
+#define RPM_ENGINE_IDLE_MIN_THRESHOLD		(uint32_t)(600U)
+#define RPM_ENGINE_IDLE_MAX_THRESHOLD		(uint32_t)(1000U)
+
+#define SPEED_ENGINE_IDLE_MAX_THRESHOLD		(uint32_t)(5U)
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -267,34 +282,30 @@ typedef uint8_t boolean;
 #define NUMBER_OF_DIAGNOSTIC_SNAPSHOTS_OVERFLOWED_ADDRESS		((uint16_t)(68))	/* indicates if the counter overflowed */
 #define DIAGNOSTIC_SNAPSHOTS_START_ADDRESS						((uint16_t)(1024))	/* Max 255 diagnostic snapshots due to 8bit counter (add: 1024 - 17280) */
 
-#define TOTAL_MILEAGE_START_ADDRESS					((uint16_t)(0))	/* 4 bytes value! (uint32) */
-#define TRIP_MILEAGE_START_ADDRESS					((uint16_t)(4))	/* 4 bytes value! (uint32) */
+#define WATER_HIGH_TEMP_WARNING_THRESHOLD_ADDRESS	((uint16_t)(128))	/* 4 bytes value! (float) */
+#define WATER_HIGH_TEMP_ALARM_THRESHOLD_ADDRESS		((uint16_t)(132))	/* 4 bytes value! (float) */
+#define WATER_HIGH_TEMP_FAN_ON_THRESHOLD_ADDRESS	((uint16_t)(136))	/* 4 bytes value! (float) */
+#define WATER_HIGH_TEMP_FAN_OFF_THRESHOLD_ADDRESS	((uint16_t)(140))	/* 4 bytes value! (float) */
+#define WATER_TEMP_ALL_SETTINGS_ADDRESS				((uint16_t)(144))
 
+#define OIL_HIGH_TEMP_WARNING_THRESHOLD_ADDRESS		((uint16_t)(192))	/* 4 bytes value! (float) */
+#define OIL_HIGH_TEMP_ALARM_THRESHOLD_ADDRESS		((uint16_t)(196))	/* 4 bytes value! (float) */
+#define OIL_TEMP_ALL_SETTINGS_ADDRESS				((uint16_t)(200))
 
-#define WATER_HIGH_TEMP_WARNING_THRESHOLD_ADDRESS	((uint16_t)(768))	/* 4 bytes value! (float) */
-#define WATER_HIGH_TEMP_ALARM_THRESHOLD_ADDRESS		((uint16_t)(772))	/* 4 bytes value! (float) */
-#define WATER_HIGH_TEMP_FAN_ON_THRESHOLD_ADDRESS	((uint16_t)(776))	/* 4 bytes value! (float) */
-#define WATER_HIGH_TEMP_FAN_OFF_THRESHOLD_ADDRESS	((uint16_t)(780))	/* 4 bytes value! (float) */
-#define WATER_TEMP_ALL_SETTINGS_ADDRESS				((uint16_t)(784))
+#define MAIN_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS		((uint16_t)(256))	/* 4 bytes value! (float) */
+#define MAIN_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS		((uint16_t)(260))	/* 4 bytes value! (float) */
+#define MAIN_BATTERY_ALL_SETTINGS_ADDRESS						((uint16_t)(264))
 
-#define OIL_HIGH_TEMP_WARNING_THRESHOLD_ADDRESS		((uint16_t)(788))	/* 4 bytes value! (float) */
-#define OIL_HIGH_TEMP_ALARM_THRESHOLD_ADDRESS		((uint16_t)(792))	/* 4 bytes value! (float) */
-#define OIL_TEMP_ALL_SETTINGS_ADDRESS				((uint16_t)(796))
+#define AUXILIARY_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS	((uint16_t)(288))	/* 4 bytes value! (float) */
+#define AUXILIARY_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS	((uint16_t)(292))	/* 4 bytes value! (float) */
+#define AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS					((uint16_t)(296))
 
-#define MAIN_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS		((uint16_t)(800))	/* 4 bytes value! (float) */
-#define MAIN_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS		((uint16_t)(804))	/* 4 bytes value! (float) */
-#define MAIN_BATTERY_ALL_SETTINGS_ADDRESS						((uint16_t)(808))
+#define FUEL_LOW_LEVEL_WARNING_THRESHOLD_ADDRESS				((uint16_t)(320))	/* 4 bytes value! (float) */
+#define FUEL_ALL_SETTINGS_ADDRESS								((uint16_t)(324))
 
-#define AUXILIARY_BATTERY_LOW_VOLTAGE_ALARM_THRESHOLD_ADDRESS	((uint16_t)(812))	/* 4 bytes value! (float) */
-#define AUXILIARY_BATTERY_HIGH_VOLTAGE_ALARM_THRESHOLD_ADDRESS	((uint16_t)(816))	/* 4 bytes value! (float) */
-#define AUXILIARY_BATTERY_ALL_SETTINGS_ADDRESS					((uint16_t)(820))
-
-#define FUEL_LOW_LEVEL_WARNING_THRESHOLD_ADDRESS				((uint16_t)(824))	/* 4 bytes value! (float) */
-#define FUEL_ALL_SETTINGS_ADDRESS								((uint16_t)(828))
-
-#define OIL_HIGH_PRESSURE_ALARM_THRESHOLD_ADDRESS				((uint16_t)(832))	/* 4 bytes value! (float) */
-#define OIL_LOW_PRESSURE_ALARM_THRESHOLD_ADDRESS				((uint16_t)(836))	/* 4 bytes value! (float) */
-#define OIL_PRESSURE_ALL_SETTINGS_ADDRESS						((uint16_t)(840))
+#define OIL_HIGH_PRESSURE_ALARM_THRESHOLD_ADDRESS				((uint16_t)(352))	/* 4 bytes value! (float) */
+#define OIL_LOW_PRESSURE_ALARM_THRESHOLD_ADDRESS				((uint16_t)(356))	/* 4 bytes value! (float) */
+#define OIL_PRESSURE_ALL_SETTINGS_ADDRESS						((uint16_t)(360))
 
 /* EEPROM BOARD ADDRESSES AND SETTINGS */
 #define NUMBER_OF_ERROR_SNAPSHOTS							((uint16_t)(64))	/* 8 bit counter - 0-255 snapshots */
@@ -313,20 +324,24 @@ typedef uint8_t boolean;
 #define BOARD_VIN_SUPPLY_LOW_THRESHOLD_ADDRESS					((uint16_t)(272))	/* 4 bytes value! (float) */
 #define BOARD_VOLTAGE_ALL_SETTINGS_ADDRESS						((uint16_t)(276))
 
-#define BOARD_5V_TEMPERATURE_THRESHOLD_ADDRESS					((uint16_t)(280))	/* 4 bytes value! (float) */
-#define BOARD_3V3_TEMPERATURE_THRESHOLD_ADDRESS					((uint16_t)(284))	/* 4 bytes value! (float) */
-#define BOARD_HBRIDGE_TEMPERATURE_THRESHOLD_ADDRESS				((uint16_t)(288))	/* 4 bytes value! (float) */
-#define BOARD_TEMPERATURE_ALL_SETTINGS_ADDRESS					((uint16_t)(292))
+#define BOARD_5V_TEMPERATURE_THRESHOLD_ADDRESS					((uint16_t)(320))	/* 4 bytes value! (float) */
+#define BOARD_3V3_TEMPERATURE_THRESHOLD_ADDRESS					((uint16_t)(324))	/* 4 bytes value! (float) */
+#define BOARD_HBRIDGE_TEMPERATURE_THRESHOLD_ADDRESS				((uint16_t)(328))	/* 4 bytes value! (float) */
+#define BOARD_TEMPERATURE_ALL_SETTINGS_ADDRESS					((uint16_t)(332))
 
-#define BOARD_BUZZER_ALL_SETTINGS_ADDRESS						((uint16_t)(300))
+#define BOARD_BUZZER_ALL_SETTINGS_ADDRESS						((uint16_t)(352))
 
-#define BOARD_LCD_HOME_SCREEN_ADDRESS							((uint16_t)(320))
-#define BOARD_LCD_AUTO_HOME_RETURN_TIME_ADDRESS					((uint16_t)(324))
-#define BOARD_LCD_BACKLIGHT_LEVEL_ADDRESS						((uint16_t)(328))
-#define BOARD_LCD_SECONDS_TO_AUTO_TURN_OFF_BACKLIGHT_ADDRESS	((uint16_t)(332))
-#define BOARD_LCD_AUTO_BACKLIGHT_OFF_HOUR_START_ADDRESS			((uint16_t)(336))
-#define BOARD_LCD_AUTO_BACKLIGHT_OFF_HOUR_END_ADDRESS			((uint16_t)(340))
-#define BOARD_LCD_ALL_SETTINGS_ADDRESS							((uint16_t)(400))
+#define BOARD_LCD_HOME_SCREEN_ADDRESS							((uint16_t)(384))
+#define BOARD_LCD_AUTO_HOME_RETURN_TIME_ADDRESS					((uint16_t)(388))
+#define BOARD_LCD_BACKLIGHT_LEVEL_ADDRESS						((uint16_t)(392))
+#define BOARD_LCD_SECONDS_TO_AUTO_TURN_OFF_BACKLIGHT_ADDRESS	((uint16_t)(396))
+#define BOARD_LCD_AUTO_BACKLIGHT_OFF_HOUR_START_ADDRESS			((uint16_t)(400))
+#define BOARD_LCD_AUTO_BACKLIGHT_OFF_HOUR_END_ADDRESS			((uint16_t)(404))
+#define BOARD_LCD_ALL_SETTINGS_ADDRESS							((uint16_t)(408))
+
+/* FRAM ADDRESSES AND SETTINGS */
+#define TOTAL_MILEAGE_START_ADDRESS					((uint16_t)(0))	/* 4 bytes value! (uint32) */
+#define TRIP_MILEAGE_START_ADDRESS					((uint16_t)(4))	/* 4 bytes value! (uint32) */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 

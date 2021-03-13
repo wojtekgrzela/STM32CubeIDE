@@ -117,11 +117,11 @@ LCD_parameters_struct LCD =
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* For measuring Board temperatures with usage of NTC parameters */
 NTC_parameters_struct NTC =
-	{ 	.Beta = 4250,
-		.R25 = 100000,
-		.Rgnd = 10000,
-		.T25 = 298,
-		.beta_x_T25 = 1266500 };
+	{ 	.Beta = 4250.0,
+		.R25 = 100000.0,
+		.Rgnd = 10000.0,
+		.T25 = 298.0,
+		.beta_x_T25 = 1266500.0 };
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Counter for CAR EEPROM */
@@ -717,7 +717,7 @@ void StartStartUpTask(void const * argument)
 	 ***** ***** ***** ***** ***** ***** ***** ***** ***** *****/
 
 	/*** Step 1 ***/
-	(void)enable_5VDCDC(); /* Enable 5V DCDC converter */
+ 	(void)enable_5VDCDC(); /* Enable 5V DCDC converter */
 	osDelay(50U); /* Wait 50ms for the voltage to set properly */
 
 	/*** Step 2 ***/
@@ -754,12 +754,17 @@ void StartStartUpTask(void const * argument)
 	osDelay(50U); /* Wait 50ms for the task to run a bit */
 
 	/*** Step 10 ***/
+	(void)turnOnPower_LCD(); /* Turn on the power */
 	vTaskResume(My_LCD_TaskHandle); /* Turn on LCD task */
 	osDelay(50U); /* Wait 50ms for the task to run a bit */
 
 	osDelay(2000U); /* This is to wait for measurements to happen */
 
 	/*** Step 11 ***/
+	vTaskResume(My_DiagCheck_TaHandle); /* Turn on Diagnostic task */
+	osDelay(1000U); /* Wait 50ms for the task to run a bit */
+
+	/*** Step 12 ***/
 	vTaskResume(My_AlarmControlHandle); /* Turn on Alarm Control task */
 	osDelay(50U); /* Wait 50ms for the task to run a bit */
 

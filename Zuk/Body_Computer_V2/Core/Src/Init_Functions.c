@@ -29,6 +29,8 @@ Error_Code EraseWholeEEPROM(EEPROM_parameters_struct * EEPROMParameters)
 	EEPROMData.memAddressSize = EEPROM_PAGES_ADDRESS_SIZE;
 	EEPROMData.size = EEPROM_PAGE_SIZE;
 
+	(void)UnlockEEPROM(EEPROMData.EEPROMParameters);
+
 	for(uint16_t i=0u; i<512u; ++i)
 	{
 		EEPROMData.memAddress += EEPROM_PAGE_SIZE*i;
@@ -37,8 +39,10 @@ Error_Code EraseWholeEEPROM(EEPROM_parameters_struct * EEPROMParameters)
 		{
 			break;
 		}
-		HAL_Delay(5);
+		HAL_Delay(10);
 	}
+
+	(void)LockEEPROM(EEPROMData.EEPROMParameters);
 
 	return error;
 }

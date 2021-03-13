@@ -87,6 +87,12 @@ void StartEEPROMTask(void const * argument)
 		{
 			*(EEPROMData.isReadyPtr) = DATA_NOT_READY;
 
+			if(NULL == EEPROMData.EEPROMParameters)
+			{
+				error = EEPROM__PARAMETERS_POINTER_IS_NULL;
+				my_error_handler(error);
+			}
+
 			error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
 			if (NO_ERROR == error)
 			{
@@ -103,6 +109,12 @@ void StartEEPROMTask(void const * argument)
 			{
 				*(EEPROMData.isReadyPtr) = DATA_NOT_READY;
 				*(EEPROMData.dataIsCopiedPtr) = DATA_NOT_COPIED;
+
+				if(NULL == EEPROMData.EEPROMParameters)
+				{
+					error = EEPROM__PARAMETERS_POINTER_IS_NULL;
+					my_error_handler(error);
+				}
 				if (0u == EEPROMData.size)
 				{
 					error = EEPROM__SIZE_TO_WRITE_IS_ZERO;

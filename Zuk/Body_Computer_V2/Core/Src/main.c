@@ -305,7 +305,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	{
 		if ((Tim7_Counter_100us - lastTimerCounter) > (DEBOUNCING_TIME_FOR_ENCODER_BUTTON * 10U) /*ms*/)
 		{
-			if (GPIO_PIN_SET == HAL_GPIO_ReadPin(ENC_BUTTON_MENU_GPIO_Port, ENC_BUTTON_MENU_Pin)) /*Button Pushed In*/
+			if (GPIO_PIN_RESET == HAL_GPIO_ReadPin(ENC_BUTTON_MENU_GPIO_Port, ENC_BUTTON_MENU_Pin)) /*Button Pushed In*/
 			{
 				error = (Error_Code)osTimerStart(My_Timer_ENC_Menu_ButtonHandle, ENC_BUTTON_LONG_PRESS_TIME);
 				if (NO_ERROR != error)

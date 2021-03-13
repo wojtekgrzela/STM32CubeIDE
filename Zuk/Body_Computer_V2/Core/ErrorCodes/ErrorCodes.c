@@ -48,12 +48,14 @@ void my_error_handler(Error_Code error)
 		case ADC__VALUE_INCORRECT:			//Not a real issue for now
 		{
 			++debugCounter;
+			while(TRUE) {}
 			break;
 		}
 
 		case STRING__EMPTY:					//Not a real issue for now
 		{
 			++debugCounter;
+			while(TRUE) {}
 			break;
 		}
 
@@ -67,6 +69,7 @@ void my_error_handler(Error_Code error)
 		case SDCARD__INITIAL_READ_FAILED:	//Non-critical error but the usage of card must be stopped - done in the code
 		{
 			++debugCounter;
+			while(TRUE) {}
 			break;
 		}
 

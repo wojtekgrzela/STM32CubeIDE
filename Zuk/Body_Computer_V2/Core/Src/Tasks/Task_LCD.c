@@ -1677,6 +1677,7 @@ void StartLCDTask(void const * argument)
 
 	LCD_DCDC5VHighTemperatureThreshold.unit			= (char*)degreeSymbolCharacter;
 	LCD_DCDC3V3HighTemperatureThreshold.unit		= (char*)degreeSymbolCharacter;
+	LCD_HBridgeHighTemperatureThreshold.unit		= (char*)degreeSymbolCharacter;
 
 	LCD_SecondsToTurnLCDBacklightOff.unit			= STRING_SEC;
 	LCD_AutoHomeReturnTime.unit						= STRING_SEC;
@@ -1780,6 +1781,7 @@ void StartLCDTask(void const * argument)
 
 	PREPARE_LCD_board(LCD_DCDC5VHighTemperatureThreshold);
 	PREPARE_LCD_board(LCD_DCDC3V3HighTemperatureThreshold);
+	PREPARE_LCD_board(LCD_HBridgeHighTemperatureThreshold);
 	PREPARE_LCD_board(LCD_DCDC5VHighTemperatureAlarmOnOff);
 	PREPARE_LCD_board(LCD_DCDC5VHighTemperatureAlarmBuzzerOnOff);
 	PREPARE_LCD_board(LCD_DCDC3V3HighTemperatureAlarmOnOff);
@@ -2058,8 +2060,11 @@ void StartLCDTask(void const * argument)
 	LCD_DCDC5VHighTemperatureThreshold.nextLayer_ptr			= &LCD_DCDC3V3HighTemperatureThreshold;
 	LCD_DCDC3V3HighTemperatureThreshold.previousLayer_ptr		= &LCD_DCDC5VHighTemperatureThreshold;
 	LCD_DCDC3V3HighTemperatureThreshold.upperLayer_ptr			= &LCD_InternalTempSett;
-	LCD_DCDC3V3HighTemperatureThreshold.nextLayer_ptr			= &LCD_DCDC5VHighTemperatureAlarmOnOff;
-	LCD_DCDC5VHighTemperatureAlarmOnOff.previousLayer_ptr		= &LCD_DCDC3V3HighTemperatureThreshold;
+	LCD_DCDC3V3HighTemperatureThreshold.nextLayer_ptr			= &LCD_HBridgeHighTemperatureThreshold;
+	LCD_HBridgeHighTemperatureThreshold.previousLayer_ptr		= &LCD_DCDC3V3HighTemperatureThreshold;
+	LCD_HBridgeHighTemperatureThreshold.upperLayer_ptr			= &LCD_InternalTempSett;
+	LCD_HBridgeHighTemperatureThreshold.nextLayer_ptr			= &LCD_DCDC5VHighTemperatureAlarmOnOff;
+	LCD_DCDC5VHighTemperatureAlarmOnOff.previousLayer_ptr		= &LCD_HBridgeHighTemperatureThreshold;
 	LCD_DCDC5VHighTemperatureAlarmOnOff.upperLayer_ptr			= &LCD_InternalTempSett;
 	LCD_DCDC5VHighTemperatureAlarmOnOff.nextLayer_ptr			= &LCD_DCDC5VHighTemperatureAlarmBuzzerOnOff;
 	LCD_DCDC5VHighTemperatureAlarmBuzzerOnOff.previousLayer_ptr	= &LCD_DCDC5VHighTemperatureAlarmOnOff;

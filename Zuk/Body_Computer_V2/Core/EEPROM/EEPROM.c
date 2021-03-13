@@ -17,7 +17,7 @@
  * @param EEPROM: a pointer to a structure with EEPROM parameters
  * @retval Error_Code: gives a value of error if one occurs
  */
-Error_Code LockEEPROM(EEPROM_parameters_struct *const EEPROM)
+Error_Code LockEEPROM(EEPROM_parameters_struct *EEPROM)
 {
 	Error_Code error = NO_ERROR;
 
@@ -39,7 +39,7 @@ Error_Code LockEEPROM(EEPROM_parameters_struct *const EEPROM)
  * 			(look in EEPROM.h)
  * @retval Error_Code: gives a value of error if one occurs
  */
-Error_Code UnlockEEPROM(EEPROM_parameters_struct *const EEPROM)
+Error_Code UnlockEEPROM(EEPROM_parameters_struct *EEPROM)
 {
 	Error_Code error = NO_ERROR;
 	HAL_GPIO_WritePin(EEPROM->port, EEPROM->pin, RESET);
