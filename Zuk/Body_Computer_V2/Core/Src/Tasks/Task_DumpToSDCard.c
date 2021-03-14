@@ -142,7 +142,7 @@ void StartDumpToSDCardTask(void const *argument)
 				/* FA_OPEN_APPEND - opens the file if it is existing. If not, a new file will be created.
 				 * The read/write pointer is set end of the file.
 				 */
-				f_open(&fileObj, "plik.txt", (FA_OPEN_ALWAYS | FA_WRITE));
+				f_open(&fileObj, "plik.txt", (FA_OPEN_APPEND | FA_WRITE));
 				if (FR_OK != result)
 				{
 					continue;
