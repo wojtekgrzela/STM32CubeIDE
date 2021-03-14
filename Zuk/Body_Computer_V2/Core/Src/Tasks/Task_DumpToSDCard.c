@@ -29,6 +29,8 @@
 #define MAIN_PATH				("")			/* Main path to the disk (that is no path - we write in the main folder) */
 #define FILE_NAME_LENGTH		((uint8_t)(15))	/* For example: "01.12.2020.csv" - 14 signs and \0 = 15 */
 #define FILE_EXTERNSION_STRING	(".csv")		/* This will be added to the date as a file name, for example: "01.12.2021" + ".csv" */
+
+#define MAX_LENGTH_CSV_HEADER_TABLE		(100u)
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -48,12 +50,11 @@ extern GPS_data_struct GPS;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 //static FATFS SD_FATFS;
 static FIL fileObj;
-static FRESULT *my_global_result = NULL;
-uint32_t count = 0;
-uint32_t lastVal = 0;
 uint32_t dupa = 0;
+static boolean InitialIteration = TRUE;
+static uint8_t CSVHeadersTable[MAX_LENGTH_CSV_HEADER_TABLE] = "Tutaj,Jakis,Napis";
 
-uint8_t TEMPBUFF[20];
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -75,15 +76,10 @@ void StartDumpToSDCardTask(void const *argument)
 	Error_Code error = NO_ERROR;
 	FRESULT result = FR_OK;
 
-	static boolean FirstIteration = TRUE;
 	static uint8_t fileName[FILE_NAME_LENGTH] = {SPACE_IN_ASCII};
-	static uint8_t tempFileName[] = "tempF.csv";
-	my_global_result = &result;
-
 
 	/* Turn on power for MicroSD */
 	(void)turnOnPower_MicroSD();
-
 
 	if(TRUE == SDCard_info.isPresent)
 	{
@@ -135,33 +131,97 @@ void StartDumpToSDCardTask(void const *argument)
 		/* Check if the SDCard is present and is initialized and is mounted - if yes then proceed to writing data. */
 		if((TRUE == SDCard_info.isPresent) && (FALSE == SDCard_info.needsToBeInitialized) && (TRUE == SDCard_info.isMounted) && (FALSE == SDCard_info.cardRequestedByUSB))
 		{
-//			if((TRUE == GPS.DateReady) && (TRUE == GPS.forLCD.clock.messageReadyFLAG))
-//			{
-//				error = copy_str_to_buffer((char*)GPS.forLCD.date.messageHandler, (char*)fileName, 0u, GPS.forLCD.date.size);
-//				error = copy_str_to_buffer(FILE_EXTERNSION_STRING, (char*)fileName, GPS.forLCD.date.size, sizeof(FILE_EXTERNSION_STRING));
+			if((TRUE == GPS.DateReady) && (TRUE == GPS.forLCD.clock.messageReadyFLAG))
+			{
+				error = copy_str_to_buffer((char*)GPS.forLCD.date.messageHandler, (char*)fileName, 0u, GPS.forLCD.date.size);
+				error = copy_str_to_buffer(FILE_EXTERNSION_STRING, (char*)fileName, GPS.forLCD.date.size, sizeof(FILE_EXTERNSION_STRING));
+
+				/* If it is the initialization iteration then do some checks. */
+				if(TRUE == InitialIteration)
+				{
+					/* This function tries to create a new file. If the file already exists - it fails.
+					 * This way we can get information if the file is or is not already created and
+					 * add or not add the headers to it.
+					 */
+					result = f_open(&fileObj, (char*)fileName, (FA_CREATE_NEW | FA_WRITE));
+
+					/* If the file already exists then try opening in append mode. */
+					if(FR_EXIST == result)
+					{
+						/* FA_OPEN_APPEND - opens the file if it is existing. If not, a new file will be created.
+						 * The read/write pointer is set end of the file.
+						 */
+						result = f_open(&fileObj, (char*)fileName, (FA_OPEN_APPEND | FA_WRITE));
+
+						/* If the result is no OK, then catch the error and go to the error handler. */
+						if(FR_OK != result)
+						{
+							error = SDCARD__WRITING_FAILED;
+							my_error_handler(error);
+						}
+					}
+
+					/* If the files does not exist already, but the result is OK then write */
+					if(FR_OK == result)
+					{
+						/* If the file is newly created - add the data headers in the file. */
+						result = f_write(&fileObj, (char*)CSVHeadersTable, sizeof(CSVHeadersTable), (UINT*)&savedBytes);
+
+						/* If the result is not OK or nothing was saved to the file - catch the error. */
+						if((FR_OK != result) || (0 == savedBytes))
+						{
+							error = SDCARD__WRITING_FAILED;
+							my_error_handler(error);
+						}
+						else
+						{
+							/* Close the file after writing */
+							result = f_close(&fileObj);
+							if(FR_OK != result)
+							{
+								error = SDCARD__FILE_CLOSE_FAILED;
+								my_error_handler(error);
+							}
+						}
+					}
+					else	/* No file could be opened or created. */
+					{
+						error = SDCARD__FILE_OPEN_FAILED;
+						my_error_handler(error);
+					}
+					/* Initialization finished. */
+					InitialIteration = FALSE;
+				}
+
+
 				/* FA_OPEN_APPEND - opens the file if it is existing. If not, a new file will be created.
 				 * The read/write pointer is set end of the file.
 				 */
-				f_open(&fileObj, "plik.txt", (FA_OPEN_APPEND | FA_WRITE));
+				result = f_open(&fileObj, (char*)fileName, (FA_OPEN_APPEND | FA_WRITE));
 				if (FR_OK != result)
 				{
-					continue;
+					error = SDCARD__FILE_OPEN_FAILED;
+					my_error_handler(error);
 				}
-
-				f_write(&fileObj, "zawartosc pliku\n", 15, (UINT*)&savedBytes);
-
-				if (FR_OK != result)
+				else
 				{
+					/* Write GPS data, parameters data, etc. */
+					result = f_write(&fileObj, "\nTutaj,powinno,byc", 19, (UINT*)&savedBytes);
+					if (FR_OK != result)
+					{
+						error = SDCARD__WRITING_FAILED;
+						my_error_handler(error);
+					}
 
+					/* Close the file after writing to it. */
+					result = f_close(&fileObj);
+					if (FR_OK != result)
+					{
+						error = SDCARD__FILE_CLOSE_FAILED;
+						my_error_handler(error);
+					}
 				}
-
-				result = f_close(&fileObj);
-
-
-				if (FR_OK != result)
-				{
-					continue;
-				}
+			}
 		}
 
 		dupa++;
@@ -188,6 +248,8 @@ static Error_Code unmountIfNecessary(void)
 		if (FR_OK == result)
 		{
 			SDCard_info.isMounted = FALSE;
+			/* Initialization needed. */
+			InitialIteration = TRUE;
 		}
 		else
 		{
@@ -259,6 +321,8 @@ static Error_Code initializeIfNecessary(void)
 			if (FR_OK == result)
 			{
 				SDCard_info.isMounted = TRUE;
+				/* Initialization needed. */
+				InitialIteration = TRUE;
 			}
 		}
 

@@ -53,7 +53,7 @@
 
 
 
-void Start1000msTask(void const *argument)
+void StartCruiseCntrlTask(void const *argument)
 {
 	TickType_t xLastWakeTime;
 	const TickType_t xFrequency = MY_TASK_1000_MS_TIME_PERIOD;
@@ -66,6 +66,7 @@ void Start1000msTask(void const *argument)
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 	for (;;)
 	{
+
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */

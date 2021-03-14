@@ -14,6 +14,7 @@
 #include "task.h"
 #include "main.h"
 #include "cmsis_os.h"
+#include "../../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h"
 #include "defines.h"
 #include "../../VariousFunctions/Functions.h"
 #include "../../lcd_hd44780_i2c/lcd_hd44780_i2c.h"
@@ -34,6 +35,8 @@
 /* Extern variables */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 extern osMessageQId Queue_EEPROM_writeHandle;
+extern USBD_HandleTypeDef hUsbDeviceHS;
+
 extern EEPROM_parameters_struct FRAM_parameters;
 
 extern waterTempSettings_struct CAR_waterTemp;
@@ -132,6 +135,7 @@ static void Read_CarState(void);
 static void Read_AlternatorCharging(void);
 
 static void checkMicroSDPresence(void);
+static void checkUSBMSCState(void);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -583,6 +587,8 @@ void StartMeasureTask(void const *argument)
 
 		/* Check checkMicroSDPresence (YES, NO) */
 		checkMicroSDPresence();
+		/* Check USB state (is it present or not) and set SDCard_info */
+		checkUSBMSCState();
 
 
 		if (halfSecond_FLAG)
@@ -900,9 +906,36 @@ static void checkMicroSDPresence(void)
 {
 	static boolean oldState = FALSE;
 	/* "!" because the logic is inverted - when the MicroSD is inserted it shorts the pin to GND. */
+	oldState = SDCard_info.isPresent;
 	SDCard_info.isPresent = !HAL_GPIO_ReadPin(MICROSD_DETECT_GPIO_Port, MICROSD_DETECT_Pin);
+
+	if((TRUE == oldState) && (FALSE == SDCard_info.isPresent))
+	{
+		SDCard_info.gotPulledOut = TRUE;
+	}
+
+
 }
 
+
+
+/* This function checks the state of the USB Mass Storage Device to set request for SD Card for Dump task */
+static void checkUSBMSCState(void)
+{
+	/* Reads the state of the USB */
+	uint8_t USBMSC_state = hUsbDeviceHS.dev_state;
+	/* 0x03 - USBD_STATE_CONFIGURED */
+	/* 0x04 - USBD_STATE_SUSPENDED */
+
+	if(0x03 == USBMSC_state)
+	{
+		SDCard_info.cardRequestedByUSB = TRUE;
+	}
+	else
+	{
+		SDCard_info.cardRequestedByUSB = FALSE;
+	}
+}
 
 
 

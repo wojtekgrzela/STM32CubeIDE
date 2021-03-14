@@ -237,21 +237,9 @@ int8_t STORAGE_GetCapacity_HS(uint8_t lun, uint32_t *block_num, uint16_t *block_
 int8_t STORAGE_IsReady_HS(uint8_t lun)
 {
   /* USER CODE BEGIN 11 */
-	HAL_SD_StateTypeDef state = HAL_SD_STATE_RESET;
 	int8_t retVal = USBD_FAIL;
 
 	if((TRUE == SDCard_info.isPresent) && (FALSE == SDCard_info.needsToBeInitialized) && (FALSE == SDCard_info.isMounted) && (TRUE == SDCard_info.cardRequestedByUSB))
-	{
-		retVal = USBD_OK;
-	}
-	else
-	{
-		retVal = USBD_FAIL;
-	}
-
-//	state = HAL_SD_GetState(&hsd);
-
-	if(/*(HAL_SD_STATE_READY == state) &&*/ (USBD_OK == retVal))
 	{
 		retVal = USBD_OK;
 	}
@@ -272,6 +260,8 @@ int8_t STORAGE_IsReady_HS(uint8_t lun)
 int8_t STORAGE_IsWriteProtected_HS(uint8_t lun)
 {
   /* USER CODE BEGIN 12 */
+	/* USBD_OK - write protection disabled */
+	/* USBD_FAIL - write protection enabled*/
   return (USBD_OK);
   /* USER CODE END 12 */
 }
@@ -287,7 +277,7 @@ int8_t STORAGE_IsWriteProtected_HS(uint8_t lun)
 int8_t STORAGE_Read_HS(uint8_t lun, uint8_t *buf, uint32_t blk_addr, uint16_t blk_len)
 {
   /* USER CODE BEGIN 13 */
-	(void)HAL_SD_ReadBlocks(&hsd, buf, blk_addr, blk_len, 100);
+	(void)HAL_SD_ReadBlocks(&hsd, buf, blk_addr, blk_len, 10);
 
 	while (HAL_SD_GetCardState(&hsd) != HAL_SD_CARD_TRANSFER)
 	{
@@ -309,7 +299,7 @@ int8_t STORAGE_Read_HS(uint8_t lun, uint8_t *buf, uint32_t blk_addr, uint16_t bl
 int8_t STORAGE_Write_HS(uint8_t lun, uint8_t *buf, uint32_t blk_addr, uint16_t blk_len)
 {
   /* USER CODE BEGIN 14 */
-	HAL_SD_WriteBlocks(&hsd, buf, blk_addr, blk_len, 100);
+	HAL_SD_WriteBlocks(&hsd, buf, blk_addr, blk_len, 10);
 
 	while (HAL_SD_GetCardState(&hsd) != HAL_SD_CARD_TRANSFER)
 	{
