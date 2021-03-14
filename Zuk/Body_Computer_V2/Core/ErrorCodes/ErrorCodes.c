@@ -66,7 +66,7 @@ void my_error_handler(Error_Code error)
 			break;
 		}
 
-		case SDCARD__INITIAL_READ_FAILED:	//Non-critical error but the usage of card must be stopped - done in the code
+		case SDCARD__INIT_FAILED:	//Non-critical error but the usage of card must be stopped - done in the code
 		{
 			++debugCounter;
 			while(TRUE) {}

@@ -358,6 +358,9 @@ typedef uint8_t boolean;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* SD CARD */
 #define TEST_MESSAGE_FOR_CHECK		("This is a test text.")
+
+#define MOUNT_IMMEDIATELY			((uint8_t)(1u))
+#define UNMOUNT_PARAMETER			((uint8_t)(1u))
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */

@@ -20,6 +20,8 @@
 #define GPS_BUFFER_SIZE		(uint8_t)(150)
 #endif
 
+#define NUMBER_OF_R_AND_N_SIGNS		(uint8_t)(3)
+
 #ifdef GPS__USING_LCD
 #include "../lcd_hd44780_i2c/lcd_hd44780_i2c.h"
 #endif
@@ -42,6 +44,12 @@ typedef struct
 		uint8_t minutes[2];
 		uint8_t seconds[2];
 		uint8_t clock[8];
+
+		uint8_t day[2];
+		uint8_t month[2];
+		uint8_t year[4];
+		uint8_t date[10];
+
 		uint8_t latitude[10];
 		uint8_t latitudeIndicator[1];
 		uint8_t longitude[11];
@@ -55,6 +63,11 @@ typedef struct
 	struct rawData
 	{
 		uint8_t UTC[7];					/* UTC time */
+
+		uint8_t Day[3];
+		uint8_t Month[3];
+		uint8_t Year[3];
+
 		uint8_t Latitude[11];
 		uint8_t LatitudeIndicator[2];	/* N-North, S-South */
 		uint8_t Longitude[12];
@@ -73,6 +86,12 @@ typedef struct
 		LCD_message minutes;
 		LCD_message seconds;
 		LCD_message clock;
+
+		LCD_message day;
+		LCD_message month;
+		LCD_message year;
+		LCD_message date;
+
 		LCD_message latitude;
 		LCD_message latitudeIndicator;
 		LCD_message longitude;
@@ -86,6 +105,7 @@ typedef struct
 
 	uint8_t DataReady	:1;				/* Set when all data is received from GPS and ready to be processed */
 	uint8_t TimeReady	:1;				/* Set when GPS received the time (do not have to mean, that there is a FIX!!! */
+	uint8_t DateReady	:1;				/* Set when GPS received the date (do not have to mean, that there is a FIX or time ready!!! */
 	uint8_t Fix			:1;				/* Set when there is fix (set in GPS_Parsing) */
 }GPS_data_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */

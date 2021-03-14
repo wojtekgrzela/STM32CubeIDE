@@ -58,6 +58,7 @@ Error_Code turnOffPower_NodeMCU(void);
 Error_Code turnOnPower_CruiseControl(void);
 Error_Code turnOffPower_CruiseControl(void);
 
+
 uint8_t compare_two_strings(const char *const str1/*The short one*/,
 		const char *const str2/*The one you compare to*/,
 		const uint8_t start /*Start position of the comparison*/,

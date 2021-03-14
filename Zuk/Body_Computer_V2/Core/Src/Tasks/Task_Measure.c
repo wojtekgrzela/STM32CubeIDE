@@ -95,6 +95,8 @@ extern CAR_mileage_struct CAR_mileage;
 
 extern volatile ENCButton_struct ENC_button_menu;
 extern volatile int8_t EncoderCounterDiff;
+
+extern SDCard_info_struct SDCard_info;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -128,6 +130,8 @@ static void Read_KeyState(void);
 static void Read_EngineState(void);
 static void Read_CarState(void);
 static void Read_AlternatorCharging(void);
+
+static void checkMicroSDPresence(void);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -550,7 +554,7 @@ void StartMeasureTask(void const *argument)
 		temperatureHBridgeForLCD.messageReadyFLAG = TRUE;
 		/*** Board 3V3 DCDC voltage ***/
 		voltage3V3ForLCD.messageReadyFLAG = FALSE;
-		snprintf((char*)voltage3V3ForLCD.messageHandler, 6, "%01" PRIu16 ".%02" PRIi16 "V", (uint16_t)voltage3V3, (uint16_t)(voltage5V * 100) % 100);
+		snprintf((char*)voltage3V3ForLCD.messageHandler, 6, "%01" PRIu16 ".%02" PRIi16 "V", (uint16_t)voltage3V3, (uint16_t)(voltage3V3 * 100) % 100);
 		voltage3V3ForLCD.size = strlen((char*)voltage3V3ForLCD.messageHandler);
 		voltage3V3ForLCD.messageReadyFLAG = TRUE;
 		/*** Board 5V DCDC voltage ***/
@@ -576,6 +580,9 @@ void StartMeasureTask(void const *argument)
 		Read_CarState();
 		/* Check AlternatorCharging (TRUE, FALSE) */
 		Read_AlternatorCharging();
+
+		/* Check checkMicroSDPresence (YES, NO) */
+		checkMicroSDPresence();
 
 
 		if (halfSecond_FLAG)
@@ -885,5 +892,17 @@ static void Read_AlternatorCharging(void)
 	 */
 	CarStateInfo.AlternatorCharging = (boolean)HAL_GPIO_ReadPin(ALTERNATOR_CHARGING_GPIO_Port, ALTERNATOR_CHARGING_Pin);
 }
+
+
+
+/* This function checks if the MicroSD card is inserted into the slot. */
+static void checkMicroSDPresence(void)
+{
+	static boolean oldState = FALSE;
+	/* "!" because the logic is inverted - when the MicroSD is inserted it shorts the pin to GND. */
+	SDCard_info.isPresent = !HAL_GPIO_ReadPin(MICROSD_DETECT_GPIO_Port, MICROSD_DETECT_Pin);
+}
+
+
 
 

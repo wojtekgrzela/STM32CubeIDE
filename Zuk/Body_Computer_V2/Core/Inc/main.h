@@ -661,6 +661,19 @@ typedef struct
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef struct
+{
+	boolean isPresent;
+	boolean isPresentFromBeginning;
+	boolean gotPulledOut;
+	boolean needsToBeInitialized;
+	boolean isMounted;
+	boolean cardRequestedByUSB;
+	boolean canBePassedToUSB;
+}SDCard_info_struct;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 // @formatter:on
 /* USER CODE END ET */
 

@@ -65,10 +65,6 @@ extern SD_HandleTypeDef hsd;
 #ifdef RUNTIME_STATS_TIMER_CONFIG
 extern TIM_HandleTypeDef htim7;
 #endif
-
-/* Handlers for SD Memory Card usage (TASK: My_DumpToSDCard) */
-extern FIL SDFile;
-extern FATFS SDFatFS;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -106,6 +102,11 @@ GPS_data_struct GPS =
 		FALSE,
 		.forLCD.altitude.messageReadyFLAG = FALSE,
 		.forLCD.speed.messageReadyFLAG = FALSE };
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* For SDCard parameters, settings, information */
+SDCard_info_struct SDCard_info =
+	{ 0 };
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* For LCD parameters and settings */
