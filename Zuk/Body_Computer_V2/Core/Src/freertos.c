@@ -65,10 +65,6 @@ extern SD_HandleTypeDef hsd;
 #ifdef RUNTIME_STATS_TIMER_CONFIG
 extern TIM_HandleTypeDef htim7;
 #endif
-
-/* Handlers for SD Memory Card usage (TASK: My_DumpToSDCard) */
-extern FIL SDFile;
-extern FATFS SDFatFS;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -106,6 +102,11 @@ GPS_data_struct GPS =
 		FALSE,
 		.forLCD.altitude.messageReadyFLAG = FALSE,
 		.forLCD.speed.messageReadyFLAG = FALSE };
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* For SDCard parameters, settings, information */
+SDCard_info_struct SDCard_info =
+	{ 0 };
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* For LCD parameters and settings */
@@ -355,7 +356,7 @@ GlobalValuesLimits_struct GlobalValuesLimits =
 
 /* USER CODE END Variables */
 osThreadId My_StartUp_TaskHandle;
-osThreadId My_1000ms_TaskHandle;
+osThreadId My_CruiseCntrlHandle;
 osThreadId My_500ms_TaskHandle;
 osThreadId My_LCD_TaskHandle;
 osThreadId My_GPS_TaskHandle;
@@ -393,7 +394,7 @@ osTimerId My_Timer_carAuxBattVoltageValueCheckHandle;
 /* USER CODE END FunctionPrototypes */
 
 void StartStartUpTask(void const * argument);
-extern void Start1000msTask(void const * argument);
+extern void StartCruiseCntrlTask(void const * argument);
 extern void Start500msTask(void const * argument);
 extern void StartLCDTask(void const * argument);
 extern void StartGPSTask(void const * argument);
@@ -617,9 +618,9 @@ void MX_FREERTOS_Init(void) {
   osThreadDef(My_StartUp_Task, StartStartUpTask, osPriorityHigh, 0, 128);
   My_StartUp_TaskHandle = osThreadCreate(osThread(My_StartUp_Task), NULL);
 
-  /* definition and creation of My_1000ms_Task */
-  osThreadDef(My_1000ms_Task, Start1000msTask, osPriorityNormal, 0, 256);
-  My_1000ms_TaskHandle = osThreadCreate(osThread(My_1000ms_Task), NULL);
+  /* definition and creation of My_CruiseCntrl */
+  osThreadDef(My_CruiseCntrl, StartCruiseCntrlTask, osPriorityAboveNormal, 0, 256);
+  My_CruiseCntrlHandle = osThreadCreate(osThread(My_CruiseCntrl), NULL);
 
   /* definition and creation of My_500ms_Task */
   osThreadDef(My_500ms_Task, Start500msTask, osPriorityNormal, 0, 128);
@@ -665,7 +666,7 @@ void MX_FREERTOS_Init(void) {
   /* add threads, ... */
 
   /* Turning off all threads except the default one - there the initialization will take place */
-  vTaskSuspend(My_1000ms_TaskHandle);
+  vTaskSuspend(My_CruiseCntrlHandle);
   vTaskSuspend(My_500ms_TaskHandle);
   vTaskSuspend(My_Measure_TaskHandle);
   vTaskSuspend(My_50ms_TaskHandle);
@@ -742,7 +743,7 @@ void StartStartUpTask(void const * argument)
 	osDelay(50U); /* Wait 50ms for the task to run a bit */
 
 	/*** Step 7 ***/
-	vTaskResume(My_1000ms_TaskHandle); /* Turn on 1000 milliseconds task */
+	vTaskResume(My_CruiseCntrlHandle); /* Turn on cruise control task */
 	osDelay(50U); /* Wait 50ms for the task to run a bit */
 
 	/*** Step 8 ***/

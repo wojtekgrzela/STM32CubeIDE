@@ -2426,9 +2426,6 @@ static void RUNNING_DesktopLayer(struct LCD_board* currentBoard)
 		error = copy_str_to_buffer((char*)mainBatteryVoltageValueForLCD.messageHandler, (char*)LCD_buffer[Row1], 0, mainBatteryVoltageValueForLCD.size);
 	error = copy_str_to_buffer("V", (char*)LCD_buffer[Row1], 5, 1);
 
-	if(1 == tuBylemFLAG)	//TODO: do usuniecia po ogarnieciu obslugi MicroSD
-		error = copy_str_to_buffer((char*)TEMPBUFF, (char*)LCD_buffer[Row2], 13, 5);
-
 		/* Aux Battery Voltage */
 	if(TRUE == auxiliaryBatteryVoltageValueForLCD.messageReadyFLAG)
 		error = copy_str_to_buffer((char*)auxiliaryBatteryVoltageValueForLCD.messageHandler, (char*)LCD_buffer[Row1], 7, auxiliaryBatteryVoltageValueForLCD.size);

@@ -270,7 +270,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 					}
 					else
 					{
-						if (((2 > rCounter) || (2 > nCounter)) && (GPS_BUFFER_SIZE > counter))
+						if (((NUMBER_OF_R_AND_N_SIGNS > rCounter) || (NUMBER_OF_R_AND_N_SIGNS > nCounter)) && (GPS_BUFFER_SIZE > counter))
 						{
 							GPS.GPS_buffer[counter] = GPS.receivedByte;
 							++counter;

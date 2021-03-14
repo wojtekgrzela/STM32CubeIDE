@@ -63,7 +63,10 @@ void Start500msTask(void const *argument)
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 	for (;;)
 	{
-//		HAL_GPIO_TogglePin(LED_2_GPIO_Port, LED_2_Pin);
+		HAL_GPIO_TogglePin(DIAG_LED_1_GPIO_Port, DIAG_LED_1_Pin);
+		HAL_GPIO_TogglePin(DIAG_LED_2_GPIO_Port, DIAG_LED_2_Pin);
+		HAL_GPIO_TogglePin(DIAG_LED_3_GPIO_Port, DIAG_LED_3_Pin);
+		HAL_GPIO_TogglePin(DIAG_LED_4_GPIO_Port, DIAG_LED_4_Pin);
 
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}

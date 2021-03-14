@@ -58,6 +58,10 @@ void StartGPSTask(void const * argument)
 	GPS.forLCD.minutes.messageHandler 				= GPS.message_buffers.minutes;
 	GPS.forLCD.seconds.messageHandler 				= GPS.message_buffers.seconds;
 	GPS.forLCD.clock.messageHandler 				= GPS.message_buffers.clock;
+	GPS.forLCD.day.messageHandler					= GPS.message_buffers.day;
+	GPS.forLCD.month.messageHandler					= GPS.message_buffers.month;
+	GPS.forLCD.year.messageHandler					= GPS.message_buffers.year;
+	GPS.forLCD.date.messageHandler					= GPS.message_buffers.date;
 	GPS.forLCD.latitude.messageHandler 				= GPS.message_buffers.latitude;
 	GPS.forLCD.latitudeIndicator.messageHandler 	= GPS.message_buffers.latitudeIndicator;
 	GPS.forLCD.longitude.messageHandler 			= GPS.message_buffers.longitude;
@@ -71,6 +75,10 @@ void StartGPSTask(void const * argument)
 	GPS.forLCD.minutes.size 			= 2u;
 	GPS.forLCD.seconds.size 			= 2u;
 	GPS.forLCD.clock.size 				= 8u;
+	GPS.forLCD.day.size					= 2u;
+	GPS.forLCD.month.size				= 2u;
+	GPS.forLCD.year.size				= 4u;
+	GPS.forLCD.date.size				= 10u;
 	GPS.forLCD.latitude.size			= 10u;
 	GPS.forLCD.latitudeIndicator.size	= 1u;
 	GPS.forLCD.longitude.size			= 11u;
@@ -81,7 +89,6 @@ void StartGPSTask(void const * argument)
 	HAL_UART_Receive_IT(&huart1, (uint8_t *)&(GPS.receivedByte), 1u);
 
 	xLastWakeTime = xTaskGetTickCount();
-
 	/* Infinite loop */
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 	for (;;)
@@ -143,12 +150,14 @@ void StartGPSTask(void const * argument)
 			GPS.forLCD.hours.messageReadyFLAG = FALSE;
 			GPS.forLCD.minutes.messageReadyFLAG = FALSE;
 			GPS.forLCD.seconds.messageReadyFLAG = FALSE;
+
 			for(uint i=0; i<2; ++i)
 			{
 				GPS.message_buffers.hours[i] = 'x';
 				GPS.message_buffers.minutes[i] = 'x';
 				GPS.message_buffers.seconds[i] = 'x';
 			}
+
 			GPS.forLCD.hours.messageReadyFLAG = TRUE;
 			GPS.forLCD.minutes.messageReadyFLAG = TRUE;
 			GPS.forLCD.seconds.messageReadyFLAG = TRUE;
@@ -161,6 +170,52 @@ void StartGPSTask(void const * argument)
 		error = copy_str_to_buffer((char*)GPS.message_buffers.minutes, (char*)GPS.message_buffers.clock, 3u, GPS.forLCD.minutes.size);
 		error = copy_str_to_buffer((char*)GPS.message_buffers.seconds, (char*)GPS.message_buffers.clock, 6u, GPS.forLCD.seconds.size);
 		GPS.forLCD.clock.messageReadyFLAG = TRUE;
+
+		if(NO_ERROR != error)
+		{
+			my_error_handler(error);
+		}
+
+		if(TRUE == GPS.DateReady)
+		{
+			GPS.forLCD.day.messageReadyFLAG = FALSE;
+			error = copy_buffer_to_str((char*)GPS.rawData.Day, (char*)GPS.message_buffers.day, 0u, GPS.forLCD.day.size);
+			GPS.forLCD.day.messageReadyFLAG = TRUE;
+
+			GPS.forLCD.month.messageReadyFLAG = FALSE;
+			error = copy_buffer_to_str((char*)GPS.rawData.Month, (char*)GPS.message_buffers.month, 0u, GPS.forLCD.month.size);
+			GPS.forLCD.month.messageReadyFLAG = TRUE;
+
+			GPS.forLCD.year.messageReadyFLAG = FALSE;
+			error = copy_buffer_to_str((char*)GPS.rawData.Year, (char*)GPS.message_buffers.year, 0u, GPS.forLCD.year.size);
+			GPS.forLCD.year.messageReadyFLAG = TRUE;
+		}
+		else
+		{
+			GPS.forLCD.day.messageReadyFLAG = FALSE;
+			GPS.forLCD.month.messageReadyFLAG = FALSE;
+			GPS.forLCD.year.messageReadyFLAG = FALSE;
+
+			for(uint i=0; i<2; ++i)
+			{
+				GPS.message_buffers.day[i] = 'x';
+				GPS.message_buffers.month[i] = 'x';
+				GPS.message_buffers.year[i] = 'x';
+				GPS.message_buffers.year[i+2] = 'x';
+			}
+
+			GPS.forLCD.day.messageReadyFLAG = TRUE;
+			GPS.forLCD.month.messageReadyFLAG = TRUE;
+			GPS.forLCD.year.messageReadyFLAG = TRUE;
+		}
+
+		GPS.forLCD.date.messageReadyFLAG = FALSE;
+		GPS.message_buffers.date[2] = '_';
+		GPS.message_buffers.date[5] = '_';
+		error = copy_str_to_buffer((char*)GPS.message_buffers.day, (char*)GPS.message_buffers.date, 0u, GPS.forLCD.day.size);
+		error = copy_str_to_buffer((char*)GPS.message_buffers.month, (char*)GPS.message_buffers.date, 3u, GPS.forLCD.month.size);
+		error = copy_str_to_buffer((char*)GPS.message_buffers.year, (char*)GPS.message_buffers.date, 6u, GPS.forLCD.year.size);
+		GPS.forLCD.date.messageReadyFLAG = TRUE;
 
 		if(NO_ERROR != error)
 		{

@@ -14,6 +14,7 @@
 #include "task.h"
 #include "main.h"
 #include "cmsis_os.h"
+#include "../../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h"
 #include "defines.h"
 #include "../../VariousFunctions/Functions.h"
 #include "../../lcd_hd44780_i2c/lcd_hd44780_i2c.h"
@@ -34,6 +35,8 @@
 /* Extern variables */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 extern osMessageQId Queue_EEPROM_writeHandle;
+extern USBD_HandleTypeDef hUsbDeviceHS;
+
 extern EEPROM_parameters_struct FRAM_parameters;
 
 extern waterTempSettings_struct CAR_waterTemp;
@@ -95,6 +98,8 @@ extern CAR_mileage_struct CAR_mileage;
 
 extern volatile ENCButton_struct ENC_button_menu;
 extern volatile int8_t EncoderCounterDiff;
+
+extern SDCard_info_struct SDCard_info;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -128,6 +133,9 @@ static void Read_KeyState(void);
 static void Read_EngineState(void);
 static void Read_CarState(void);
 static void Read_AlternatorCharging(void);
+
+static void checkMicroSDPresence(void);
+static void checkUSBMSCState(void);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -550,7 +558,7 @@ void StartMeasureTask(void const *argument)
 		temperatureHBridgeForLCD.messageReadyFLAG = TRUE;
 		/*** Board 3V3 DCDC voltage ***/
 		voltage3V3ForLCD.messageReadyFLAG = FALSE;
-		snprintf((char*)voltage3V3ForLCD.messageHandler, 6, "%01" PRIu16 ".%02" PRIi16 "V", (uint16_t)voltage3V3, (uint16_t)(voltage5V * 100) % 100);
+		snprintf((char*)voltage3V3ForLCD.messageHandler, 6, "%01" PRIu16 ".%02" PRIi16 "V", (uint16_t)voltage3V3, (uint16_t)(voltage3V3 * 100) % 100);
 		voltage3V3ForLCD.size = strlen((char*)voltage3V3ForLCD.messageHandler);
 		voltage3V3ForLCD.messageReadyFLAG = TRUE;
 		/*** Board 5V DCDC voltage ***/
@@ -576,6 +584,11 @@ void StartMeasureTask(void const *argument)
 		Read_CarState();
 		/* Check AlternatorCharging (TRUE, FALSE) */
 		Read_AlternatorCharging();
+
+		/* Check checkMicroSDPresence (YES, NO) */
+		checkMicroSDPresence();
+		/* Check USB state (is it present or not) and set SDCard_info */
+		checkUSBMSCState();
 
 
 		if (halfSecond_FLAG)
@@ -885,5 +898,44 @@ static void Read_AlternatorCharging(void)
 	 */
 	CarStateInfo.AlternatorCharging = (boolean)HAL_GPIO_ReadPin(ALTERNATOR_CHARGING_GPIO_Port, ALTERNATOR_CHARGING_Pin);
 }
+
+
+
+/* This function checks if the MicroSD card is inserted into the slot. */
+static void checkMicroSDPresence(void)
+{
+	static boolean oldState = FALSE;
+	/* "!" because the logic is inverted - when the MicroSD is inserted it shorts the pin to GND. */
+	oldState = SDCard_info.isPresent;
+	SDCard_info.isPresent = !HAL_GPIO_ReadPin(MICROSD_DETECT_GPIO_Port, MICROSD_DETECT_Pin);
+
+	if((TRUE == oldState) && (FALSE == SDCard_info.isPresent))
+	{
+		SDCard_info.gotPulledOut = TRUE;
+	}
+
+
+}
+
+
+
+/* This function checks the state of the USB Mass Storage Device to set request for SD Card for Dump task */
+static void checkUSBMSCState(void)
+{
+	/* Reads the state of the USB */
+	uint8_t USBMSC_state = hUsbDeviceHS.dev_state;
+	/* 0x03 - USBD_STATE_CONFIGURED */
+	/* 0x04 - USBD_STATE_SUSPENDED */
+
+	if(0x03 == USBMSC_state)
+	{
+		SDCard_info.cardRequestedByUSB = TRUE;
+	}
+	else
+	{
+		SDCard_info.cardRequestedByUSB = FALSE;
+	}
+}
+
 
 
