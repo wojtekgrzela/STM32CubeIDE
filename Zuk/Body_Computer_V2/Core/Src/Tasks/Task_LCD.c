@@ -108,7 +108,7 @@ extern uint8_t tuBylemFLAG;		//TODO: to be deleted finally	(after MicroSd is wor
 extern uint8_t TEMPBUFF[100];	//TODO: to be deleted finally (after MicroSd is working)
 
 extern volatile ENCButton_struct ENC_button_menu;
-extern volatile int8_t EncoderCounterDiff;
+extern volatile int8_t EncoderCounterMenuDiff;
 
 extern LCD_message mainBatteryVoltageValueForLCD;
 extern LCD_message auxiliaryBatteryVoltageValueForLCD;
@@ -2388,17 +2388,17 @@ static void RUNNING_ScrollList(struct LCD_board* currentBoard)
 		scrollList_doneOnce = TRUE;
 	}
 
-	if(0 < EncoderCounterDiff)
+	if(0 < EncoderCounterMenuDiff)
 	{
-		ScrollForward(displayBoards, EncoderCounterDiff);
-		EncoderCounterDiff = 0;
+		ScrollForward(displayBoards, EncoderCounterMenuDiff);
+		EncoderCounterMenuDiff = 0;
 	}
 	else
 	{
-		if(0 > EncoderCounterDiff)
+		if(0 > EncoderCounterMenuDiff)
 		{
-			ScrollBack(displayBoards, EncoderCounterDiff);
-			EncoderCounterDiff = 0;
+			ScrollBack(displayBoards, EncoderCounterMenuDiff);
+			EncoderCounterMenuDiff = 0;
 		}
 	}
 
@@ -2724,19 +2724,19 @@ static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard)
 			{
 				case StepByOne:
 				{
-					tempSetting += EncoderCounterDiff;
+					tempSetting += EncoderCounterMenuDiff;
 					tempSize = snprintf(tempSettingBuffer, 10u, "%01d ", (uint16_t)tempSetting);
 					break;
 				}
 				case StepByOneTen:
 				{
-					tempSetting += (float)EncoderCounterDiff/10;
+					tempSetting += (float)EncoderCounterMenuDiff/10;
 					tempSize = snprintf(tempSettingBuffer, 10u, "%01d.%01d ", (uint16_t)tempSetting, (uint16_t)(tempSetting*10)%10);
 					break;
 				}
 				case StepByOneHundred:
 				{
-					tempSetting += (float)EncoderCounterDiff/100;
+					tempSetting += (float)EncoderCounterMenuDiff/100;
 					tempSize = snprintf(tempSettingBuffer, 10u, "%01d.%02d ", (uint16_t)tempSetting, (uint16_t)(tempSetting*100)%100);
 					break;
 				}
@@ -2776,7 +2776,7 @@ static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard)
 				displayAndControlValue_doneOnce = TRUE;
 			}
 
-			if(0 != EncoderCounterDiff)
+			if(0 != EncoderCounterMenuDiff)
 			{
 				tempState ^= currentBoard->settingsMask;	//Toggling the bit with encoder
 			}
@@ -2800,7 +2800,7 @@ static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard)
 				displayAndControlValue_doneOnce = TRUE;
 			}
 
-			tempTime += EncoderCounterDiff;
+			tempTime += EncoderCounterMenuDiff;
 			tempSize = snprintf(tempSettingBuffer, 10u, "%01d ", tempTime);
 
 			if(*((timeHours_type*)(currentBoard->minValue)) > tempTime)
@@ -2832,7 +2832,7 @@ static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard)
 				displayAndControlValue_doneOnce = TRUE;
 			}
 
-			tempLayer += EncoderCounterDiff;
+			tempLayer += EncoderCounterMenuDiff;
 
 			if(*((Enum_Layer*)(currentBoard->minValue)) > tempLayer)
 			{
@@ -2862,7 +2862,7 @@ static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard)
 		}
 	}//switch(currentBoard->valueType)
 
-	EncoderCounterDiff = 0;
+	EncoderCounterMenuDiff = 0;
 
 	if(NO_ERROR != error) my_error_handler(error);
 

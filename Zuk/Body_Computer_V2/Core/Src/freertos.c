@@ -75,10 +75,15 @@ volatile uint32_t Tim7_Counter_100us = 0u;
 volatile uint32_t RPM_counter = 0u;
 volatile uint32_t SPEED_counter = 0u;
 
-/* For Signaling ENC button and scroll */
+/* For Signaling ENC button and scroll for the menu */
 volatile ENCButton_struct ENC_button_menu =
 	{ 0 };
-volatile int8_t EncoderCounterDiff = 0;
+volatile int8_t EncoderCounterMenuDiff = 0;
+
+/* For Signaling ENC button and scroll for the cruise control */
+volatile ENCButton_struct ENC_button_cruise =
+	{ 0 };
+volatile int8_t EncoderCounterCruiseDiff = 0;
 
 /* For measurements from ADC1 and ADC3 */
 volatile uint16_t ADC1Measures[NO_OF_ADC1_MEASURES] =
@@ -803,6 +808,13 @@ void ENC_Menu_Button_LongPress_Callback(void const * argument)
 void ENC_Cruise_Button_LongPress_Callback(void const * argument)
 {
   /* USER CODE BEGIN ENC_Cruise_Button_LongPress_Callback */
+
+	ENC_button_cruise.allFlags |= 0b00010110;
+	/* Set 1st, 2nd, 3rd bit to 1 to
+	 indicate the long press on bits:
+	 longPressDetected,
+	 longPressDetectedForISR,
+	 longPressDetectedBuzzer */
 
   /* USER CODE END ENC_Cruise_Button_LongPress_Callback */
 }

@@ -122,10 +122,17 @@ int main(void)
   MX_FATFS_Init();
   MX_TIM1_Init();
   MX_TIM7_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 
 	error = (Error_Code)HAL_TIM_Encoder_Start(&htim1, TIM_CHANNEL_ALL);
+	if (NO_ERROR != error)
+	{
+		error = TIM__ENCODER_START_FAIL;
+		my_error_handler(error);
+	}
 
+	error = (Error_Code)HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_ALL);
 	if (NO_ERROR != error)
 	{
 		error = TIM__ENCODER_START_FAIL;
@@ -135,8 +142,8 @@ int main(void)
 	/* There is no Calibration services in STM32F407IGTx devices */
 	/* HAL_ADCEx_Calibration_Start */
 
-	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ADC1Measures, NO_OF_ADC1_MEASURES);
-	HAL_ADC_Start_DMA(&hadc3, (uint32_t*)ADC3Measures, NO_OF_ADC3_MEASURES);
+	(void)HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ADC1Measures, NO_OF_ADC1_MEASURES);
+	(void)HAL_ADC_Start_DMA(&hadc3, (uint32_t*)ADC3Measures, NO_OF_ADC3_MEASURES);
 
 //	error = (Error_Code)HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
 
@@ -297,13 +304,14 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-	static uint64_t lastTimerCounter = 0;
+	static uint32_t lastTimerCounter_ENC_MENU = 0;
+	static uint32_t lastTimerCounter_ENC_CRUISE = 0;
 	Error_Code error = NO_ERROR;
 
-	/* Checking if interrupt is from ENC_BUTTON pin */
+	/* Checking if interrupt is from ENC_BUTTON pin for menu*/
 	if (ENC_BUTTON_MENU_Pin == GPIO_Pin)
 	{
-		if ((Tim7_Counter_100us - lastTimerCounter) > (DEBOUNCING_TIME_FOR_ENCODER_BUTTON * 10U) /*ms*/)
+		if ((Tim7_Counter_100us - lastTimerCounter_ENC_MENU) > (DEBOUNCING_TIME_FOR_ENCODER_BUTTON * 10U) /*ms*/)
 		{
 			if (GPIO_PIN_RESET == HAL_GPIO_ReadPin(ENC_BUTTON_MENU_GPIO_Port, ENC_BUTTON_MENU_Pin)) /*Button Pushed In*/
 			{
@@ -332,15 +340,53 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 				}
 
 			}
-			lastTimerCounter = Tim7_Counter_100us;
+			lastTimerCounter_ENC_MENU = Tim7_Counter_100us;
 		}
 	}
 
+	/* Checking if interrupt is from ENC_BUTTON pin for cruise control*/
+	if (ENC_BUTTON_CRUISE_Pin == GPIO_Pin)
+	{
+		if ((Tim7_Counter_100us - lastTimerCounter_ENC_CRUISE) > (DEBOUNCING_TIME_FOR_ENCODER_BUTTON * 10U) /*ms*/)
+		{
+			if (GPIO_PIN_RESET == HAL_GPIO_ReadPin(ENC_BUTTON_CRUISE_GPIO_Port, ENC_BUTTON_CRUISE_Pin)) /*Button Pushed In*/
+			{
+				error = (Error_Code)osTimerStart(My_Timer_ENC_Cruise_ButtonHandle, ENC_BUTTON_LONG_PRESS_TIME);
+				if (NO_ERROR != error)
+				{
+					error = OS__STARTING_TIMER_FAILED;
+					my_error_handler(error);
+				}
+			}
+			else /*Button Released*/
+			{
+				if (FALSE == ENC_button_cruise.longPressInfoForISR) /* If long press was NOT detected then it is a short press */
+				{
+					error = (Error_Code)osTimerStop(My_Timer_ENC_Cruise_ButtonHandle); /* Stop the timer */
+					if (NO_ERROR != error)
+					{
+						error = OS__STOPPING_TIMER_FAILED;
+						my_error_handler(error);
+					}
+					ENC_button_cruise.allFlags = 0b00001001; /* shortPressDetected and shortPressDetectedBuzzer set to 1 */
+				}
+				else /* Long press was detected so do not set short press and reset the flag for ISR for the next time */
+				{
+					ENC_button_cruise.longPressInfoForISR = FALSE;
+				}
+
+			}
+			lastTimerCounter_ENC_CRUISE = Tim7_Counter_100us;
+		}
+	}
+
+	/* Count RPM signals */
 	if(RPM_SIGNAL_Pin == GPIO_Pin)
 	{
 		++RPM_counter;
 	}
 
+	/* Count Speed signals */
 	if(SPEED_SIGNAL_Pin == GPIO_Pin)
 	{
 		++SPEED_counter;

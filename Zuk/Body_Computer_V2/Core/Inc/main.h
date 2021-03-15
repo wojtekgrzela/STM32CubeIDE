@@ -695,6 +695,8 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define EN_ELECTRO_CLUTCH_Pin GPIO_PIN_2
+#define EN_ELECTRO_CLUTCH_GPIO_Port GPIOE
 #define DCDC_5V_ENABLE_Pin GPIO_PIN_10
 #define DCDC_5V_ENABLE_GPIO_Port GPIOI
 #define BUZZER_Pin GPIO_PIN_11
@@ -785,6 +787,9 @@ void Error_Handler(void);
 #define RPM_SIGNAL_Pin GPIO_PIN_6
 #define RPM_SIGNAL_GPIO_Port GPIOG
 #define RPM_SIGNAL_EXTI_IRQn EXTI9_5_IRQn
+#define ENCODER_2_BUTTON_Pin GPIO_PIN_7
+#define ENCODER_2_BUTTON_GPIO_Port GPIOG
+#define ENCODER_2_BUTTON_EXTI_IRQn EXTI9_5_IRQn
 #define ENCODER_1_BUTTON_Pin GPIO_PIN_8
 #define ENCODER_1_BUTTON_GPIO_Port GPIOG
 #define ENCODER_1_BUTTON_EXTI_IRQn EXTI9_5_IRQn
@@ -798,6 +803,10 @@ void Error_Handler(void);
 #define POWER_ON_NODEMCU_GPIO_Port GPIOG
 #define POWER_ON_GPS_Pin GPIO_PIN_15
 #define POWER_ON_GPS_GPIO_Port GPIOG
+#define ENCODER_2_A_Pin GPIO_PIN_4
+#define ENCODER_2_A_GPIO_Port GPIOB
+#define ENCODER_2_B_Pin GPIO_PIN_5
+#define ENCODER_2_B_GPIO_Port GPIOB
 #define GPS_USART1_TX_Pin GPIO_PIN_6
 #define GPS_USART1_TX_GPIO_Port GPIOB
 #define GPS_USART1_RX_Pin GPIO_PIN_7

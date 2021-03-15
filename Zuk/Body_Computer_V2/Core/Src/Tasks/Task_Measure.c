@@ -97,7 +97,7 @@ extern volatile uint16_t ADC3Measures[NO_OF_ADC3_MEASURES];
 extern CAR_mileage_struct CAR_mileage;
 
 extern volatile ENCButton_struct ENC_button_menu;
-extern volatile int8_t EncoderCounterDiff;
+extern volatile int8_t EncoderCounterMenuDiff;
 
 extern SDCard_info_struct SDCard_info;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
