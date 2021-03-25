@@ -26,7 +26,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Defines And Typedefs */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+#define ON_BOARD_FAN_HBRIDGE_TEMP_ON_THRESHOLD		((float)(60.0))
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -136,6 +136,8 @@ static void Read_AlternatorCharging(void);
 
 static void checkMicroSDPresence(void);
 static void checkUSBMSCState(void);
+
+static void controlOnBoardFan(boolean state);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -638,6 +640,18 @@ void StartMeasureTask(void const *argument)
 			xQueueSend(Queue_EEPROM_writeHandle, &FRAMData, (TickType_t)0u/*NONE wait time if the queue is full*/);
 		}
 
+		if (tenSeconds_FLAG)
+		{
+			if(temperatureHBridge >= ON_BOARD_FAN_HBRIDGE_TEMP_ON_THRESHOLD)
+			{
+				controlOnBoardFan(ON);
+			}
+			else
+			{
+				controlOnBoardFan(OFF);
+			}
+		}
+
 		/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -935,6 +949,18 @@ static void checkUSBMSCState(void)
 	{
 		SDCard_info.cardRequestedByUSB = FALSE;
 	}
+}
+
+
+
+/* This function controls the state of the FAN - turns it on or off */
+static void controlOnBoardFan(boolean state)
+{
+	/* Possible states:
+	 * ON - turn the FAN ON
+	 * OFF - turn the FAN OFF
+	 */
+	HAL_GPIO_WritePin(FAN_BOARD_GPIO_Port, FAN_BOARD_Pin, (GPIO_PinState)state);
 }
 
 

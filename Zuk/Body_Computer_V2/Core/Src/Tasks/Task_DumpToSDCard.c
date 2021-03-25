@@ -50,7 +50,6 @@ extern GPS_data_struct GPS;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 //static FATFS SD_FATFS;
 static FIL fileObj;
-uint32_t dupa = 0;
 static boolean InitialIteration = TRUE;
 static uint8_t CSVHeadersTable[MAX_LENGTH_CSV_HEADER_TABLE] = "Tutaj,Jakis,Napis";
 
@@ -223,8 +222,6 @@ void StartDumpToSDCardTask(void const *argument)
 				}
 			}
 		}
-
-		dupa++;
 
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}

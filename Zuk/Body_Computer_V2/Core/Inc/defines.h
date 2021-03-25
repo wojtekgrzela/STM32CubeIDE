@@ -9,6 +9,7 @@
 #define INC_DEFINES_H_
 
 
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 typedef uint8_t boolean;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -34,7 +35,7 @@ typedef uint8_t boolean;
 #define MY_TASK_50_MS_TIME_PERIOD			(TickType_t)(50)
 #define MY_TASK_MEASURE_TIME_PERIOD			(TickType_t)(250)
 #define MY_TASK_500_MS_TIME_PERIOD			(TickType_t)(500)
-#define MY_TASK_1000_MS_TIME_PERIOD			(TickType_t)(1000)
+#define MY_TASK_CRUISE_CONTROL_TIME_PERIOD	(TickType_t)(500)
 #define MY_DIAG_CHECK_TASK_TIME_PERIOD		(TickType_t)(1000)
 #define MY_ALARM_CONTROL_TASK_TIME_PERIOD	(TickType_t)(250)
 
@@ -156,10 +157,6 @@ typedef uint8_t boolean;
 #define LM35_5_N_ADC_VALUE	LM35_5_N_MEM_TABLE[LM35_5_N_RANK]
 #define LM35_5_P_ADC_VALUE	LM35_5_P_MEM_TABLE[LM35_5_P_RANK]
 
-#define ACC_POSITION_RANK			RANK_8
-#define ACC_POSITION_MEM_TABLE		ADC1Measures
-#define ACC_POSITION_ADC_VALUE		ACC_POSITION_MEM_TABLE[ACC_POSTITION_RANK]
-
 #define FUEL_LEVEL_RANK				RANK_7
 #define FUEL_LEVEL_MEM_TABLE		ADC1Measures
 #define FUEL_LEVEL_ADC_VALUE		FUEL_LEVEL_MEM_TABLE[FUEL_LEVEL_RANK]
@@ -248,6 +245,8 @@ typedef uint8_t boolean;
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Symbols */
+#define ON										((boolean)(1))
+#define OFF										((boolean)(0))
 #define TRUE									((boolean)(1))
 #define True									((boolean)(1))
 #define FALSE									((boolean)(0))

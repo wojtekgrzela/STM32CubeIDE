@@ -289,6 +289,8 @@ typedef struct
 	uint32_t RPM;
 	uint32_t SPEED;
 
+	uint16_t ADC_AcceleratorValue;
+
 	boolean AlternatorCharging :1;
 }CarStateinfo_type;
 
@@ -674,6 +676,31 @@ typedef struct
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef enum {
+	NOTHING  = 	0,
+	DECREASE = 	-1,
+	INCREASE = 	1
+}Enum_EngineDirection;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef enum {
+	CONSTANT_SPEED = 0,
+	CONSTANT_RPM   = 1
+}Enum_CruiseMode;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef struct {
+	boolean state;
+	Enum_CruiseMode mode;
+	uint32_t wantedSpeed;
+	uint32_t wantedRPM;
+	int32_t error;
+}CruiseControlParameters_struct;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 // @formatter:on
 /* USER CODE END ET */
 
@@ -697,6 +724,14 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define EN_ELECTRO_CLUTCH_Pin GPIO_PIN_2
 #define EN_ELECTRO_CLUTCH_GPIO_Port GPIOE
+#define IN2_CNTRL_ENGINE_Pin GPIO_PIN_3
+#define IN2_CNTRL_ENGINE_GPIO_Port GPIOE
+#define IN1_CNTRL_ENGINE_Pin GPIO_PIN_4
+#define IN1_CNTRL_ENGINE_GPIO_Port GPIOE
+#define PWM_CRUISE_CONTROL_Pin GPIO_PIN_5
+#define PWM_CRUISE_CONTROL_GPIO_Port GPIOE
+#define PWM_LCD_BACKLIGHT_Pin GPIO_PIN_6
+#define PWM_LCD_BACKLIGHT_GPIO_Port GPIOE
 #define DCDC_5V_ENABLE_Pin GPIO_PIN_10
 #define DCDC_5V_ENABLE_GPIO_Port GPIOI
 #define BUZZER_Pin GPIO_PIN_11
@@ -763,6 +798,12 @@ void Error_Handler(void);
 #define FUEL_LEVEL_GPIO_Port GPIOB
 #define ACC_POSITION_Pin GPIO_PIN_1
 #define ACC_POSITION_GPIO_Port GPIOB
+#define BRAKE_PEDAL_Pin GPIO_PIN_2
+#define BRAKE_PEDAL_GPIO_Port GPIOB
+#define BRAKE_PEDAL_EXTI_IRQn EXTI2_IRQn
+#define CLUTCH_PEDAL_Pin GPIO_PIN_11
+#define CLUTCH_PEDAL_GPIO_Port GPIOF
+#define CLUTCH_PEDAL_EXTI_IRQn EXTI15_10_IRQn
 #define OIL_PRESSURE_BINARY_Pin GPIO_PIN_12
 #define OIL_PRESSURE_BINARY_GPIO_Port GPIOF
 #define EEPROM_WP2_Pin GPIO_PIN_10
@@ -822,6 +863,12 @@ void Error_Handler(void);
 #define POWER_ON_CRUISE_CONTROL_Pin GPIO_PIN_7
 #define POWER_ON_CRUISE_CONTROL_GPIO_Port GPIOI
 /* USER CODE BEGIN Private defines */
+
+/* ADC readouts */
+extern volatile uint16_t ADC1Measures[NO_OF_ADC1_MEASURES];
+#define ACC_POSITION_RANK			RANK_8
+#define ACC_POSITION_MEM_TABLE		ADC1Measures
+#define ACC_POSITION_ADC_VALUE		ACC_POSITION_MEM_TABLE[ACC_POSITION_RANK]
 
 /* USER CODE END Private defines */
 

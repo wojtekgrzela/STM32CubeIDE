@@ -56,15 +56,19 @@
 
 /* USER CODE BEGIN PV */
 
-extern ENCButton_struct ENC_button_menu;
+extern volatile ENCButton_struct ENC_button_menu;
+extern volatile ENCButton_struct ENC_button_cruise;
 extern volatile uint16_t ADC1Measures[NO_OF_ADC1_MEASURES];
 extern volatile uint16_t ADC3Measures[NO_OF_ADC3_MEASURES];
 extern GPS_data_struct GPS;
 extern uint64_t Tim7_Counter_100us;
 extern osTimerId My_Timer_ENC_Menu_ButtonHandle;
+extern osTimerId My_Timer_ENC_Cruise_ButtonHandle;
 
 extern volatile uint32_t RPM_counter;
 extern volatile uint32_t SPEED_counter;
+
+extern volatile CruiseControlParameters_struct cruiseControlParam;
 
 /* USER CODE END PV */
 
@@ -75,6 +79,8 @@ void MX_FREERTOS_Init(void);
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
+
+extern void Complete_Shutdown(void);
 
 /* USER CODE END PFP */
 
@@ -123,6 +129,7 @@ int main(void)
   MX_TIM1_Init();
   MX_TIM7_Init();
   MX_TIM3_Init();
+  MX_TIM9_Init();
   /* USER CODE BEGIN 2 */
 
 	error = (Error_Code)HAL_TIM_Encoder_Start(&htim1, TIM_CHANNEL_ALL);
@@ -145,7 +152,8 @@ int main(void)
 	(void)HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ADC1Measures, NO_OF_ADC1_MEASURES);
 	(void)HAL_ADC_Start_DMA(&hadc3, (uint32_t*)ADC3Measures, NO_OF_ADC3_MEASURES);
 
-//	error = (Error_Code)HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
+	if(NO_ERROR == error) {error = (Error_Code)HAL_TIM_PWM_Start(&htim9, TIM_CHANNEL_1);}
+	if(NO_ERROR == error) {error = (Error_Code)HAL_TIM_PWM_Start(&htim9, TIM_CHANNEL_2);}
 
 	if (NO_ERROR != error)
 	{
@@ -307,6 +315,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	static uint32_t lastTimerCounter_ENC_MENU = 0;
 	static uint32_t lastTimerCounter_ENC_CRUISE = 0;
 	Error_Code error = NO_ERROR;
+
+	/* Checking if brake or clutch pedals were pushed in - turning off the cruise control */
+	if((BRAKE_PEDAL_Pin == GPIO_Pin) || (CLUTCH_PEDAL_Pin == GPIO_Pin))
+	{
+		Complete_Shutdown();
+	}
 
 	/* Checking if interrupt is from ENC_BUTTON pin for menu*/
 	if (ENC_BUTTON_MENU_Pin == GPIO_Pin)
