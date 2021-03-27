@@ -60,6 +60,7 @@ typedef enum
 	Last3Err_Layer			=	0x06,
 	CarSettings_Layer		=	0x07,
 	JarvisSettings_Layer	=	0x08,
+	CruiseControl_Layer		=	0x09,
 
 		/* CarSettings_Layer */
 		ClearDiagnosticSnapshots	=	0x71,

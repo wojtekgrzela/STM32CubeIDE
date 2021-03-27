@@ -40,9 +40,10 @@
 /* RPM sefines */
 #define MAX_ALLOWED_RPM				((uint32_t)(3500))
 #define MIN_ALLOWED_RPM				((uint32_t)(1200))
-#define SHUTDOWN_HIGH_RPM			((uint32_t)(3700))
-#define ENCODER_RPM_SETTING_STEP	((uint32_t)(10))
-#define IMPULSES_PER_ONE_ENGINE_REVOLUTION	((uint32_t)(12))
+#define MIN_ALLOWED_SPEED			((uint32_t)(40))
+#define MAX_ALLOWED_SPEED			((uint32_t)(130))
+#define ENCODER_RPM_SETTING_STEP	((int32_t)(20))
+#define ENCODER_SPEED_SETTING_STEP	((int32_t)(1))
 
 
 
@@ -57,6 +58,7 @@
 extern CarStateinfo_type CarStateInfo;
 extern volatile ENCButton_struct ENC_button_cruise;
 extern volatile uint16_t ADC1Measures[NO_OF_ADC1_MEASURES];
+extern volatile int8_t EncoderCounterCruiseDiff;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -77,6 +79,15 @@ static PIDparameters_t PID_param_RPM =
 			.I = I_REGULATOR_GAIN_RPM,
 			.D = D_REGULATOR_GAIN_RPM,
 			.dt = MY_TASK_CRUISE_CONTROL_TIME_PERIOD };
+
+LCD_message Wanted_RPMForLCD =
+	{ 	.messageHandler = NULL,
+		.size = 0,
+		.messageReadyFLAG = 0 };
+LCD_message Wanted_SPEEDForLCD =
+	{ 	.messageHandler = NULL,
+		.size = 0,
+		.messageReadyFLAG = 0 };
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -84,6 +95,9 @@ static PIDparameters_t PID_param_RPM =
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Functions prototypes */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+static void Encoder_CruiseControl_Counter(void);
+static void valuesToStrings(void);
+
 extern void Complete_Shutdown(void);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -99,12 +113,25 @@ void StartCruiseCntrlTask(void const *argument)
 
 	PIDparameters_t *PID_param_ptr = NULL;
 
+	static uint8_t Wanted_RPMMessage[5]	= "";
+	static uint8_t Wanted_SPEEDMessage[4] = "";
+	Wanted_RPMForLCD.messageHandler = Wanted_RPMMessage;
+	Wanted_SPEEDForLCD.messageHandler = Wanted_SPEEDMessage;
+
+	cruiseControlParam.wantedRPM = MIN_ALLOWED_RPM;
+	cruiseControlParam.wantedSpeed = MIN_ALLOWED_SPEED;
+
 	xLastWakeTime = xTaskGetTickCount();
 
 	/* Infinite loop */
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 	for (;;)
 	{
+		/* Update the setting of SPEED or RPM with encoder difference value */
+		Encoder_CruiseControl_Counter();
+		/* Translate values to strings for displaying */
+		valuesToStrings();
+
 		if (ON == cruiseControlParam.state)
 		{
 			/* Check the mode of the cruise control */
@@ -150,7 +177,6 @@ void StartCruiseCntrlTask(void const *argument)
 			Complete_Shutdown();
 		}
 
-
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -158,5 +184,68 @@ void StartCruiseCntrlTask(void const *argument)
 
 
 
+/* This function checks if there was an action with encoder for cruise control and updates the wanted RPM or SPEED accordingly */
+static void Encoder_CruiseControl_Counter(void)
+{
+	int32_t tempWantedRPM = cruiseControlParam.wantedRPM;
+	int32_t tempWantedSpeed = cruiseControlParam.wantedSpeed;
+
+	if(0 != EncoderCounterCruiseDiff)
+	{
+		if(CONSTANT_RPM == cruiseControlParam.mode)
+		{
+			/* Calculating wanted RPM to a temporary variable */
+			tempWantedRPM += EncoderCounterCruiseDiff * ENCODER_RPM_SETTING_STEP; /* Changing by "20" RPM */
+
+			/* Checking if the variable is within some limits (MIN and MAX values) */
+			if(MIN_ALLOWED_RPM > tempWantedRPM)
+			{
+				tempWantedRPM = MIN_ALLOWED_RPM;
+			}
+			else if(MAX_ALLOWED_RPM < tempWantedRPM)
+			{
+				tempWantedRPM = MAX_ALLOWED_RPM;
+			}
+
+			/* Writing the temporary value to the global one after check */
+			cruiseControlParam.wantedRPM = (uint32_t)tempWantedRPM;
+		}
+		else
+		{
+			/* Calculating wanted speed to a temporary variable */
+			tempWantedSpeed += EncoderCounterCruiseDiff * ENCODER_SPEED_SETTING_STEP; /* Changing by "1" km/h */
+
+			/* Checking if the variable is within some limits (MIN and MAX values) */
+			if(MIN_ALLOWED_SPEED > tempWantedSpeed)
+			{
+				tempWantedSpeed = MIN_ALLOWED_SPEED;
+			}
+			else if(MAX_ALLOWED_SPEED < tempWantedSpeed)
+			{
+				tempWantedSpeed = MAX_ALLOWED_SPEED;
+			}
+
+			/* Writing the temporary value to the global one after check */
+			cruiseControlParam.wantedSpeed = (uint32_t)tempWantedSpeed;
+		}
+		/* Clear the difference value after usage */
+		EncoderCounterCruiseDiff = 0;
+	}
+}
 
 
+
+/* This function is to have the wanted parameters (speed and RPM) translated to strings for displaying */
+static void valuesToStrings(void)
+{
+	/* Engine Wanted RPM */
+	Wanted_RPMForLCD.messageReadyFLAG = FALSE;
+	snprintf((char*)Wanted_RPMForLCD.messageHandler, 5, "%01" PRIu32, cruiseControlParam.wantedRPM);
+	Wanted_RPMForLCD.size = strlen((char*)Wanted_RPMForLCD.messageHandler);
+	Wanted_RPMForLCD.messageReadyFLAG = TRUE;
+	/* Vehicle Wanted Speed */
+	Wanted_SPEEDForLCD.messageReadyFLAG = FALSE;
+	snprintf((char*)Wanted_SPEEDForLCD.messageHandler, 4, "%01" PRIu32, cruiseControlParam.wantedSpeed);
+	Wanted_SPEEDForLCD.size = strlen((char*)Wanted_SPEEDForLCD.messageHandler);
+	Wanted_SPEEDForLCD.messageReadyFLAG = TRUE;
+}

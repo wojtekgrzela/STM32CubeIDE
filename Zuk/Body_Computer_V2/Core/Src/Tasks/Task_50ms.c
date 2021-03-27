@@ -16,6 +16,7 @@
 #include "cmsis_os.h"
 #include "defines.h"
 #include "../../VariousFunctions/Functions.h"
+#include "../../lcd_hd44780_i2c/lcd_hd44780_i2c.h"
 #include "../../PID/PID.h"
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -43,6 +44,8 @@
 
 #define MAX_CONTROL_SIGNAL			((uint16_t)(100))
 #define MIN_CONTROL_SIGNAL			((uint16_t)(0))
+
+#define SHUTDOWN_HIGH_RPM			((uint32_t)(3800))
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -59,6 +62,10 @@ extern volatile uint16_t ADCDesiredAccelerationValue;
 extern volatile CruiseControlParameters_struct cruiseControlParam;
 extern CarStateinfo_type CarStateInfo;
 extern volatile ENCButton_struct ENC_button_cruise;
+
+extern boolean EXT_boardChangeRequest;
+extern LCD_board *EXT_boardPtr;
+extern LCD_board LCD_CruiseControl;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -78,7 +85,7 @@ static inline void Set_Electromagnes_On(void);
 static inline void Set_Electromagnes_Off(void);
 void Complete_Shutdown(void);
 static void Set_Direction(Enum_EngineDirection direction);
-void Encoder_CruiseControl_Button_Function(void);
+static void Encoder_CruiseControl_Button_Function(void);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -134,16 +141,30 @@ void Start50msTask(void const *argument)
 		/* Checks the state of the button of the cruise control Encoder and reacts for it */
 		Encoder_CruiseControl_Button_Function();
 
+		/* Check if the RPM is not too high when the cruise control is ON - if yes then shut it down */
+		if((ON == cruiseControlParam.state) && (SHUTDOWN_HIGH_RPM < CarStateInfo.RPM))
+		{
+			/* Shutdown the cruise control */
+			Complete_Shutdown();
+		}
+
 		if(ON == cruiseControlParam.state)
 		{
-			Set_Electromagnes_On();	/* Turn on cruise control */
-
 			if(OFF == previousState)
 			{
+				/* Turn on cruise control */
+				Set_Electromagnes_On();
+
 				/* If in previous state cruise control was off - turn on the engine for a little bit with full power
 				 * to stretch the line just a bit
 				 */
 				PWM_PULSE_CRUISE_CONTROL = MAX_PULSE;
+
+				/* Set the pointer to the Cruise Control Board */
+				EXT_boardPtr = &LCD_CruiseControl;
+
+				/* Set the change request flag to TRUE */
+				EXT_boardChangeRequest = TRUE;
 			}
 			else
 			{
@@ -243,11 +264,6 @@ static void Set_Direction(Enum_EngineDirection direction)
 			break;
 		}
 		case NOTHING:
-		{
-			HAL_GPIO_WritePin(INCREASE_ENG_TERMINAL_PORT, INCREASE_ENG_TERMINAL_PIN, RESET);
-			HAL_GPIO_WritePin(DECREASE_ENG_TERMINAL_PORT, DECREASE_ENG_TERMINAL_PIN, RESET);
-			break;
-		}
 		default:
 		{
 			HAL_GPIO_WritePin(INCREASE_ENG_TERMINAL_PORT, INCREASE_ENG_TERMINAL_PIN, RESET);
@@ -259,21 +275,38 @@ static void Set_Direction(Enum_EngineDirection direction)
 
 
 
-void Encoder_CruiseControl_Button_Function(void)
+static void Encoder_CruiseControl_Button_Function(void)
 {
-	if(TRUE == ENC_button_cruise.shortPressDetected)
+	if(TRUE == ENC_button_cruise.longPressDetected)	/* In case a long press is detected - change mode of the cruise control */
 	{
-		if(ON == cruiseControlParam.state)
+		if(CONSTANT_SPEED == cruiseControlParam.mode)
 		{
-			cruiseControlParam.state = OFF;
-			Set_Electromagnes_Off();
+			cruiseControlParam.mode = CONSTANT_RPM; /* If it was a constant speed - set constant RPM */
 		}
 		else
 		{
+			cruiseControlParam.mode = CONSTANT_SPEED; /* If it was a constant RPM - set constant speed */
+		}
+
+		/* Clear short and long press detections */
+		ENC_button_cruise.shortPressDetected = FALSE;
+		ENC_button_cruise.longPressDetected = FALSE;
+	}
+	else if(TRUE == ENC_button_cruise.shortPressDetected)
+	{
+		if(ON == cruiseControlParam.state)
+		{
+			/* Shutdown the cruise control completely */
+			Complete_Shutdown();
+		}
+		else
+		{
+			/* Set the state to ON and switch ON the electromagnetic clutch */
 			cruiseControlParam.state = ON;
 			Set_Electromagnes_On();
 		}
 
+		/* Clear short and long press detections */
 		ENC_button_cruise.shortPressDetected = FALSE;
 		ENC_button_cruise.longPressDetected = FALSE;
 	}

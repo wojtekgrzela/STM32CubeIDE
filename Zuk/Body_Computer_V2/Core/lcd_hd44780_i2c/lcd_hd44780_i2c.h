@@ -37,6 +37,8 @@ extern "C" {
 
 
 #include "stm32f4xx_hal.h"
+#include "main.h"
+#include "../EEPROM/EEPROM.h"
 
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -56,6 +58,43 @@ typedef struct
 	uint8_t size;					/* Gets a size of the string under buffer WITHOUT '\0' terminating character! */
 	uint8_t messageReadyFLAG;		/* 0 - data not ready to be read or buffer in use; 1 - data ready and can be read */
 }LCD_message;
+
+typedef struct LCD_board
+{
+	/* String buffers */
+	const char* const name;
+	uint8_t nameSize;
+	const char* const firstRow;
+	uint8_t firstRowSize;
+	const char* const secondRow;
+	uint8_t secondRowSize;
+
+	/* Pointers to other boards and lists */
+	struct LCD_board* previousLayer_ptr;
+	struct LCD_board* nextLayer_ptr;
+	struct LCD_board* upperLayer_ptr;
+	struct LCD_board* lowerLayer_ptr;
+
+	/* Info about the board */
+	Enum_Layer const thisLayer;
+	void (*RunningFunction)(struct LCD_board* currentBoard);
+	void (*EnterFunction)(void);
+
+	/* Controlling value */
+	void* value_ptr;
+	uint32_t settingsMask;
+	Enum_valueType valueType;
+	Enum_valueStepSize valueStepSize;
+	char* unit;
+	uint8_t unitSize;
+	const void* const minValue;
+	const void* const maxValue;
+
+	/* EEPROM parameters */
+	EEPROM_parameters_struct* EEPROMParameters;
+	uint16_t EEPROM_memAddress;
+
+} LCD_board;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 

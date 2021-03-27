@@ -425,7 +425,7 @@ void StartMeasureTask(void const *argument)
 		voltageIn_Average -= voltageInTable[0];
 
 		/* In this for loop we shift the values in the table */
-		for (uint16_t i = (NO_OF_ENGINE_TEMPERATURE_MEASUREMENTS_ADDED - 1u); i >= 1u /*1u - because we subtract 1 below from i*/; --i)
+		for (uint16_t i = 1u; i <= (NO_OF_ENGINE_TEMPERATURE_MEASUREMENTS_ADDED - 1u) /*1u - because we subtract 1 below from i*/; ++i)
 		{
 			carWaterTempTable[i - 1u] = carWaterTempTable[i];
 			carOilTempTable[i - 1u] = carOilTempTable[i];
@@ -613,12 +613,12 @@ void StartMeasureTask(void const *argument)
 		{
 			/* Engine RPM */
 			RPMForLCD.messageReadyFLAG = FALSE;
-			snprintf((char*)RPMForLCD.messageHandler, 7, "%01" PRIu32, CarStateInfo.RPM);
+			snprintf((char*)RPMForLCD.messageHandler, 5, "%01" PRIu32, CarStateInfo.RPM);
 			RPMForLCD.size = strlen((char*)RPMForLCD.messageHandler);
 			RPMForLCD.messageReadyFLAG = TRUE;
 			/* Vehicle Speed */
 			SPEEDForLCD.messageReadyFLAG = FALSE;
-			snprintf((char*)SPEEDForLCD.messageHandler, 7, "%01" PRIu32, CarStateInfo.SPEED);
+			snprintf((char*)SPEEDForLCD.messageHandler, 4, "%01" PRIu32, CarStateInfo.SPEED);
 			SPEEDForLCD.size = strlen((char*)SPEEDForLCD.messageHandler);
 			SPEEDForLCD.messageReadyFLAG = TRUE;
 		}
