@@ -37,42 +37,10 @@
 #define STRING_SEC					"sec"
 #define STRING_HOURS				"hours"
 
-typedef struct LCD_board
-{
-	/* String buffers */
-	const char* const name;
-	uint8_t nameSize;
-	const char* const firstRow;
-	uint8_t firstRowSize;
-	const char* const secondRow;
-	uint8_t secondRowSize;
+#define PWM_LCD_BACKLIGHT					(TIM9)
+#define PWM_RESOLUTION_LCD_BACKLIGHT		(PWM_LCD_BACKLIGHT->ARR)
+#define PWM_PULSE_LCD_BACKLIGHT				(PWM_LCD_BACKLIGHT->CCR2)
 
-	/* Pointers to other boards and lists */
-	struct LCD_board* previousLayer_ptr;
-	struct LCD_board* nextLayer_ptr;
-	struct LCD_board* upperLayer_ptr;
-	struct LCD_board* lowerLayer_ptr;
-
-	/* Info about the board */
-	Enum_Layer const thisLayer;
-	void (*RunningFunction)(struct LCD_board* currentBoard);
-	void (*EnterFunction)(void);
-
-	/* Controlling value */
-	void* value_ptr;
-	uint32_t settingsMask;
-	Enum_valueType valueType;
-	Enum_valueStepSize valueStepSize;
-	char* unit;
-	uint8_t unitSize;
-	const void* const minValue;
-	const void* const maxValue;
-
-	/* EEPROM parameters */
-	EEPROM_parameters_struct* EEPROMParameters;
-	uint16_t EEPROM_memAddress;
-
-} LCD_board;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #define GET_STR_LENGTH(X) strlen(X)
 #define PREPARE_LCD_board(X) \
@@ -93,6 +61,7 @@ typedef struct LCD_board
 extern I2C_HandleTypeDef hi2c2;
 extern osMessageQId Queue_EEPROM_readHandle;
 extern osMessageQId Queue_EEPROM_writeHandle;
+extern osTimerId My_Timer_LCD_BacklightHandle;
 
 extern EEPROM_parameters_struct EEPROM_car;
 extern EEPROM_parameters_struct EEPROM_board;
@@ -108,7 +77,7 @@ extern uint8_t tuBylemFLAG;		//TODO: to be deleted finally	(after MicroSd is wor
 extern uint8_t TEMPBUFF[100];	//TODO: to be deleted finally (after MicroSd is working)
 
 extern volatile ENCButton_struct ENC_button_menu;
-extern volatile int8_t EncoderCounterDiff;
+extern volatile int8_t EncoderCounterMenuDiff;
 
 extern LCD_message mainBatteryVoltageValueForLCD;
 extern LCD_message auxiliaryBatteryVoltageValueForLCD;
@@ -116,12 +85,16 @@ extern LCD_message waterTemperatureValueForLCD;
 extern LCD_message totalMileageForLCD;
 extern LCD_message tripMileageForLCD;
 extern LCD_message RPMForLCD;
+extern LCD_message SPEEDForLCD;
 
 extern LCD_message voltage3V3ForLCD;
 extern LCD_message voltage5VForLCD;
 extern LCD_message voltageInForLCD;
 extern LCD_message temperature3V3DCDCForLCD;
 extern LCD_message temperature5VDCDCForLCD;
+
+extern LCD_message Wanted_RPMForLCD;
+extern LCD_message Wanted_SPEEDForLCD;
 
 extern waterTempSettings_struct CAR_waterTemp;
 extern oilTempSettings_struct CAR_oilTemp;
@@ -136,6 +109,8 @@ extern buzzerMainSettings_struct BUZZER_settings;
 extern LCDMainSettings_struct LCD_MainSettings;
 
 extern GlobalValuesLimits_struct GlobalValuesLimits;
+extern CarStateinfo_type CarStateInfo;
+extern volatile CruiseControlParameters_struct cruiseControlParam;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -159,10 +134,13 @@ static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard);
 static void RUNNING_AreYouSure(struct LCD_board* currentBoard);
 static void RUNNING_ClearSnaps(struct LCD_board* currentBoard);
 static void RUNNING_ClearTripMileage(struct LCD_board* currentBoard);
+static void RUNNING_CruiseControlLayer(struct LCD_board* currentBoard);
 
 static void ScrollForward(LCD_board* displayTable[NUMBER_OF_SCROLLED_LINES], int8_t diff);
 static void ScrollBack(LCD_board* displayTable[NUMBER_OF_SCROLLED_LINES], int8_t diff);
 static void EEPROMWaitForWriteCheck(EEPROM_data_struct* EEPROMData);
+
+static void ControlBacklight(void);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -183,7 +161,11 @@ static boolean displayAndControlValue_doneOnce = FALSE;
 static boolean last3snaps_doneOnce = FALSE;
 static boolean enterAction_save = FALSE;
 static boolean EEPROM_Success_Failure_Message = FALSE;
+static boolean stateOfLCDBacklight = OFF;
 
+boolean backlightOnRequest = TRUE;	/* It is NOT a static on purpose (used in encoder buttons actions, alarms etc.) */
+boolean EXT_boardChangeRequest = FALSE; /* It is NOT a static on purpose */
+LCD_board *EXT_boardPtr = NULL;	/* It is NOT a static on purpose */
 
 
 /* LCD boards with its parameters and pointers to others */
@@ -301,6 +283,18 @@ static LCD_board LCD_JarvisSettings = {.name="<Jarvis Settings>",
 						.thisLayer 			= JarvisSettings_Layer,
 						.RunningFunction 	= RUNNING_ScrollList,
 						.EnterFunction 		= ENTER_GoInto,
+						.value_ptr 			= NULL,
+						.valueType 			= _void_type_,
+						.valueStepSize 		= StepNotApplicable,
+						.unit 				= NULL,
+						.EEPROM_memAddress	= NO_ADDRESS };
+
+/* NOT static */ LCD_board LCD_CruiseControl = {.name="<Cruise Control>", /* This board must be accessible from other files (cruise control for example) */
+						.firstRow 			= NULL,
+						.secondRow 			= NULL,
+						.thisLayer 			= CruiseControl_Layer,
+						.RunningFunction 	= RUNNING_CruiseControlLayer,
+						.EnterFunction 		= NULL,
 						.value_ptr 			= NULL,
 						.valueType 			= _void_type_,
 						.valueStepSize 		= StepNotApplicable,
@@ -1526,12 +1520,27 @@ static LCD_board LCD_BacklightBrightnessLevel = {.name="Backlight Level",
 						.EnterFunction 		= ENTER_SaveToEEPROM,
 						.value_ptr 			= &(LCD_MainSettings.backlightLevel),
 						.valueType 			= _LCDSettings_type_,
-						.valueStepSize 		= StepByOne,
+						.valueStepSize 		= StepByFifty,
 						.unit 				= NULL,
 						.EEPROMParameters	= &EEPROM_board,
 						.EEPROM_memAddress	= BOARD_LCD_BACKLIGHT_LEVEL_ADDRESS,
 						.minValue			= &(GlobalValuesLimits.backlightLevel_min),
 						.maxValue			= &(GlobalValuesLimits.backlightLevel_max) };
+
+static LCD_board LCD_BacklightOffBrightnessLevel = {.name="Backlight Off Level",
+						.firstRow 			= "Backlight Off LCD",
+						.secondRow 			= "Brightness Level",
+						.thisLayer 			= BacklightOffBrightnessLevel,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(LCD_MainSettings.backlightOffLevel),
+						.valueType 			= _LCDSettings_type_,
+						.valueStepSize 		= StepByFifty,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_LCD_BACKLIGHT_OFF_LEVEL_ADDRESS,
+						.minValue			= &(GlobalValuesLimits.backlightOffLevel_min),
+						.maxValue			= &(GlobalValuesLimits.backlightOffLevel_max) };
 
 static LCD_board LCD_SecondsToTurnLCDBacklightOff = {.name="Seconds to LCD Off",
 						.firstRow 			= "Seconds to turn LCD",
@@ -1698,6 +1707,7 @@ void StartLCDTask(void const * argument)
 	PREPARE_LCD_board(LCD_Last3ErrorSnaps);
 	PREPARE_LCD_board(LCD_CarSettings);
 	PREPARE_LCD_board(LCD_JarvisSettings);
+	PREPARE_LCD_board(LCD_CruiseControl);
 
 	PREPARE_LCD_board(LCD_ClearDiagSnaps);
 	PREPARE_LCD_board(LCD_ClearTripMileage);
@@ -1796,6 +1806,7 @@ void StartLCDTask(void const * argument)
 	PREPARE_LCD_board(LCD_BuzzerWhenLongPressOnOff);
 
 	PREPARE_LCD_board(LCD_BacklightBrightnessLevel);
+	PREPARE_LCD_board(LCD_BacklightOffBrightnessLevel);
 	PREPARE_LCD_board(LCD_SecondsToTurnLCDBacklightOff);
 	PREPARE_LCD_board(LCD_AutoBacklightOffStartHour);
 	PREPARE_LCD_board(LCD_AutoBacklightOffEndHour);
@@ -1807,6 +1818,7 @@ void StartLCDTask(void const * argument)
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 	/* Prepare LCD boards to be used - making connections (lists) */
 	LCD_MainMenu.lowerLayer_ptr				= &LCD_Desktop;
+	LCD_MainMenu.upperLayer_ptr				= HomeScreenBoard;	/* It is already a pointer */
 	LCD_Desktop.upperLayer_ptr 				= &LCD_MainMenu;
 	LCD_Desktop.nextLayer_ptr 				= &LCD_GPS;
 	LCD_GPS.previousLayer_ptr				= &LCD_Desktop;
@@ -1831,6 +1843,9 @@ void StartLCDTask(void const * argument)
 	LCD_JarvisSettings.lowerLayer_ptr		= &LCD_ClearErrorSnap;
 	LCD_JarvisSettings.previousLayer_ptr	= &LCD_Last3ErrorSnaps;
 	LCD_JarvisSettings.upperLayer_ptr 		= &LCD_MainMenu;
+	LCD_JarvisSettings.nextLayer_ptr 		= &LCD_CruiseControl;
+	LCD_CruiseControl.previousLayer_ptr		= &LCD_JarvisSettings;
+	LCD_CruiseControl.upperLayer_ptr		= &LCD_MainMenu;
 
 	/* CarSettings_Layer */
 	LCD_ClearDiagSnaps.upperLayer_ptr 		= &LCD_CarSettings;
@@ -2099,8 +2114,11 @@ void StartLCDTask(void const * argument)
 
 	/* JarvisSettings_Layer -> LCDSettings_Layer */
 	LCD_BacklightBrightnessLevel.upperLayer_ptr					= &LCD_LCDSettings;
-	LCD_BacklightBrightnessLevel.nextLayer_ptr					= &LCD_SecondsToTurnLCDBacklightOff;
-	LCD_SecondsToTurnLCDBacklightOff.previousLayer_ptr			= &LCD_BacklightBrightnessLevel;
+	LCD_BacklightBrightnessLevel.nextLayer_ptr					= &LCD_BacklightOffBrightnessLevel;
+	LCD_BacklightOffBrightnessLevel.previousLayer_ptr			= &LCD_BacklightBrightnessLevel;
+	LCD_BacklightOffBrightnessLevel.upperLayer_ptr				= &LCD_LCDSettings;
+	LCD_BacklightOffBrightnessLevel.nextLayer_ptr				= &LCD_SecondsToTurnLCDBacklightOff;
+	LCD_SecondsToTurnLCDBacklightOff.previousLayer_ptr			= &LCD_BacklightOffBrightnessLevel;
 	LCD_SecondsToTurnLCDBacklightOff.upperLayer_ptr				= &LCD_LCDSettings;
 	LCD_SecondsToTurnLCDBacklightOff.nextLayer_ptr				= &LCD_AutoBacklightOffStartHour;
 	LCD_AutoBacklightOffStartHour.previousLayer_ptr				= &LCD_SecondsToTurnLCDBacklightOff;
@@ -2125,6 +2143,9 @@ void StartLCDTask(void const * argument)
 
 	/* Setting " " in the whole buffer */
 	memset(LCD_buffer, SPACE_IN_ASCII, (LCD.noOfRowsLCD * LCD.noOfColumnsLCD));
+
+	/* Setting LCD Back-light to a set level */
+	PWM_PULSE_LCD_BACKLIGHT = LCD_MainSettings.backlightLevel;
 
 	/** LCD Init (setting number of rows, columns, address, I2C handler **/
 	if(TRUE != lcdInit(&hi2c2, LCD.addressLCD, LCD.noOfRowsLCD, LCD.noOfColumnsLCD))
@@ -2182,12 +2203,22 @@ void StartLCDTask(void const * argument)
 		/** Cleaning the buffer by writing only spaces into it **/
 		memset(LCD_buffer, SPACE_IN_ASCII, (LCD.noOfRowsLCD * LCD.noOfColumnsLCD));
 
+		/* Control back-light (check PWM state and timers) */
+		ControlBacklight();
+
 		/* Wait with proceeding if there was a "DONE" or "ERROR" message displayed.
 		 * Flag EEPROM_Success_Failure_Message is set in EEPROMWaitForWriteCheck(...). */
 		if(TRUE == EEPROM_Success_Failure_Message)
 		{
 			vTaskDelay((TickType_t)ERROR_DONE_DISPLAY_TIME);
 			EEPROM_Success_Failure_Message = FALSE;
+		}
+
+		/* Check if there is a request to change the board (alarm, cruise control etc.) */
+		if(TRUE == EXT_boardChangeRequest)
+		{
+			EXT_boardChangeRequest = FALSE;
+			CurrentBoard_global = EXT_boardPtr;
 		}
 
 		/* Calling a function to run on this LCD board (if one exists) */
@@ -2388,17 +2419,17 @@ static void RUNNING_ScrollList(struct LCD_board* currentBoard)
 		scrollList_doneOnce = TRUE;
 	}
 
-	if(0 < EncoderCounterDiff)
+	if(0 < EncoderCounterMenuDiff)
 	{
-		ScrollForward(displayBoards, EncoderCounterDiff);
-		EncoderCounterDiff = 0;
+		ScrollForward(displayBoards, EncoderCounterMenuDiff);
+		EncoderCounterMenuDiff = 0;
 	}
 	else
 	{
-		if(0 > EncoderCounterDiff)
+		if(0 > EncoderCounterMenuDiff)
 		{
-			ScrollBack(displayBoards, EncoderCounterDiff);
-			EncoderCounterDiff = 0;
+			ScrollBack(displayBoards, EncoderCounterMenuDiff);
+			EncoderCounterMenuDiff = 0;
 		}
 	}
 
@@ -2453,9 +2484,9 @@ static void RUNNING_DesktopLayer(struct LCD_board* currentBoard)
 
 	/*** Third Row ***/
 		/* Speed */
-	if(TRUE == GPS.forLCD.speed.messageReadyFLAG)
-		error = copy_str_to_buffer((char*)GPS.forLCD.speed.messageHandler, (char*)LCD_buffer[Row3], 0, GPS.forLCD.speed.size);
-	error = copy_str_to_buffer("km/h", (char*)LCD_buffer[Row3], (GPS.forLCD.speed.size+1), 4);
+	if(TRUE == SPEEDForLCD.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)SPEEDForLCD.messageHandler, (char*)LCD_buffer[Row3], 0, SPEEDForLCD.size);
+	error = copy_str_to_buffer("km/h", (char*)LCD_buffer[Row3], 4u, 4u);
 		/* Total Mileage */
 	if(TRUE == totalMileageForLCD.messageReadyFLAG)
 		error = copy_str_to_buffer((char*)totalMileageForLCD.messageHandler, (char*)LCD_buffer[Row3], 9, totalMileageForLCD.size);
@@ -2465,9 +2496,8 @@ static void RUNNING_DesktopLayer(struct LCD_board* currentBoard)
 
 	/*** Fourth Row ***/
 		/* Engine RPM */
-	//TODO
 	if(TRUE == RPMForLCD.messageReadyFLAG)
-		error = copy_str_to_buffer((char*)RPMForLCD.messageHandler, (char*)LCD_buffer[Row4], 8, RPMForLCD.size);
+		error = copy_str_to_buffer((char*)RPMForLCD.messageHandler, (char*)LCD_buffer[Row4], 0u, RPMForLCD.size);
 	error = copy_str_to_buffer("rpm", (char*)LCD_buffer[Row4], 5, 3);
 		/* Trip Mileage */
 	if(TRUE == tripMileageForLCD.messageReadyFLAG)
@@ -2713,6 +2743,7 @@ static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard)
 		case _carVoltage_type_:
 		case _boardVoltage_type_:
 		case _boardTemperature_type_:
+		case _LCDSettings_type_:
 		{
 			if(FALSE == displayAndControlValue_doneOnce)
 			{
@@ -2722,21 +2753,27 @@ static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard)
 
 			switch(currentBoard->valueStepSize)
 			{
+				case StepByFifty:
+				{
+					tempSetting += EncoderCounterMenuDiff*50;
+					tempSize = snprintf(tempSettingBuffer, 10u, "%01d ", (uint16_t)tempSetting);
+					break;
+				}
 				case StepByOne:
 				{
-					tempSetting += EncoderCounterDiff;
+					tempSetting += EncoderCounterMenuDiff;
 					tempSize = snprintf(tempSettingBuffer, 10u, "%01d ", (uint16_t)tempSetting);
 					break;
 				}
 				case StepByOneTen:
 				{
-					tempSetting += (float)EncoderCounterDiff/10;
+					tempSetting += (float)EncoderCounterMenuDiff/10;
 					tempSize = snprintf(tempSettingBuffer, 10u, "%01d.%01d ", (uint16_t)tempSetting, (uint16_t)(tempSetting*10)%10);
 					break;
 				}
 				case StepByOneHundred:
 				{
-					tempSetting += (float)EncoderCounterDiff/100;
+					tempSetting += (float)EncoderCounterMenuDiff/100;
 					tempSize = snprintf(tempSettingBuffer, 10u, "%01d.%02d ", (uint16_t)tempSetting, (uint16_t)(tempSetting*100)%100);
 					break;
 				}
@@ -2776,7 +2813,7 @@ static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard)
 				displayAndControlValue_doneOnce = TRUE;
 			}
 
-			if(0 != EncoderCounterDiff)
+			if(0 != EncoderCounterMenuDiff)
 			{
 				tempState ^= currentBoard->settingsMask;	//Toggling the bit with encoder
 			}
@@ -2800,7 +2837,7 @@ static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard)
 				displayAndControlValue_doneOnce = TRUE;
 			}
 
-			tempTime += EncoderCounterDiff;
+			tempTime += EncoderCounterMenuDiff;
 			tempSize = snprintf(tempSettingBuffer, 10u, "%01d ", tempTime);
 
 			if(*((timeHours_type*)(currentBoard->minValue)) > tempTime)
@@ -2832,7 +2869,7 @@ static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard)
 				displayAndControlValue_doneOnce = TRUE;
 			}
 
-			tempLayer += EncoderCounterDiff;
+			tempLayer += EncoderCounterMenuDiff;
 
 			if(*((Enum_Layer*)(currentBoard->minValue)) > tempLayer)
 			{
@@ -2862,7 +2899,7 @@ static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard)
 		}
 	}//switch(currentBoard->valueType)
 
-	EncoderCounterDiff = 0;
+	EncoderCounterMenuDiff = 0;
 
 	if(NO_ERROR != error) my_error_handler(error);
 
@@ -2966,6 +3003,70 @@ static void RUNNING_ClearTripMileage(struct LCD_board* currentBoard)
 
 
 
+static void RUNNING_CruiseControlLayer(struct LCD_board* currentBoard)
+{
+	Error_Code error = NO_ERROR;
+
+	/*** First Row ***/
+		/* Cruise Control Mode and State: SPEED / RPM, ON / OFF */
+	error = copy_str_to_buffer("Mode", (char*)LCD_buffer[Row1], 0u, 4u);
+	error = copy_str_to_buffer(((CONSTANT_SPEED == cruiseControlParam.mode) ? "SPEED" : "RPM"), (char*)LCD_buffer[Row1], 5u, ((CONSTANT_SPEED == cruiseControlParam.mode) ? 5u : 3u));
+	error = copy_str_to_buffer(((TRUE == cruiseControlParam.state) ? "ON" : "OFF"), (char*)LCD_buffer[Row1], 11u, ((TRUE == cruiseControlParam.state) ? 2u : 3u));
+		/* clock */
+	if((TRUE == GPS.forLCD.hours.messageReadyFLAG) && (TRUE == GPS.forLCD.minutes.messageReadyFLAG))
+	{
+		error = copy_str_to_buffer((char*)GPS.forLCD.hours.messageHandler, (char*)LCD_buffer[Row1], 15u, GPS.forLCD.hours.size);
+		error = copy_str_to_buffer(":", (char*)LCD_buffer[Row1], (15u+GPS.forLCD.hours.size), 1u);
+		error = copy_str_to_buffer((char*)GPS.forLCD.minutes.messageHandler, (char*)LCD_buffer[Row1], (15u+GPS.forLCD.hours.size+1u), GPS.forLCD.minutes.size);
+	}
+
+	if(NO_ERROR != error) my_error_handler(error);
+
+	/*** Second Row ***/
+		/* Actual and desired values" speed / RPM */
+	if(CONSTANT_SPEED == cruiseControlParam.mode)
+	{
+		error = copy_str_to_buffer("km/h:", (char*)LCD_buffer[Row2], 0u, 5u);
+		error = copy_str_to_buffer("-", (char*)LCD_buffer[Row2], 10u, 1u);
+
+		if(TRUE == SPEEDForLCD.messageReadyFLAG)
+			error = copy_str_to_buffer((char*)SPEEDForLCD.messageHandler, (char*)LCD_buffer[Row2], (10u-SPEEDForLCD.size), SPEEDForLCD.size);
+		if(TRUE == Wanted_SPEEDForLCD.messageReadyFLAG)
+			error = copy_str_to_buffer((char*)Wanted_SPEEDForLCD.messageHandler, (char*)LCD_buffer[Row2], 11u, Wanted_SPEEDForLCD.size);
+	}
+	else
+	{
+		error = copy_str_to_buffer("RPM:", (char*)LCD_buffer[Row2], 0u, 4u);
+		error = copy_str_to_buffer("-", (char*)LCD_buffer[Row2], 10u, 1u);
+
+		if(TRUE == RPMForLCD.messageReadyFLAG)
+			error = copy_str_to_buffer((char*)RPMForLCD.messageHandler, (char*)LCD_buffer[Row2], (10u-RPMForLCD.size), RPMForLCD.size);
+		if(TRUE == Wanted_RPMForLCD.messageReadyFLAG)
+			error = copy_str_to_buffer((char*)Wanted_RPMForLCD.messageHandler, (char*)LCD_buffer[Row2], 11u, Wanted_RPMForLCD.size);
+	}
+
+	if(NO_ERROR != error) my_error_handler(error);
+
+	/*** Third Row ***/
+		/* Water temperature */
+	error = copy_str_to_buffer("H2O:", (char*)LCD_buffer[Row3], 0u, 4u);
+	if(TRUE == waterTemperatureValueForLCD.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)waterTemperatureValueForLCD.messageHandler, (char*)LCD_buffer[Row3], 5u, waterTemperatureValueForLCD.size);
+	error = copy_str_to_buffer((char*)degreeSymbolCharacter, (char*)LCD_buffer[Row3], 5u+waterTemperatureValueForLCD.size, 1u);
+	error = copy_str_to_buffer("C", (char*)LCD_buffer[Row3], 5u+waterTemperatureValueForLCD.size+1u, 1u);
+
+	if(NO_ERROR != error) my_error_handler(error);
+
+	/*** Fourth Row ***/
+
+		/* Nothing yet */
+
+	if(NO_ERROR != error) my_error_handler(error);
+
+}
+
+
+
 static void ScrollForward(LCD_board* displayTable[NUMBER_OF_SCROLLED_LINES], int8_t diff)
 {
 	LCD_board* tempBoardPtr = NULL;
@@ -3055,4 +3156,80 @@ static void EEPROMWaitForWriteCheck(EEPROM_data_struct* EEPROMData)
 
 
 
+/* This function checks and controls the back-light of the LCD */
+static void ControlBacklight(void)
+{
+	boolean isTimerActive = (boolean)xTimerIsTimerActive(My_Timer_LCD_BacklightHandle); /* if timer is active returns 1 */;
+
+	if(ON == stateOfLCDBacklight)	/* If the backlight is ON */
+	{
+		/* If any of the auto-dimming functions are on */
+		if((0 != LCD_MainSettings.secondsToAutoTurnOffBacklight) || (TRUE == LCD_MainSettings.autoBacklightOffAtNightOn))
+		{
+			/* If there is a back-light on request */
+			if(TRUE == backlightOnRequest)
+			{
+				xTimerReset(My_Timer_LCD_BacklightHandle, 0u);
+				backlightOnRequest = FALSE;
+			}
+
+			/* If the time to turn the back-light off is different than 0 */
+			if(0 != LCD_MainSettings.secondsToAutoTurnOffBacklight)
+			{
+				/* Check the status of the LCD back-light timer */
+				if(FALSE == isTimerActive)
+				{
+					/* If the timer is not ON then turn it ON */
+					(void)osTimerStart(My_Timer_LCD_BacklightHandle, LCD_MainSettings.secondsToAutoTurnOffBacklight);
+				}
+			}
+			else /* If the time to turn the back-light off is 0 */
+			{
+				/* Check if turning off in certain hours is ON and if time is available */
+				if(TRUE == GPS.TimeReady)
+				{
+					/* If the time is between the set hours and the setting is ON */
+					if((GPS.hoursInNumber >= LCD_MainSettings.autoBacklightOffHourStart) && (GPS.hoursInNumber <= LCD_MainSettings.autoBacklightOffHourEnd))
+					{
+						/* Check the status of the LCD back-light timer */
+						if(FALSE == isTimerActive)
+						{
+							/* If the timer is not ON then turn it ON */
+							(void)osTimerStart(My_Timer_LCD_BacklightHandle, LCD_MainSettings.secondsToAutoTurnOffBacklight);
+						}
+					}
+				}
+			}
+		}//((0 != LCD_MainSettings.secondsToAutoTurnOffBacklight) || (TRUE == LCD_MainSettings.autoBacklightOffAtNightOn))
+		else /* if no turning off the back-light is ON */
+		{
+			/* Check the status of the LCD back-light timer */
+			if(FALSE == isTimerActive)
+			{
+				/* If the timer is ON then turn it OFF */
+				(void)osTimerStop(My_Timer_LCD_BacklightHandle);
+			}
+		}
+	}//(ON == stateOfLCDBacklight)
+	else	/* If the backlight is OFF */
+	{
+		if(TRUE == backlightOnRequest)
+		{
+			PWM_PULSE_LCD_BACKLIGHT = LCD_MainSettings.backlightLevel;
+			backlightOnRequest = FALSE;
+			stateOfLCDBacklight = ON;
+		}
+		else
+		{
+			stateOfLCDBacklight = OFF;
+		}
+	}
+}
+
+
+void Timer_LCD_Backlight(void const * argument)
+{
+	PWM_PULSE_LCD_BACKLIGHT = LCD_MainSettings.backlightOffLevel;
+	stateOfLCDBacklight = OFF;
+}
 

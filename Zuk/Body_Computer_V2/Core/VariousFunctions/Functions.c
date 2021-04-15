@@ -21,11 +21,11 @@
  * @param sourceLength: length of the string you want to copy
  * @retval Error_Code: gives a value of error if one occurs
  */
-Error_Code copy_str_to_buffer(const char *const source, char* destiny, const uint8_t startPosition, const uint8_t sourceLength)
+Error_Code copy_str_to_buffer(const char *const source, char* destiny, const uint16_t startPosition, const uint16_t sourceLength)
 {
 	Error_Code error = NO_ERROR;
 
-	for(uint8_t i=0; i<(sourceLength); ++i)
+	for(uint16_t i=0; i<(sourceLength); ++i)
 	{
 	  destiny[i + startPosition] = source[i];
 	}
@@ -48,11 +48,11 @@ Error_Code copy_str_to_buffer(const char *const source, char* destiny, const uin
  * @param dataLength: length of the data from buffer you want to copy
  * @retval Error_Code: gives a value of error if one occurs
  */
-Error_Code copy_buffer_to_str(const char *const source, char* destiny, const uint8_t startPosition, const uint8_t dataLength)
+Error_Code copy_buffer_to_str(const char *const source, char* destiny, const uint16_t startPosition, const uint16_t dataLength)
 {
 	Error_Code error = NO_ERROR;
 
-	for(uint8_t i=0; i<(dataLength); ++i)
+	for(uint16_t i=0; i<(dataLength); ++i)
 	{
 	  destiny[i] = source[i+startPosition];
 	}

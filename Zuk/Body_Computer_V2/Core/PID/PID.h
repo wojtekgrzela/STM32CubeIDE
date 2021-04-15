@@ -9,8 +9,20 @@
 #define INC_PID_H_
 
 
-void WritePIDParameters(float P, float I, float D, float dt);
-float RunPIDController(float error);
+
+typedef struct PIDparameters_t
+{
+	float P;	// Proportional gain
+	float I;	// Integrating gain
+	float D;	// Differentiating gain
+
+	float dt;	// sampling period in milliseconds
+}PIDparameters_t;
+
+
+
+float RunPIDController(float error, PIDparameters_t *PIDparam);
+
 
 
 #endif /* INC_PID_H_ */

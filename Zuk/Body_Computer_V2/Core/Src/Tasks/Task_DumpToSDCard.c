@@ -30,7 +30,8 @@
 #define FILE_NAME_LENGTH		((uint8_t)(15))	/* For example: "01.12.2020.csv" - 14 signs and \0 = 15 */
 #define FILE_EXTERNSION_STRING	(".csv")		/* This will be added to the date as a file name, for example: "01.12.2021" + ".csv" */
 
-#define MAX_LENGTH_CSV_HEADER_TABLE		(100u)
+#define MAX_LENGTH_CSV_HEADER_TABLE		(125u)
+#define MAX_LENGTH_CSV_DATA_TABLE		(512u)
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -50,10 +51,10 @@ extern GPS_data_struct GPS;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 //static FATFS SD_FATFS;
 static FIL fileObj;
-uint32_t dupa = 0;
 static boolean InitialIteration = TRUE;
-static uint8_t CSVHeadersTable[MAX_LENGTH_CSV_HEADER_TABLE] = "Tutaj,Jakis,Napis";
-
+static uint8_t CSVDataTable[MAX_LENGTH_CSV_DATA_TABLE] = "";
+static uint8_t CSVHeadersTable[MAX_LENGTH_CSV_HEADER_TABLE] =
+		"Time,Latitude,LatitudeIndicator,Longitude,LongitudeIndicator,Altitude,SpeedByGPS,SatelitesUsed,Speed,RPM,CoolantTemp,OilTemp";
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -77,6 +78,7 @@ void StartDumpToSDCardTask(void const *argument)
 	FRESULT result = FR_OK;
 
 	static uint8_t fileName[FILE_NAME_LENGTH] = {SPACE_IN_ASCII};
+	uint16_t dataBufferPosition = 0u;
 
 	/* Turn on power for MicroSD */
 	(void)turnOnPower_MicroSD();
@@ -159,10 +161,12 @@ void StartDumpToSDCardTask(void const *argument)
 							error = SDCARD__WRITING_FAILED;
 							my_error_handler(error);
 						}
-					}
-
-					/* If the files does not exist already, but the result is OK then write */
-					if(FR_OK == result)
+						else
+						{
+							/* If opened correctly then close it. */
+							result = f_close(&fileObj);
+						}
+					}else if(FR_OK == result)/* If the files does not exist already, but the result is OK then write */
 					{
 						/* If the file is newly created - add the data headers in the file. */
 						result = f_write(&fileObj, (char*)CSVHeadersTable, sizeof(CSVHeadersTable), (UINT*)&savedBytes);
@@ -205,6 +209,19 @@ void StartDumpToSDCardTask(void const *argument)
 				}
 				else
 				{
+					/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+					/* Here is the process of copying data to a buffer which will be written to the file */
+					dataBufferPosition = 0u;	/* Clearing the data position value */
+
+					if(TRUE == GPS.forLCD.clock.messageReadyFLAG)
+					{
+						copy_str_to_buffer((char*)GPS.forLCD.clock.messageHandler, (char*)CSVDataTable, 0u, GPS.forLCD.clock.size);
+						dataBufferPosition += GPS.forLCD.clock.size;
+					}
+					copy_str_to_buffer(",", (char*)CSVDataTable, dataBufferPosition, 1u);
+					dataBufferPosition += 1u;
+
+					/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 					/* Write GPS data, parameters data, etc. */
 					result = f_write(&fileObj, "\nTutaj,powinno,byc", 19, (UINT*)&savedBytes);
 					if (FR_OK != result)
@@ -223,8 +240,6 @@ void StartDumpToSDCardTask(void const *argument)
 				}
 			}
 		}
-
-		dupa++;
 
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}

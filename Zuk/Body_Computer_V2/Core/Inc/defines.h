@@ -9,6 +9,7 @@
 #define INC_DEFINES_H_
 
 
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 typedef uint8_t boolean;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -34,7 +35,7 @@ typedef uint8_t boolean;
 #define MY_TASK_50_MS_TIME_PERIOD			(TickType_t)(50)
 #define MY_TASK_MEASURE_TIME_PERIOD			(TickType_t)(250)
 #define MY_TASK_500_MS_TIME_PERIOD			(TickType_t)(500)
-#define MY_TASK_1000_MS_TIME_PERIOD			(TickType_t)(1000)
+#define MY_TASK_CRUISE_CONTROL_TIME_PERIOD	(TickType_t)(500)
 #define MY_DIAG_CHECK_TASK_TIME_PERIOD		(TickType_t)(1000)
 #define MY_ALARM_CONTROL_TASK_TIME_PERIOD	(TickType_t)(250)
 
@@ -156,10 +157,6 @@ typedef uint8_t boolean;
 #define LM35_5_N_ADC_VALUE	LM35_5_N_MEM_TABLE[LM35_5_N_RANK]
 #define LM35_5_P_ADC_VALUE	LM35_5_P_MEM_TABLE[LM35_5_P_RANK]
 
-#define ACC_POSITION_RANK			RANK_8
-#define ACC_POSITION_MEM_TABLE		ADC1Measures
-#define ACC_POSITION_ADC_VALUE		ACC_POSITION_MEM_TABLE[ACC_POSTITION_RANK]
-
 #define FUEL_LEVEL_RANK				RANK_7
 #define FUEL_LEVEL_MEM_TABLE		ADC1Measures
 #define FUEL_LEVEL_ADC_VALUE		FUEL_LEVEL_MEM_TABLE[FUEL_LEVEL_RANK]
@@ -225,7 +222,7 @@ typedef uint8_t boolean;
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Measurements */
-#define NO_OF_ENGINE_TEMPERATURE_MEASUREMENTS_ADDED			((uint8_t)(4u))
+#define NO_OF_ENGINE_TEMPERATURE_MEASUREMENTS_ADDED			((uint8_t)(8u))
 #define NO_OF_CAR_VOLTAGES_MEASUREMENTS_ADDED				((uint8_t)(8u))
 #define NO_OF_FUEL_LEVEL_MEASUREMENTS_ADDED					((uint8_t)(10u))
 
@@ -248,6 +245,8 @@ typedef uint8_t boolean;
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Symbols */
+#define ON										((boolean)(1))
+#define OFF										((boolean)(0))
 #define TRUE									((boolean)(1))
 #define True									((boolean)(1))
 #define FALSE									((boolean)(0))
@@ -334,10 +333,11 @@ typedef uint8_t boolean;
 #define BOARD_LCD_HOME_SCREEN_ADDRESS							((uint16_t)(384))
 #define BOARD_LCD_AUTO_HOME_RETURN_TIME_ADDRESS					((uint16_t)(388))
 #define BOARD_LCD_BACKLIGHT_LEVEL_ADDRESS						((uint16_t)(392))
-#define BOARD_LCD_SECONDS_TO_AUTO_TURN_OFF_BACKLIGHT_ADDRESS	((uint16_t)(396))
-#define BOARD_LCD_AUTO_BACKLIGHT_OFF_HOUR_START_ADDRESS			((uint16_t)(400))
-#define BOARD_LCD_AUTO_BACKLIGHT_OFF_HOUR_END_ADDRESS			((uint16_t)(404))
-#define BOARD_LCD_ALL_SETTINGS_ADDRESS							((uint16_t)(408))
+#define BOARD_LCD_BACKLIGHT_OFF_LEVEL_ADDRESS					((uint16_t)(396))
+#define BOARD_LCD_SECONDS_TO_AUTO_TURN_OFF_BACKLIGHT_ADDRESS	((uint16_t)(400))
+#define BOARD_LCD_AUTO_BACKLIGHT_OFF_HOUR_START_ADDRESS			((uint16_t)(404))
+#define BOARD_LCD_AUTO_BACKLIGHT_OFF_HOUR_END_ADDRESS			((uint16_t)(408))
+#define BOARD_LCD_ALL_SETTINGS_ADDRESS							((uint16_t)(412))
 
 /* FRAM ADDRESSES AND SETTINGS */
 #define TOTAL_MILEAGE_START_ADDRESS					((uint16_t)(0))	/* 4 bytes value! (uint32) */
@@ -389,6 +389,8 @@ typedef uint8_t boolean;
 
 #define ENC_BUTTON_MENU_Pin 				(ENCODER_1_BUTTON_Pin)
 #define ENC_BUTTON_MENU_GPIO_Port 			(ENCODER_1_BUTTON_GPIO_Port)
+#define ENC_BUTTON_CRUISE_Pin				(ENCODER_2_BUTTON_Pin)
+#define ENC_BUTTON_CRUISE_GPIO_Port			(ENCODER_2_BUTTON_GPIO_Port)
 
 
 #define GPIO_PORT_OIL_PRESSURE_SENSOR		(OIL_PRESSURE_BINARY_GPIO_Port)

@@ -26,7 +26,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Defines And Typedefs */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+#define ON_BOARD_FAN_HBRIDGE_TEMP_ON_THRESHOLD		((float)(60.0))
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -97,7 +97,7 @@ extern volatile uint16_t ADC3Measures[NO_OF_ADC3_MEASURES];
 extern CAR_mileage_struct CAR_mileage;
 
 extern volatile ENCButton_struct ENC_button_menu;
-extern volatile int8_t EncoderCounterDiff;
+extern volatile int8_t EncoderCounterMenuDiff;
 
 extern SDCard_info_struct SDCard_info;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -130,12 +130,13 @@ static inline Error_Code calculate_5VDCDCTemperature(boardTemperature_type *temp
 static inline Error_Code calculate_HBridgeTemperature(boardTemperature_type *temperature);
 
 static void Read_KeyState(void);
-static void Read_EngineState(void);
 static void Read_CarState(void);
 static void Read_AlternatorCharging(void);
 
 static void checkMicroSDPresence(void);
 static void checkUSBMSCState(void);
+
+static void controlOnBoardFan(boolean state);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -158,7 +159,6 @@ void StartMeasureTask(void const *argument)
 
 	// @formatter:off
 	CarStateInfo.keyState 		= KeyState_Out;
-	CarStateInfo.engineState 	= EngineState_Off;
 	CarStateInfo.carState 		= CarState_Off;
 	CarStateInfo.AlternatorCharging = FALSE;
 
@@ -422,31 +422,31 @@ void StartMeasureTask(void const *argument)
 		voltage5V_Average -= voltage5VTable[0];
 		voltageIn_Average -= voltageInTable[0];
 
-		/* In this for loop we shift the values in the table */
-		for (uint16_t i = (NO_OF_ENGINE_TEMPERATURE_MEASUREMENTS_ADDED - 1u); i >= 1u /*1u - because we subtract 1 below from i*/; --i)
+		/* In this for loops we shift the values in the table */
+		for (uint16_t i = 1u; i <= (NO_OF_ENGINE_TEMPERATURE_MEASUREMENTS_ADDED - 1u) /*1u - because we subtract 1 below from i*/; ++i)
 		{
 			carWaterTempTable[i - 1u] = carWaterTempTable[i];
 			carOilTempTable[i - 1u] = carOilTempTable[i];
 		}
-		for (uint16_t i = (NO_OF_CAR_VOLTAGES_MEASUREMENTS_ADDED - 1u); i >= 1u /*1u - because we subtract 1 below from i*/; --i)
+		for (uint16_t i = 1u; i <= (NO_OF_CAR_VOLTAGES_MEASUREMENTS_ADDED - 1u) /*1u - because we subtract 1 below from i*/; ++i)
 		{
 			carMainBatteryVoltageTable[i - 1u] = carMainBatteryVoltageTable[i];
 			carAuxBatteryVoltageTable[i - 1u] = carAuxBatteryVoltageTable[i];
 		}
 		if (tenSeconds_FLAG) /* This will execute every 10 seconds */
 		{
-			for (uint16_t i = (NO_OF_FUEL_LEVEL_MEASUREMENTS_ADDED - 1u); i >= 1u /*1u - because we subtract 1 below from i*/; --i)
+			for (uint16_t i = 1u; i <= (NO_OF_FUEL_LEVEL_MEASUREMENTS_ADDED - 1u) /*1u - because we subtract 1 below from i*/; ++i)
 			{
 				carFuelLevelTable[i - 1u] = carFuelLevelTable[i];
 			}
 		}
-		for (uint16_t i = (NO_OF_BOARD_TEMPERATURES_MEASUREMENTS_ADDED - 1u); i >= 1u /*1u - because we subtract 1 below from i*/; --i)
+		for (uint16_t i = 1u; i <= (NO_OF_BOARD_TEMPERATURES_MEASUREMENTS_ADDED - 1u) /*1u - because we subtract 1 below from i*/; ++i)
 		{
 			temperature3V3DCDCTable[i - 1u] = temperature3V3DCDCTable[i];
 			temperature5VDCDCTable[i - 1u] = temperature5VDCDCTable[i];
 			temperatureHBridgeTable[i - 1u] = temperatureHBridgeTable[i];
 		}
-		for (uint16_t i = (NO_OF_BOARD_VOLTAGES_MEASUREMENTS_ADDED - 1u); i >= 1u /*1u - because we subtract 1 below from i*/; --i)
+		for (uint16_t i = 1u; i <= (NO_OF_BOARD_VOLTAGES_MEASUREMENTS_ADDED - 1u) /*1u - because we subtract 1 below from i*/; ++i)
 		{
 			voltage3V3Table[i - 1u] = voltage3V3Table[i];
 			voltage5VTable[i - 1u] = voltage5VTable[i];
@@ -576,14 +576,12 @@ void StartMeasureTask(void const *argument)
 		/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 		/* Measurements not related directly to sensors, not needing filtering and averaging */
 
-		/* Check keyState (Out, IgnitionOn, Crank) */
-		Read_KeyState();
-		/* Check engineState (Off, Crank, Idle, Work) */
-		Read_EngineState();
-		/* Check carState (Off, Crank, Idle, Drive) */
-		Read_CarState();
 		/* Check AlternatorCharging (TRUE, FALSE) */
 		Read_AlternatorCharging();
+		/* Check keyState (Out, IgnitionOn, Crank) */
+		Read_KeyState();
+		/* Check carState (Off, Crank, Idle, Drive) */
+		Read_CarState();
 
 		/* Check checkMicroSDPresence (YES, NO) */
 		checkMicroSDPresence();
@@ -611,12 +609,12 @@ void StartMeasureTask(void const *argument)
 		{
 			/* Engine RPM */
 			RPMForLCD.messageReadyFLAG = FALSE;
-			snprintf((char*)RPMForLCD.messageHandler, 7, "%01" PRIu32, CarStateInfo.RPM);
+			snprintf((char*)RPMForLCD.messageHandler, 5, "%01" PRIu32, CarStateInfo.RPM);
 			RPMForLCD.size = strlen((char*)RPMForLCD.messageHandler);
 			RPMForLCD.messageReadyFLAG = TRUE;
 			/* Vehicle Speed */
 			SPEEDForLCD.messageReadyFLAG = FALSE;
-			snprintf((char*)SPEEDForLCD.messageHandler, 7, "%01" PRIu32, CarStateInfo.SPEED);
+			snprintf((char*)SPEEDForLCD.messageHandler, 4, "%01" PRIu32, CarStateInfo.SPEED);
 			SPEEDForLCD.size = strlen((char*)SPEEDForLCD.messageHandler);
 			SPEEDForLCD.messageReadyFLAG = TRUE;
 		}
@@ -636,6 +634,18 @@ void StartMeasureTask(void const *argument)
 			tripMileageForLCD.messageReadyFLAG = TRUE;
 
 			xQueueSend(Queue_EEPROM_writeHandle, &FRAMData, (TickType_t)0u/*NONE wait time if the queue is full*/);
+		}
+
+		if (tenSeconds_FLAG)
+		{
+			if(temperatureHBridge >= ON_BOARD_FAN_HBRIDGE_TEMP_ON_THRESHOLD)
+			{
+				controlOnBoardFan(ON);
+			}
+			else
+			{
+				controlOnBoardFan(OFF);
+			}
 		}
 
 		/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -831,56 +841,23 @@ static void Read_KeyState(void)
 
 
 
-/* Check the state of the engine (off, cranking, idling, working). */
-static void Read_EngineState(void)
-{
-	if(RPM_ENGINE_OFF_MAX_THRESHOLD > CarStateInfo.RPM) /* if RPM are higher than the threshold */
-	{
-		CarStateInfo.engineState = EngineState_Off;
-	}
-	else if((RPM_ENGINE_CRANK_MIN_THRESHOLD < CarStateInfo.RPM) &&	/* if RPM are higher than minimal threshold and */
-			(RPM_ENGINE_CRANK_MAX_THRESHOLD > CarStateInfo.RPM) &&	/* if RPM are lower than maximum threshold */
-			(KeyState_Crank == CarStateInfo.keyState))
-	{
-		CarStateInfo.engineState = EngineState_Crank;
-	}
-	else if((RPM_ENGINE_IDLE_MIN_THRESHOLD < CarStateInfo.RPM) &&	/* if RPM are higher than minimal threshold and */
-			(RPM_ENGINE_IDLE_MAX_THRESHOLD > CarStateInfo.RPM) &&	/* if RPM are lower than maximum threshold and */
-			(SPEED_ENGINE_IDLE_MAX_THRESHOLD > CarStateInfo.SPEED))	/* if speed is lower than maximum threshold */
-	{
-		CarStateInfo.engineState = EngineState_Idle;
-	}
-	else
-	{
-		CarStateInfo.engineState = EngineState_Work;
-	}
-}
-
-
-
 /* Check the car state basing on the key and engine status (off, cranking, idling, driving). */
 static void Read_CarState(void)
 {
-	if (EngineState_Off == CarStateInfo.engineState)
+	if (KeyState_Out == CarStateInfo.keyState)
 	{
 		CarStateInfo.carState = CarState_Off;
 	}
-	/* If key is in crank position OR engine is cranking. */
-	else if ((KeyState_Crank == CarStateInfo.keyState) || (EngineState_Crank == CarStateInfo.engineState))
+	/* If key is in crank position. */
+	else if (KeyState_Crank == CarStateInfo.keyState)
 	{
 		CarStateInfo.carState = CarState_Crank;
 	}
 	/* If key is in ignition state AND engine is in idle/ */
-	else if ((KeyState_IgnitionOn == CarStateInfo.keyState) && (EngineState_Idle == CarStateInfo.engineState))
+	else if ((KeyState_IgnitionOn == CarStateInfo.keyState) && ((TRUE == CarStateInfo.AlternatorCharging) || (OK == oilPressureValueBinary)))
 	{
-		CarStateInfo.carState = CarState_Idle;
+		CarStateInfo.carState = CarState_Running;
 	}
-	/* If key is in Ignition state and engine is in work */
-	else if ((KeyState_IgnitionOn == CarStateInfo.keyState) && (EngineState_Work == CarStateInfo.engineState))
-	{
-		CarStateInfo.carState = CarState_Drive;
-	}
-	/* If no previous option matches then something is wrong (for example the key was taken out while engine running. */
 	else
 	{
 		CarStateInfo.carState = CarState_Error;
@@ -935,6 +912,18 @@ static void checkUSBMSCState(void)
 	{
 		SDCard_info.cardRequestedByUSB = FALSE;
 	}
+}
+
+
+
+/* This function controls the state of the FAN - turns it on or off */
+static void controlOnBoardFan(boolean state)
+{
+	/* Possible states:
+	 * ON - turn the FAN ON
+	 * OFF - turn the FAN OFF
+	 */
+	HAL_GPIO_WritePin(FAN_BOARD_GPIO_Port, FAN_BOARD_Pin, (GPIO_PinState)state);
 }
 
 

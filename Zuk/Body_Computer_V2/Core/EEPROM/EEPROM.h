@@ -72,6 +72,7 @@ typedef union data32bit_union
 	boardTemperature_type boardTemperature;
 
 	LCDSettings_type LCDSettings;
+	LCDBacklightSettings_type LCDBacklightSettings;
 	timeHours_type timeHours;
 	Enum_Layer screenLayer;
 } data32bit_union;

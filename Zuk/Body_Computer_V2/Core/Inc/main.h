@@ -60,6 +60,7 @@ typedef enum
 	Last3Err_Layer			=	0x06,
 	CarSettings_Layer		=	0x07,
 	JarvisSettings_Layer	=	0x08,
+	CruiseControl_Layer		=	0x09,
 
 		/* CarSettings_Layer */
 		ClearDiagnosticSnapshots	=	0x71,
@@ -170,12 +171,13 @@ typedef enum
 
 			/* JarvisSettings_Layer -> LCDSettings_Layer */
 			BacklightBrightnessLevel	=	0x871,
-			SecondsToTurnOffBacklight	=	0x872,
-			AutoBacklightOffStartHour	=	0x873,
-			AutoBacklightOffEndHour		=	0x874,
-			HomeScreen					=	0x875,
-			AutoHomeReturnTime			=	0x876,
-			AutoBacklightOff			=	0x877,
+			BacklightOffBrightnessLevel	=	0x872,
+			SecondsToTurnOffBacklight	=	0x873,
+			AutoBacklightOffStartHour	=	0x874,
+			AutoBacklightOffEndHour		=	0x875,
+			HomeScreen					=	0x876,
+			AutoHomeReturnTime			=	0x877,
+			AutoBacklightOff			=	0x878,
 
 	AreYouSure_Layer		=	0xF000,
 	Alarm_Layer				=	0xFFFF
@@ -211,7 +213,8 @@ typedef enum
 	StepByToogling		=	1,
 	StepByOne			=	1,
 	StepByOneTen		=	10,
-	StepByOneHundred	=	100
+	StepByOneHundred	=	100,
+	StepByFifty			=	999050
 }Enum_valueStepSize;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -260,22 +263,10 @@ typedef enum
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 typedef enum
 {
-	EngineState_Error	= 0,
-	EngineState_Off		= 1,
-	EngineState_Crank	= 2,
-	EngineState_Idle	= 3,
-	EngineState_Work	= 4
-}Enum_EngineState;
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-typedef enum
-{
-	CarState_Error	= 0,
-	CarState_Off	= 1,
-	CarState_Crank	= 2,
-	CarState_Idle	= 3,
-	CarState_Drive	= 4
+	CarState_Error		= 0,
+	CarState_Off		= 1,
+	CarState_Crank		= 2,
+	CarState_Running	= 3
 }Enum_CarState;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -283,13 +274,14 @@ typedef enum
 typedef struct
 {
 	Enum_KeyState keyState;
-	Enum_EngineState engineState;
 	Enum_CarState carState;
 
 	uint32_t RPM;
 	uint32_t SPEED;
 
-	boolean AlternatorCharging :1;
+	uint16_t ADC_AcceleratorValue;
+
+	boolean AlternatorCharging;
 }CarStateinfo_type;
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -302,6 +294,7 @@ typedef boolean carOilBinaryPressure_type;
 typedef float boardTemperature_type;
 typedef float boardVoltage_type;
 typedef uint8_t LCDSettings_type;
+typedef uint16_t LCDBacklightSettings_type;
 
 typedef int8_t timeHours_type;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -553,7 +546,8 @@ typedef struct
 {
 	Enum_Layer homeScreen;	// should be 4 bytes
 	LCDSettings_type autoHomeReturnTime;
-	LCDSettings_type backlightLevel;
+	LCDBacklightSettings_type backlightLevel;
+	LCDBacklightSettings_type backlightOffLevel;
 	LCDSettings_type secondsToAutoTurnOffBacklight;
 	LCDSettings_type autoBacklightOffHourStart;
 	LCDSettings_type autoBacklightOffHourEnd;
@@ -594,68 +588,71 @@ typedef struct
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 typedef struct
 {
-	const timeHours_type polishTimeAdj_min;
-	const timeHours_type polishTimeAdj_max;
-	const timeHours_type timeZoneAdj_min;
-	const timeHours_type timeZoneAdj_max;
+	const float polishTimeAdj_min;
+	const float polishTimeAdj_max;
+	const float timeZoneAdj_min;
+	const float timeZoneAdj_max;
 
-	const carTemperature_type waterHighTempWarningThreshold_min;
-	const carTemperature_type waterHighTempWarningThreshold_max;
-	const carTemperature_type waterHighTempAlarmThreshold_min;
-	const carTemperature_type waterHighTempAlarmThreshold_max;
-	const carTemperature_type waterHighTempFanOnThreshold_min;
-	const carTemperature_type waterHighTempFanOnThreshold_max;
-	const carTemperature_type waterHighTempFanOffThreshold_min;
-	const carTemperature_type waterHighTempFanOffThreshold_max;
+	const float waterHighTempWarningThreshold_min;
+	const float waterHighTempWarningThreshold_max;
+	const float waterHighTempAlarmThreshold_min;
+	const float waterHighTempAlarmThreshold_max;
+	const float waterHighTempFanOnThreshold_min;
+	const float waterHighTempFanOnThreshold_max;
+	const float waterHighTempFanOffThreshold_min;
+	const float waterHighTempFanOffThreshold_max;
 
-	const carTemperature_type oilHighTempWarningThreshold_min;
-	const carTemperature_type oilHighTempWarningThreshold_max;
-	const carTemperature_type oilHighTempAlarmThreshold_min;
-	const carTemperature_type oilHighTempAlarmThreshold_max;
+	const float oilHighTempWarningThreshold_min;
+	const float oilHighTempWarningThreshold_max;
+	const float oilHighTempAlarmThreshold_min;
+	const float oilHighTempAlarmThreshold_max;
 
-	const carOilAnalogPressure_type oilHighPressureAlarmThreshold_min;
-	const carOilAnalogPressure_type oilHighPressureAlarmThreshold_max;
-	const carOilAnalogPressure_type oilLowPressureAlarmThreshold_min;
-	const carOilAnalogPressure_type oilLowPressureAlarmThreshold_max;
+	const float oilHighPressureAlarmThreshold_min;
+	const float oilHighPressureAlarmThreshold_max;
+	const float oilLowPressureAlarmThreshold_min;
+	const float oilLowPressureAlarmThreshold_max;
 
-	const carVoltage_type batteryLowVoltageAlarmThreshold_min;
-	const carVoltage_type batteryLowVoltageAlarmThreshold_max;
-	const carVoltage_type batteryHighVoltageAlarmThreshold_min;
-	const carVoltage_type batteryHighVoltageAlarmThreshold_max;
+	const float batteryLowVoltageAlarmThreshold_min;
+	const float batteryLowVoltageAlarmThreshold_max;
+	const float batteryHighVoltageAlarmThreshold_min;
+	const float batteryHighVoltageAlarmThreshold_max;
 
-	const cafFuelLevel_type fuelLowLevelWarningThreshold_min;
-	const cafFuelLevel_type fuelLowLevelWarningThreshold_max;
+	const float fuelLowLevelWarningThreshold_min;
+	const float fuelLowLevelWarningThreshold_max;
 
-	const boardVoltage_type board3V3SupplyLowThreshold_min;
-	const boardVoltage_type board3V3SupplyLowThreshold_max;
-	const boardVoltage_type board3V3SupplyHighThreshold_min;
-	const boardVoltage_type board3V3SupplyHighThreshold_max;
-	const boardVoltage_type board5VSupplyLowThreshold_min;
-	const boardVoltage_type board5VSupplyLowThreshold_max;
-	const boardVoltage_type board5VSupplyHighThreshold_min;
-	const boardVoltage_type board5VSupplyHighThreshold_max;
-	const boardVoltage_type boardVinSupplyLowThreshold_min;
-	const boardVoltage_type boardVinSupplyLowThreshold_max;
+	const float board3V3SupplyLowThreshold_min;
+	const float board3V3SupplyLowThreshold_max;
+	const float board3V3SupplyHighThreshold_min;
+	const float board3V3SupplyHighThreshold_max;
+	const float board5VSupplyLowThreshold_min;
+	const float board5VSupplyLowThreshold_max;
+	const float board5VSupplyHighThreshold_min;
+	const float board5VSupplyHighThreshold_max;
+	const float boardVinSupplyLowThreshold_min;
+	const float boardVinSupplyLowThreshold_max;
 
-	const boardTemperature_type board5VDCDCTemperatureHighThreshold_min;
-	const boardTemperature_type board5VDCDCTemperatureHighThreshold_max;
-	const boardTemperature_type board3V3DCDCTemperatureHighThreshold_min;
-	const boardTemperature_type board3V3DCDCTemperatureHighThreshold_max;
-	const boardTemperature_type boardHBridgeTemperatureHighThreshold_min;
-	const boardTemperature_type boardHBridgeTemperatureHighThreshold_max;
+	const float board5VDCDCTemperatureHighThreshold_min;
+	const float board5VDCDCTemperatureHighThreshold_max;
+	const float board3V3DCDCTemperatureHighThreshold_min;
+	const float board3V3DCDCTemperatureHighThreshold_max;
+	const float boardHBridgeTemperatureHighThreshold_min;
+	const float boardHBridgeTemperatureHighThreshold_max;
 
-	const Enum_Layer homeScreen_min;
-	const Enum_Layer homeScreen_max;
-	const LCDSettings_type autoHomeReturnTime_min;
-	const LCDSettings_type autoHomeReturnTime_max;
-	const LCDSettings_type backlightLevel_min;
-	const LCDSettings_type backlightLevel_max;
-	const LCDSettings_type secondsToAutoTurnOffBacklight_min;
-	const LCDSettings_type secondsToAutoTurnOffBacklight_max;
-	const LCDSettings_type autoBacklightOffHourStart_min;
-	const LCDSettings_type autoBacklightOffHourStart_max;
-	const LCDSettings_type autoBacklightOffHourEnd_min;
-	const LCDSettings_type autoBacklightOffHourEnd_max;
+	const float homeScreen_min;
+	const float homeScreen_max;
+	const float autoHomeReturnTime_min;
+	const float autoHomeReturnTime_max;
+	const float backlightLevel_min;
+	const float backlightLevel_max;
+	const float backlightOffLevel_min;
+	const float backlightOffLevel_max;
+
+	const float secondsToAutoTurnOffBacklight_min;
+	const float secondsToAutoTurnOffBacklight_max;
+	const float autoBacklightOffHourStart_min;
+	const float autoBacklightOffHourStart_max;
+	const float autoBacklightOffHourEnd_min;
+	const float autoBacklightOffHourEnd_max;
 
 }GlobalValuesLimits_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -671,6 +668,31 @@ typedef struct
 	boolean cardRequestedByUSB;
 	boolean canBePassedToUSB;
 }SDCard_info_struct;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef enum {
+	NOTHING  = 	0,
+	DECREASE = 	-1,
+	INCREASE = 	1
+}Enum_EngineDirection;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef enum {
+	CONSTANT_SPEED = 0,
+	CONSTANT_RPM   = 1
+}Enum_CruiseMode;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef struct {
+	boolean state;
+	Enum_CruiseMode mode;
+	uint32_t wantedSpeed;
+	uint32_t wantedRPM;
+	int32_t error;
+}CruiseControlParameters_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -695,6 +717,16 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define EN_ELECTRO_CLUTCH_Pin GPIO_PIN_2
+#define EN_ELECTRO_CLUTCH_GPIO_Port GPIOE
+#define IN2_CNTRL_ENGINE_Pin GPIO_PIN_3
+#define IN2_CNTRL_ENGINE_GPIO_Port GPIOE
+#define IN1_CNTRL_ENGINE_Pin GPIO_PIN_4
+#define IN1_CNTRL_ENGINE_GPIO_Port GPIOE
+#define PWM_CRUISE_CONTROL_Pin GPIO_PIN_5
+#define PWM_CRUISE_CONTROL_GPIO_Port GPIOE
+#define PWM_LCD_BACKLIGHT_Pin GPIO_PIN_6
+#define PWM_LCD_BACKLIGHT_GPIO_Port GPIOE
 #define DCDC_5V_ENABLE_Pin GPIO_PIN_10
 #define DCDC_5V_ENABLE_GPIO_Port GPIOI
 #define BUZZER_Pin GPIO_PIN_11
@@ -761,6 +793,12 @@ void Error_Handler(void);
 #define FUEL_LEVEL_GPIO_Port GPIOB
 #define ACC_POSITION_Pin GPIO_PIN_1
 #define ACC_POSITION_GPIO_Port GPIOB
+#define BRAKE_PEDAL_Pin GPIO_PIN_2
+#define BRAKE_PEDAL_GPIO_Port GPIOB
+#define BRAKE_PEDAL_EXTI_IRQn EXTI2_IRQn
+#define CLUTCH_PEDAL_Pin GPIO_PIN_11
+#define CLUTCH_PEDAL_GPIO_Port GPIOF
+#define CLUTCH_PEDAL_EXTI_IRQn EXTI15_10_IRQn
 #define OIL_PRESSURE_BINARY_Pin GPIO_PIN_12
 #define OIL_PRESSURE_BINARY_GPIO_Port GPIOF
 #define EEPROM_WP2_Pin GPIO_PIN_10
@@ -785,6 +823,9 @@ void Error_Handler(void);
 #define RPM_SIGNAL_Pin GPIO_PIN_6
 #define RPM_SIGNAL_GPIO_Port GPIOG
 #define RPM_SIGNAL_EXTI_IRQn EXTI9_5_IRQn
+#define ENCODER_2_BUTTON_Pin GPIO_PIN_7
+#define ENCODER_2_BUTTON_GPIO_Port GPIOG
+#define ENCODER_2_BUTTON_EXTI_IRQn EXTI9_5_IRQn
 #define ENCODER_1_BUTTON_Pin GPIO_PIN_8
 #define ENCODER_1_BUTTON_GPIO_Port GPIOG
 #define ENCODER_1_BUTTON_EXTI_IRQn EXTI9_5_IRQn
@@ -798,6 +839,10 @@ void Error_Handler(void);
 #define POWER_ON_NODEMCU_GPIO_Port GPIOG
 #define POWER_ON_GPS_Pin GPIO_PIN_15
 #define POWER_ON_GPS_GPIO_Port GPIOG
+#define ENCODER_2_A_Pin GPIO_PIN_4
+#define ENCODER_2_A_GPIO_Port GPIOB
+#define ENCODER_2_B_Pin GPIO_PIN_5
+#define ENCODER_2_B_GPIO_Port GPIOB
 #define GPS_USART1_TX_Pin GPIO_PIN_6
 #define GPS_USART1_TX_GPIO_Port GPIOB
 #define GPS_USART1_RX_Pin GPIO_PIN_7
@@ -813,6 +858,12 @@ void Error_Handler(void);
 #define POWER_ON_CRUISE_CONTROL_Pin GPIO_PIN_7
 #define POWER_ON_CRUISE_CONTROL_GPIO_Port GPIOI
 /* USER CODE BEGIN Private defines */
+
+/* ADC readouts */
+extern volatile uint16_t ADC1Measures[NO_OF_ADC1_MEASURES];
+#define ACC_POSITION_RANK			RANK_8
+#define ACC_POSITION_MEM_TABLE		ADC1Measures
+#define ACC_POSITION_ADC_VALUE		ACC_POSITION_MEM_TABLE[ACC_POSITION_RANK]
 
 /* USER CODE END Private defines */
 
