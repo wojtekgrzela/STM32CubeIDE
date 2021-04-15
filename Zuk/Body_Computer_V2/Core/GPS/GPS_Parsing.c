@@ -80,7 +80,7 @@ Error_Code parse_GPS_data(GPS_data_struct* const GPS)
 							nIndex2 + 1 /*Start position of the comparison*/,
 							6 /*Number of characters to compare*/))
 			{
-				GPGGAIndex = nIndex + 1;
+				GPGGAIndex = nIndex2 + 1;
 			}
 		}
 	}
@@ -106,7 +106,7 @@ Error_Code parse_GPS_data(GPS_data_struct* const GPS)
 							nIndex2 + 1 /*Start position of the comparison*/,
 							6 /*Number of characters to compare*/))
 			{
-				GPVTGIndex = nIndex + 1;
+				GPVTGIndex = nIndex2 + 1;
 			}
 		}
 	}
@@ -124,7 +124,7 @@ Error_Code parse_GPS_data(GPS_data_struct* const GPS)
 						nIndex + 1 /*Start position of the comparison*/,
 						6 /*Number of characters to compare*/))
 		{
-			GPZDAIndex = 0;
+			GPZDAIndex = nIndex + 1;
 		}
 		else
 		{
@@ -132,7 +132,7 @@ Error_Code parse_GPS_data(GPS_data_struct* const GPS)
 							nIndex2 + 1 /*Start position of the comparison*/,
 							6 /*Number of characters to compare*/))
 			{
-				GPZDAIndex = 0;
+				GPZDAIndex = nIndex2 + 1;
 			}
 		}
 	}
@@ -429,6 +429,14 @@ Error_Code parse_GPS_data(GPS_data_struct* const GPS)
 			{
 				error = GPS__NO_SYMBOL_FOUND;
 			}
+			else
+			{
+				index1 = find_nearest_symbol(',', (const char* const)GPS_message, index1+1);
+				if(-1 == index1)
+				{
+					error = GPS__NO_SYMBOL_FOUND;
+				}
+			}
 		}
 		/* IGNORING UTC time END */
 
@@ -447,11 +455,6 @@ Error_Code parse_GPS_data(GPS_data_struct* const GPS)
 				if(indexDiff >1)
 				{
 					error = copy_buffer_to_str((char*)GPS_message, (char*)GPS->rawData.Day, index1+1, indexDiff-1);
-					GPS->DateReady = 1;
-				}
-				else
-				{
-					GPS->DateReady = 0;
 				}
 			}
 		}
@@ -494,6 +497,11 @@ Error_Code parse_GPS_data(GPS_data_struct* const GPS)
 				if(indexDiff >1)
 				{
 					error = copy_buffer_to_str((char*)GPS_message, (char*)GPS->rawData.Year, index1+1, indexDiff-1);
+					GPS->DateReady = 1;
+				}
+				else
+				{
+					GPS->DateReady = 0;
 				}
 			}
 		}

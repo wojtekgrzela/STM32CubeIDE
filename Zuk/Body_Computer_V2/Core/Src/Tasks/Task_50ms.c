@@ -35,6 +35,7 @@
 #define PWM_PULSE_CRUISE_CONTROL			(PWM_TIMER_CRUISE_CONTROL->CCR1)
 #define MIN_PULSE							(uint16_t)(0)
 #define MAX_PULSE							(uint16_t)(100)
+#define PWM_PULSE_COEFFICIENT				(uint16_t)(10)
 
 /* H-BRIDGE defines */
 #define DECREASE_ENG_TERMINAL_PORT	(IN2_CNTRL_ENGINE_GPIO_Port)
@@ -158,7 +159,7 @@ void Start50msTask(void const *argument)
 				/* If in previous state cruise control was off - turn on the engine for a little bit with full power
 				 * to stretch the line just a bit
 				 */
-				PWM_PULSE_CRUISE_CONTROL = MAX_PULSE;
+				PWM_PULSE_CRUISE_CONTROL = MAX_PULSE * PWM_PULSE_COEFFICIENT;
 
 				/* Set the pointer to the Cruise Control Board */
 				EXT_boardPtr = &LCD_CruiseControl;
@@ -169,7 +170,7 @@ void Start50msTask(void const *argument)
 			else
 			{
 				/* Set PWM duty cycle to min value which is 0 - turn off the engine */
-				PWM_PULSE_CRUISE_CONTROL = MIN_PULSE;
+				PWM_PULSE_CRUISE_CONTROL = MIN_PULSE * PWM_PULSE_COEFFICIENT;
 				/* Read current ADC value for accelerator */
 				CarStateInfo.ADC_AcceleratorValue = ACC_POSITION_ADC_VALUE;
 
@@ -198,7 +199,7 @@ void Start50msTask(void const *argument)
 				}
 
 				/* Write the calculated PWM duty cycle to the registers */
-				PWM_PULSE_CRUISE_CONTROL = (uint16_t)PID_result;
+				PWM_PULSE_CRUISE_CONTROL = (uint16_t)PID_result * PWM_PULSE_COEFFICIENT;
 			}
 
 			/* Set the previous State variable to ON - because the cruise control is on */
@@ -241,7 +242,7 @@ void Complete_Shutdown(void)
 	cruiseControlParam.state = OFF;
 	Set_Electromagnes_Off();
 	Set_Direction(NOTHING);
-	PWM_PULSE_CRUISE_CONTROL = MIN_PULSE;	/* Min pulse is 0 - turning off completely */
+	PWM_PULSE_CRUISE_CONTROL = MIN_PULSE * PWM_PULSE_COEFFICIENT;	/* Min pulse is 0 - turning off completely */
 }
 
 

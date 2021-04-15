@@ -190,8 +190,7 @@ void StartDiagCheckTask(void const * argument)
 				valueStates.carFuelLevel_ValueState = val_OK;
 				break;
 			}
-			case CarState_Idle:
-			case CarState_Drive:
+			case CarState_Running:
 			{
 				Check_CarWaterTemp();
 				Check_CarOilTemp();
@@ -201,6 +200,7 @@ void StartDiagCheckTask(void const * argument)
 				Check_CarFuelLevel();
 				break;
 			}
+			case CarState_Error:
 			default:
 			{
 				break;
@@ -477,18 +477,18 @@ static void CheckValuesStateAndSendAlarmRequests(void)
 static Error_Code CheckValueAndTimer(Enum_ValueState valState, osTimerId timerId, TickType_t timerSetting)
 {
 	Error_Code result = NO_ERROR;
-	boolean isTimerActive = !xTimerIsTimerActive(timerId); /* if timer in NOT active (hence !) */
+	boolean isTimerActive = (boolean)xTimerIsTimerActive(timerId); /* if timer is active returns 1 */
 
 	if(val_OK != valState)	/* If the value is not OK */
 	{
-		if(isTimerActive)	/* Check if timer is running */
+		if(FALSE == isTimerActive)	/* Check if timer is running */
 		{
 			result = (Error_Code)osTimerStart(timerId, timerSetting);	/* Turn timer ON */
 		}
 	}
 	else	/* If the value is OK */
 	{
-		if(isTimerActive)	/* Check if timer is running */
+		if(TRUE == isTimerActive)	/* Check if timer is running */
 		{
 			result = (Error_Code)osTimerStop(timerId);	/* Turn timer OFF */
 		}

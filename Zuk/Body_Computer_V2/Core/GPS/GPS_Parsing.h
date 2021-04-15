@@ -32,8 +32,9 @@ typedef struct
 {
 	volatile uint8_t receivedByte;
 	volatile uint8_t GPS_buffer[GPS_BUFFER_SIZE];
-	timeHours_type TimeZoneAdjPoland;			/* 1 in Winter and 2 in Summer (it will be added to the clock to get proper time */
+	timeHours_type TimeZoneAdjPoland;		/* 1 in Winter and 2 in Summer (it will be added to the clock to get proper time */
 	timeHours_type TimeZoneManualAdj;		/* for manual adjusting the time zone in clock */
+	timeHours_type hoursInNumber;			/* hours from clock in a form of int8_t (adjusted with time zones etc.). -1 if time not ready. */
 
 	float homeLatitude;
 	float homeLongitude;

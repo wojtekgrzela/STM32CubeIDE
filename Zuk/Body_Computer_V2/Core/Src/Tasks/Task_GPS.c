@@ -144,6 +144,8 @@ void StartGPSTask(void const * argument)
 			GPS.forLCD.seconds.messageReadyFLAG = FALSE;
 			error = copy_buffer_to_str((char*)GPS.rawData.UTC, (char*)GPS.message_buffers.seconds, 4u, GPS.forLCD.seconds.size);
 			GPS.forLCD.seconds.messageReadyFLAG = TRUE;
+
+			GPS.hoursInNumber = (timeHours_type)atoi((char*)tempbuffer);
 		}
 		else
 		{
@@ -161,6 +163,8 @@ void StartGPSTask(void const * argument)
 			GPS.forLCD.hours.messageReadyFLAG = TRUE;
 			GPS.forLCD.minutes.messageReadyFLAG = TRUE;
 			GPS.forLCD.seconds.messageReadyFLAG = TRUE;
+
+			GPS.hoursInNumber = -1;
 		}
 
 		GPS.forLCD.clock.messageReadyFLAG = FALSE;

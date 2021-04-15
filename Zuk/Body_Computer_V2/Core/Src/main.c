@@ -70,6 +70,8 @@ extern volatile uint32_t SPEED_counter;
 
 extern volatile CruiseControlParameters_struct cruiseControlParam;
 
+extern boolean backlightOnRequest;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -347,6 +349,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 						my_error_handler(error);
 					}
 					ENC_button_menu.allFlags = 0b00001001; /* shortPressDetected and shortPressDetectedBuzzer set to 1 */
+					backlightOnRequest = TRUE;	/* Turn back-light on due to an action */
 				}
 				else /* Long press was detected so do not set short press and reset the flag for ISR for the next time */
 				{
@@ -383,6 +386,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 						my_error_handler(error);
 					}
 					ENC_button_cruise.allFlags = 0b00001001; /* shortPressDetected and shortPressDetectedBuzzer set to 1 */
+					backlightOnRequest = TRUE;	/* Turn back-light on due to an action */
 				}
 				else /* Long press was detected so do not set short press and reset the flag for ISR for the next time */
 				{

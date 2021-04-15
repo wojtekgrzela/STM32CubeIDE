@@ -62,6 +62,8 @@ extern I2C_HandleTypeDef hi2c3;
 extern TIM_HandleTypeDef htim8;
 extern SD_HandleTypeDef hsd;
 
+extern boolean backlightOnRequest;
+
 #ifdef RUNTIME_STATS_TIMER_CONFIG
 extern TIM_HandleTypeDef htim7;
 #endif
@@ -346,11 +348,13 @@ GlobalValuesLimits_struct GlobalValuesLimits =
 
 		.homeScreen_min = MainMenu_Layer,
 		.homeScreen_max = JarvisInfo_Layer,
-		.autoHomeReturnTime_min = 3,
+		.autoHomeReturnTime_min = 0,
 		.autoHomeReturnTime_max = 255,
 		.backlightLevel_min = 1,
-		.backlightLevel_max = 10,
-		.secondsToAutoTurnOffBacklight_min = 2,
+		.backlightLevel_max = 1000,
+		.backlightOffLevel_min = 0,
+		.backlightOffLevel_max = 1000,
+		.secondsToAutoTurnOffBacklight_min = 0,
 		.secondsToAutoTurnOffBacklight_max = 255,
 		.autoBacklightOffHourStart_min = 0,
 		.autoBacklightOffHourStart_max = 24,
@@ -392,6 +396,7 @@ osTimerId My_Timer_boardHBridgeTempValueCheckHandle;
 osTimerId My_Timer_carOilBinaryPressureValueCheckHandle;
 osTimerId My_Timer_BuzzerHandle;
 osTimerId My_Timer_carAuxBattVoltageValueCheckHandle;
+osTimerId My_Timer_LCD_BacklightHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -426,6 +431,7 @@ extern void Timer_boardHBridgeTempValueCheck(void const * argument);
 extern void Timer_carOilBinaryPressureValueCheck(void const * argument);
 extern void Timer_Buzzer(void const * argument);
 extern void Timer_carAuxBattVoltageValueCheck(void const * argument);
+extern void Timer_LCD_Backlight(void const * argument);
 
 extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -592,6 +598,10 @@ void MX_FREERTOS_Init(void) {
   /* definition and creation of My_Timer_carAuxBattVoltageValueCheck */
   osTimerDef(My_Timer_carAuxBattVoltageValueCheck, Timer_carAuxBattVoltageValueCheck);
   My_Timer_carAuxBattVoltageValueCheckHandle = osTimerCreate(osTimer(My_Timer_carAuxBattVoltageValueCheck), osTimerOnce, NULL);
+
+  /* definition and creation of My_Timer_LCD_Backlight */
+  osTimerDef(My_Timer_LCD_Backlight, Timer_LCD_Backlight);
+  My_Timer_LCD_BacklightHandle = osTimerCreate(osTimer(My_Timer_LCD_Backlight), osTimerOnce, NULL);
 
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
@@ -801,6 +811,8 @@ void ENC_Menu_Button_LongPress_Callback(void const * argument)
 	 longPressDetectedForISR,
 	 longPressDetectedBuzzer */
 
+	backlightOnRequest = TRUE;	/* Turn back-light on due to an action */
+
   /* USER CODE END ENC_Menu_Button_LongPress_Callback */
 }
 
@@ -815,6 +827,8 @@ void ENC_Cruise_Button_LongPress_Callback(void const * argument)
 	 longPressDetected,
 	 longPressDetectedForISR,
 	 longPressDetectedBuzzer */
+
+	backlightOnRequest = TRUE;	/* Turn back-light on due to an action */
 
   /* USER CODE END ENC_Cruise_Button_LongPress_Callback */
 }

@@ -37,6 +37,10 @@
 #define STRING_SEC					"sec"
 #define STRING_HOURS				"hours"
 
+#define PWM_LCD_BACKLIGHT					(TIM9)
+#define PWM_RESOLUTION_LCD_BACKLIGHT		(PWM_LCD_BACKLIGHT->ARR)
+#define PWM_PULSE_LCD_BACKLIGHT				(PWM_LCD_BACKLIGHT->CCR2)
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #define GET_STR_LENGTH(X) strlen(X)
 #define PREPARE_LCD_board(X) \
@@ -57,6 +61,7 @@
 extern I2C_HandleTypeDef hi2c2;
 extern osMessageQId Queue_EEPROM_readHandle;
 extern osMessageQId Queue_EEPROM_writeHandle;
+extern osTimerId My_Timer_LCD_BacklightHandle;
 
 extern EEPROM_parameters_struct EEPROM_car;
 extern EEPROM_parameters_struct EEPROM_board;
@@ -134,6 +139,8 @@ static void RUNNING_CruiseControlLayer(struct LCD_board* currentBoard);
 static void ScrollForward(LCD_board* displayTable[NUMBER_OF_SCROLLED_LINES], int8_t diff);
 static void ScrollBack(LCD_board* displayTable[NUMBER_OF_SCROLLED_LINES], int8_t diff);
 static void EEPROMWaitForWriteCheck(EEPROM_data_struct* EEPROMData);
+
+static void ControlBacklight(void);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -154,7 +161,9 @@ static boolean displayAndControlValue_doneOnce = FALSE;
 static boolean last3snaps_doneOnce = FALSE;
 static boolean enterAction_save = FALSE;
 static boolean EEPROM_Success_Failure_Message = FALSE;
+static boolean stateOfLCDBacklight = OFF;
 
+boolean backlightOnRequest = TRUE;	/* It is NOT a static on purpose (used in encoder buttons actions, alarms etc.) */
 boolean EXT_boardChangeRequest = FALSE; /* It is NOT a static on purpose */
 LCD_board *EXT_boardPtr = NULL;	/* It is NOT a static on purpose */
 
@@ -1511,12 +1520,27 @@ static LCD_board LCD_BacklightBrightnessLevel = {.name="Backlight Level",
 						.EnterFunction 		= ENTER_SaveToEEPROM,
 						.value_ptr 			= &(LCD_MainSettings.backlightLevel),
 						.valueType 			= _LCDSettings_type_,
-						.valueStepSize 		= StepByOne,
+						.valueStepSize 		= StepByFifty,
 						.unit 				= NULL,
 						.EEPROMParameters	= &EEPROM_board,
 						.EEPROM_memAddress	= BOARD_LCD_BACKLIGHT_LEVEL_ADDRESS,
 						.minValue			= &(GlobalValuesLimits.backlightLevel_min),
 						.maxValue			= &(GlobalValuesLimits.backlightLevel_max) };
+
+static LCD_board LCD_BacklightOffBrightnessLevel = {.name="Backlight Off Level",
+						.firstRow 			= "Backlight Off LCD",
+						.secondRow 			= "Brightness Level",
+						.thisLayer 			= BacklightOffBrightnessLevel,
+						.RunningFunction 	= RUNNING_DisplayAndControlValue,
+						.EnterFunction 		= ENTER_SaveToEEPROM,
+						.value_ptr 			= &(LCD_MainSettings.backlightOffLevel),
+						.valueType 			= _LCDSettings_type_,
+						.valueStepSize 		= StepByFifty,
+						.unit 				= NULL,
+						.EEPROMParameters	= &EEPROM_board,
+						.EEPROM_memAddress	= BOARD_LCD_BACKLIGHT_OFF_LEVEL_ADDRESS,
+						.minValue			= &(GlobalValuesLimits.backlightOffLevel_min),
+						.maxValue			= &(GlobalValuesLimits.backlightOffLevel_max) };
 
 static LCD_board LCD_SecondsToTurnLCDBacklightOff = {.name="Seconds to LCD Off",
 						.firstRow 			= "Seconds to turn LCD",
@@ -1782,6 +1806,7 @@ void StartLCDTask(void const * argument)
 	PREPARE_LCD_board(LCD_BuzzerWhenLongPressOnOff);
 
 	PREPARE_LCD_board(LCD_BacklightBrightnessLevel);
+	PREPARE_LCD_board(LCD_BacklightOffBrightnessLevel);
 	PREPARE_LCD_board(LCD_SecondsToTurnLCDBacklightOff);
 	PREPARE_LCD_board(LCD_AutoBacklightOffStartHour);
 	PREPARE_LCD_board(LCD_AutoBacklightOffEndHour);
@@ -2089,8 +2114,11 @@ void StartLCDTask(void const * argument)
 
 	/* JarvisSettings_Layer -> LCDSettings_Layer */
 	LCD_BacklightBrightnessLevel.upperLayer_ptr					= &LCD_LCDSettings;
-	LCD_BacklightBrightnessLevel.nextLayer_ptr					= &LCD_SecondsToTurnLCDBacklightOff;
-	LCD_SecondsToTurnLCDBacklightOff.previousLayer_ptr			= &LCD_BacklightBrightnessLevel;
+	LCD_BacklightBrightnessLevel.nextLayer_ptr					= &LCD_BacklightOffBrightnessLevel;
+	LCD_BacklightOffBrightnessLevel.previousLayer_ptr			= &LCD_BacklightBrightnessLevel;
+	LCD_BacklightOffBrightnessLevel.upperLayer_ptr				= &LCD_LCDSettings;
+	LCD_BacklightOffBrightnessLevel.nextLayer_ptr				= &LCD_SecondsToTurnLCDBacklightOff;
+	LCD_SecondsToTurnLCDBacklightOff.previousLayer_ptr			= &LCD_BacklightOffBrightnessLevel;
 	LCD_SecondsToTurnLCDBacklightOff.upperLayer_ptr				= &LCD_LCDSettings;
 	LCD_SecondsToTurnLCDBacklightOff.nextLayer_ptr				= &LCD_AutoBacklightOffStartHour;
 	LCD_AutoBacklightOffStartHour.previousLayer_ptr				= &LCD_SecondsToTurnLCDBacklightOff;
@@ -2115,6 +2143,9 @@ void StartLCDTask(void const * argument)
 
 	/* Setting " " in the whole buffer */
 	memset(LCD_buffer, SPACE_IN_ASCII, (LCD.noOfRowsLCD * LCD.noOfColumnsLCD));
+
+	/* Setting LCD Back-light to a set level */
+	PWM_PULSE_LCD_BACKLIGHT = LCD_MainSettings.backlightLevel;
 
 	/** LCD Init (setting number of rows, columns, address, I2C handler **/
 	if(TRUE != lcdInit(&hi2c2, LCD.addressLCD, LCD.noOfRowsLCD, LCD.noOfColumnsLCD))
@@ -2171,6 +2202,9 @@ void StartLCDTask(void const * argument)
 	{
 		/** Cleaning the buffer by writing only spaces into it **/
 		memset(LCD_buffer, SPACE_IN_ASCII, (LCD.noOfRowsLCD * LCD.noOfColumnsLCD));
+
+		/* Control back-light (check PWM state and timers) */
+		ControlBacklight();
 
 		/* Wait with proceeding if there was a "DONE" or "ERROR" message displayed.
 		 * Flag EEPROM_Success_Failure_Message is set in EEPROMWaitForWriteCheck(...). */
@@ -2709,6 +2743,7 @@ static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard)
 		case _carVoltage_type_:
 		case _boardVoltage_type_:
 		case _boardTemperature_type_:
+		case _LCDSettings_type_:
 		{
 			if(FALSE == displayAndControlValue_doneOnce)
 			{
@@ -2718,6 +2753,12 @@ static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard)
 
 			switch(currentBoard->valueStepSize)
 			{
+				case StepByFifty:
+				{
+					tempSetting += EncoderCounterMenuDiff*50;
+					tempSize = snprintf(tempSettingBuffer, 10u, "%01d ", (uint16_t)tempSetting);
+					break;
+				}
 				case StepByOne:
 				{
 					tempSetting += EncoderCounterMenuDiff;
@@ -3115,4 +3156,80 @@ static void EEPROMWaitForWriteCheck(EEPROM_data_struct* EEPROMData)
 
 
 
+/* This function checks and controls the back-light of the LCD */
+static void ControlBacklight(void)
+{
+	boolean isTimerActive = (boolean)xTimerIsTimerActive(My_Timer_LCD_BacklightHandle); /* if timer is active returns 1 */;
+
+	if(ON == stateOfLCDBacklight)	/* If the backlight is ON */
+	{
+		/* If any of the auto-dimming functions are on */
+		if((0 != LCD_MainSettings.secondsToAutoTurnOffBacklight) || (TRUE == LCD_MainSettings.autoBacklightOffAtNightOn))
+		{
+			/* If there is a back-light on request */
+			if(TRUE == backlightOnRequest)
+			{
+				xTimerReset(My_Timer_LCD_BacklightHandle, 0u);
+				backlightOnRequest = FALSE;
+			}
+
+			/* If the time to turn the back-light off is different than 0 */
+			if(0 != LCD_MainSettings.secondsToAutoTurnOffBacklight)
+			{
+				/* Check the status of the LCD back-light timer */
+				if(FALSE == isTimerActive)
+				{
+					/* If the timer is not ON then turn it ON */
+					(void)osTimerStart(My_Timer_LCD_BacklightHandle, LCD_MainSettings.secondsToAutoTurnOffBacklight);
+				}
+			}
+			else /* If the time to turn the back-light off is 0 */
+			{
+				/* Check if turning off in certain hours is ON and if time is available */
+				if(TRUE == GPS.TimeReady)
+				{
+					/* If the time is between the set hours and the setting is ON */
+					if((GPS.hoursInNumber >= LCD_MainSettings.autoBacklightOffHourStart) && (GPS.hoursInNumber <= LCD_MainSettings.autoBacklightOffHourEnd))
+					{
+						/* Check the status of the LCD back-light timer */
+						if(FALSE == isTimerActive)
+						{
+							/* If the timer is not ON then turn it ON */
+							(void)osTimerStart(My_Timer_LCD_BacklightHandle, LCD_MainSettings.secondsToAutoTurnOffBacklight);
+						}
+					}
+				}
+			}
+		}//((0 != LCD_MainSettings.secondsToAutoTurnOffBacklight) || (TRUE == LCD_MainSettings.autoBacklightOffAtNightOn))
+		else /* if no turning off the back-light is ON */
+		{
+			/* Check the status of the LCD back-light timer */
+			if(FALSE == isTimerActive)
+			{
+				/* If the timer is ON then turn it OFF */
+				(void)osTimerStop(My_Timer_LCD_BacklightHandle);
+			}
+		}
+	}//(ON == stateOfLCDBacklight)
+	else	/* If the backlight is OFF */
+	{
+		if(TRUE == backlightOnRequest)
+		{
+			PWM_PULSE_LCD_BACKLIGHT = LCD_MainSettings.backlightLevel;
+			backlightOnRequest = FALSE;
+			stateOfLCDBacklight = ON;
+		}
+		else
+		{
+			stateOfLCDBacklight = OFF;
+		}
+	}
+}
+
+
+void Timer_LCD_Backlight(void const * argument)
+{
+	PWM_PULSE_LCD_BACKLIGHT = LCD_MainSettings.backlightOffLevel;
+	stateOfLCDBacklight = OFF;
+}
 
