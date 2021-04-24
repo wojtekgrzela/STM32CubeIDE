@@ -26,7 +26,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Defines And Typedefs */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define ON_BOARD_FAN_HBRIDGE_TEMP_ON_THRESHOLD		((float)(60.0))
+#define ON_BOARD_FAN_HBRIDGE_TEMP_ON_THRESHOLD		((float)(50.0))
+#define RPM_DIVIDER_COEFFICIENT						((uint32_t)(3u))
+#define SPEED_DIVIDER_COEFFICIENT					((float)(9.0/*Reaction for two edges (rising, falling)*/))
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -107,7 +109,9 @@ extern SDCard_info_struct SDCard_info;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Local variables */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+static uint16_t inBinSignalsPinTable[8u] = {IN_BIN_SIG_1_Pin, IN_BIN_SIG_2_Pin, IN_BIN_SIG_3_Pin, IN_BIN_SIG_4_Pin, IN_BIN_SIG_5_Pin, IN_BIN_SIG_6_Pin, IN_BIN_SIG_7_Pin, IN_BIN_SIG_8_Pin};
+static GPIO_TypeDef* inBinSignalsPortTable[8u] = {IN_BIN_SIG_1_GPIO_Port, IN_BIN_SIG_2_GPIO_Port, IN_BIN_SIG_3_GPIO_Port, IN_BIN_SIG_4_GPIO_Port, IN_BIN_SIG_5_GPIO_Port, IN_BIN_SIG_6_GPIO_Port, IN_BIN_SIG_7_GPIO_Port, IN_BIN_SIG_8_GPIO_Port};
+GPIO_PinState inBinSignalsTable[8u] = {RESET};
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -137,6 +141,7 @@ static void checkMicroSDPresence(void);
 static void checkUSBMSCState(void);
 
 static void controlOnBoardFan(boolean state);
+static void checkInBinSignals(void);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -174,7 +179,7 @@ void StartMeasureTask(void const *argument)
 
 	volatile float temp_mileage 			= 0;
 	volatile uint32_t temp_RPM_counter 		= 0;
-	volatile uint32_t temp_SPEED_counter 	= 0;
+	volatile float temp_SPEED_counter 	= 0;
 
 	static uint8_t totalMileageMessage[7] 	= "";
 	static uint8_t tripMileageMessage[8]	= "";
@@ -303,12 +308,12 @@ void StartMeasureTask(void const *argument)
 //		taskENTER_CRITICAL();
 		if (halfSecond_FLAG)
 		{
-			temp_SPEED_counter = SPEED_counter;
+			temp_SPEED_counter = (float)SPEED_counter / SPEED_DIVIDER_COEFFICIENT ;
 			SPEED_counter = 0;
 		}
 		if (oneSecond_FLAG)
 		{
-			temp_RPM_counter = RPM_counter;
+			temp_RPM_counter = RPM_counter * RPM_DIVIDER_COEFFICIENT;
 			RPM_counter = 0;
 		}
 //		taskEXIT_CRITICAL();
@@ -587,12 +592,14 @@ void StartMeasureTask(void const *argument)
 		checkMicroSDPresence();
 		/* Check USB state (is it present or not) and set SDCard_info */
 		checkUSBMSCState();
+		/* Check state of input GPIOs */
+		checkInBinSignals();
 
 
 		if (halfSecond_FLAG)
 		{
-			temp_mileage = temp_SPEED_counter * HOW_MANY_METERS_IN_ONE_PULSE; /* pulse counter * meters in one pulse */
-			CarStateInfo.SPEED = temp_mileage * SECONDS_IN_ONE_HOUR / METERS_IN_KILOMETER * 2u; /* mileage in meters * 3600 / 1000 * 2u (2u because we calculate every 0.5s) */
+			temp_mileage = temp_SPEED_counter; /* Because temp_SPEED_counter is in meters/0.5s */
+			CarStateInfo.SPEED = temp_SPEED_counter * (SECONDS_IN_ONE_HOUR / METERS_IN_KILOMETER) * 2u; /* mileage in meters * 3600 / 1000 * 2u (2u because we calculate every 0.5s) */
 
 			temp_mileage = INTEGER_DIVISION_ROUNDING((temp_mileage * 2), 2); /* Thanks to that operation we will obtain a rounded integer after truncating */
 			CAR_mileage.totalMileage += temp_mileage; /* Adding the mileage to the global counter */
@@ -601,8 +608,7 @@ void StartMeasureTask(void const *argument)
 
 		if (oneSecond_FLAG)
 		{
-			CarStateInfo.RPM = temp_RPM_counter * HOW_MANY_RPMS_PER_ONE_PULSE; /* pulse counter * RPMS in one pulse */
-
+			CarStateInfo.RPM = temp_RPM_counter; /* pulse counter * RPMS in one pulse */
 		}
 
 		if (oneSecond_FLAG)
@@ -614,7 +620,7 @@ void StartMeasureTask(void const *argument)
 			RPMForLCD.messageReadyFLAG = TRUE;
 			/* Vehicle Speed */
 			SPEEDForLCD.messageReadyFLAG = FALSE;
-			snprintf((char*)SPEEDForLCD.messageHandler, 4, "%01" PRIu32, CarStateInfo.SPEED);
+			snprintf((char*)SPEEDForLCD.messageHandler, 4, "%01" PRIu32, (uint32_t)CarStateInfo.SPEED);
 			SPEEDForLCD.size = strlen((char*)SPEEDForLCD.messageHandler);
 			SPEEDForLCD.messageReadyFLAG = TRUE;
 		}
@@ -623,12 +629,12 @@ void StartMeasureTask(void const *argument)
 		{
 			/* Vehicle total mileage */
 			totalMileageForLCD.messageReadyFLAG = FALSE;
-			snprintf((char*)totalMileageForLCD.messageHandler, 7, "%01" PRIu32, (CAR_mileage.totalMileage / METERS_IN_KILOMETER));
+			snprintf((char*)totalMileageForLCD.messageHandler, 7, "%01" PRIu32, (CAR_mileage.totalMileage / (uint32_t)METERS_IN_KILOMETER));
 			totalMileageForLCD.size = strlen((char*)totalMileageForLCD.messageHandler); /* It will look like that: "123456" */
 			totalMileageForLCD.messageReadyFLAG = TRUE;
 			/* Vehicle trip mileage */
 			tripMileageForLCD.messageReadyFLAG = FALSE;
-			snprintf((char*)tripMileageForLCD.messageHandler, 8, "%01" PRIu32 ".%01" PRIu32, (CAR_mileage.tripMileage / METERS_IN_KILOMETER),
+			snprintf((char*)tripMileageForLCD.messageHandler, 8, "%01" PRIu32 ".%01" PRIu32, (CAR_mileage.tripMileage / (uint32_t)METERS_IN_KILOMETER),
 					((CAR_mileage.tripMileage / 100u) % 10u));
 			tripMileageForLCD.size = strlen((char*)tripMileageForLCD.messageHandler); /* It will look like that: "12345.x" */
 			tripMileageForLCD.messageReadyFLAG = TRUE;
@@ -636,13 +642,13 @@ void StartMeasureTask(void const *argument)
 			xQueueSend(Queue_EEPROM_writeHandle, &FRAMData, (TickType_t)0u/*NONE wait time if the queue is full*/);
 		}
 
-		if (tenSeconds_FLAG)
+		if (twoSecond_FLAG)
 		{
 			if(temperatureHBridge >= ON_BOARD_FAN_HBRIDGE_TEMP_ON_THRESHOLD)
 			{
 				controlOnBoardFan(ON);
 			}
-			else
+			else if(temperatureHBridge <= ON_BOARD_FAN_HBRIDGE_TEMP_ON_THRESHOLD-3)
 			{
 				controlOnBoardFan(OFF);
 			}
@@ -860,7 +866,7 @@ static void Read_CarState(void)
 	}
 	else
 	{
-		CarStateInfo.carState = CarState_Error;
+		CarStateInfo.carState = CarState_Off;
 	}
 }
 
@@ -926,5 +932,14 @@ static void controlOnBoardFan(boolean state)
 	HAL_GPIO_WritePin(FAN_BOARD_GPIO_Port, FAN_BOARD_Pin, (GPIO_PinState)state);
 }
 
+
+
+static void checkInBinSignals(void)
+{
+	for(uint8_t i=0; i < 8u; ++i)
+	{
+		inBinSignalsTable[i] = HAL_GPIO_ReadPin(inBinSignalsPortTable[i], inBinSignalsPinTable[i]);
+	}
+}
 
 

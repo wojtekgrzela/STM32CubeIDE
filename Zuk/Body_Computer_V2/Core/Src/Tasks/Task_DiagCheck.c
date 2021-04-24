@@ -193,11 +193,11 @@ void StartDiagCheckTask(void const * argument)
 			case CarState_Running:
 			{
 				Check_CarWaterTemp();
-				Check_CarOilTemp();
+//				Check_CarOilTemp();
 				Check_CarOilPressure();
 				Check_CarMainBattVoltage();
 				Check_CarAuxBattVoltage();
-				Check_CarFuelLevel();
+//				Check_CarFuelLevel();
 				break;
 			}
 			case CarState_Error:
@@ -265,6 +265,7 @@ static void Check_CarOilTemp()
 /* This function checks whether the current oil pressure in the vehicle is in the thresholds. */
 static void Check_CarOilPressure()
 {
+#if 0
 	if(IsHigher((float)oilPressureValue, (float)CAR_oilPressure.oilHighPressureAlarmThreshold))
 	{
 		valueStates.carOilAnalogPressure_ValueState = val_alarm;	/* Set value in alarm. */
@@ -280,7 +281,7 @@ static void Check_CarOilPressure()
 		valueStates.carOilAnalogPressure_ValueState = val_OK;	/* Set value in OK state. */
 		carOilAnalogPressure_alarm.signalBuzzerIndication = FALSE;	/* Set signal indication to FALSE - turn off alarm as the value is OK. */
 	}
-
+#endif
 	if(FALSE == oilPressureValueBinary)
 	{
 		valueStates.carOilBinaryPressure_ValueState = val_alarm;	/* Set value in alarm. */

@@ -434,14 +434,14 @@ Error_Code InitVariablesFromEEPROMBoard(void)
 
 		EEPROMData.data = data_union.u8bit;
 		EEPROMData.memAddress = BOARD_LCD_BACKLIGHT_LEVEL_ADDRESS;
-		EEPROMData.size = UINT8_T_SIZE;
+		EEPROMData.size = UINT16_T_SIZE;
 		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
 		HAL_Delay(delayAfterRead);
 		LCD_MainSettings.backlightLevel = data_union.LCDBacklightSettings;
 
 		EEPROMData.data = data_union.u8bit;
 		EEPROMData.memAddress = BOARD_LCD_BACKLIGHT_OFF_LEVEL_ADDRESS;
-		EEPROMData.size = UINT8_T_SIZE;
+		EEPROMData.size = UINT16_T_SIZE;
 		error = ReadEEPROM(EEPROMData.EEPROMParameters, &EEPROMData);
 		HAL_Delay(delayAfterRead);
 		LCD_MainSettings.backlightOffLevel = data_union.LCDBacklightSettings;

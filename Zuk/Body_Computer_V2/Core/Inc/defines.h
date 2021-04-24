@@ -32,7 +32,7 @@ typedef uint8_t boolean;
 #define MY_EEPROM_TASK_TIME_PERIOD			(TickType_t)(200)	/* Would be good to decrease this number significantly, as it only executes when it has data from a Queue */
 #define MY_DUMP_TO_EEPROM_TASK_TIME_PERIOD 	(TickType_t)(1000)
 #define MY_DUMP_TO_SDCARD_TASK_TIME_PERIOD	(TickType_t)(1000)
-#define MY_TASK_50_MS_TIME_PERIOD			(TickType_t)(50)
+#define MY_TASK_50_MS_TIME_PERIOD			(TickType_t)(10)
 #define MY_TASK_MEASURE_TIME_PERIOD			(TickType_t)(250)
 #define MY_TASK_500_MS_TIME_PERIOD			(TickType_t)(500)
 #define MY_TASK_CRUISE_CONTROL_TIME_PERIOD	(TickType_t)(500)
@@ -222,17 +222,15 @@ typedef uint8_t boolean;
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Measurements */
-#define NO_OF_ENGINE_TEMPERATURE_MEASUREMENTS_ADDED			((uint8_t)(8u))
-#define NO_OF_CAR_VOLTAGES_MEASUREMENTS_ADDED				((uint8_t)(8u))
+#define NO_OF_ENGINE_TEMPERATURE_MEASUREMENTS_ADDED			((uint8_t)(16u))
+#define NO_OF_CAR_VOLTAGES_MEASUREMENTS_ADDED				((uint8_t)(16u))
 #define NO_OF_FUEL_LEVEL_MEASUREMENTS_ADDED					((uint8_t)(10u))
 
 #define NO_OF_BOARD_TEMPERATURES_MEASUREMENTS_ADDED			((uint8_t)(4u))
 #define NO_OF_BOARD_VOLTAGES_MEASUREMENTS_ADDED				((uint8_t)(4u))
 
-#define SECONDS_IN_ONE_HOUR										((uint32_t)(3600))
-#define METERS_IN_KILOMETER									((uint32_t)(1000))
-#define HOW_MANY_METERS_IN_ONE_PULSE						((float)(10))	/* Value calculated for Buba */
-#define HOW_MANY_RPMS_PER_ONE_PULSE							((float)(10))	/* Value calculated for Buba */
+#define SECONDS_IN_ONE_HOUR									((float)(3600))
+#define METERS_IN_KILOMETER									((float)(1000))
 
 #define RPM_ENGINE_OFF_MAX_THRESHOLD		(uint32_t)(50U)
 #define RPM_ENGINE_CRANK_MIN_THRESHOLD		(uint32_t)(50U)

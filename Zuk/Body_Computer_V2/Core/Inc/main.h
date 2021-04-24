@@ -214,7 +214,8 @@ typedef enum
 	StepByOne			=	1,
 	StepByOneTen		=	10,
 	StepByOneHundred	=	100,
-	StepByFifty			=	999050
+	StepByFifty			=	999050,
+	StepByHundred		=	999100
 }Enum_valueStepSize;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -277,7 +278,7 @@ typedef struct
 	Enum_CarState carState;
 
 	uint32_t RPM;
-	uint32_t SPEED;
+	float SPEED;
 
 	uint16_t ADC_AcceleratorValue;
 
@@ -691,7 +692,7 @@ typedef struct {
 	Enum_CruiseMode mode;
 	uint32_t wantedSpeed;
 	uint32_t wantedRPM;
-	int32_t error;
+	float error;
 }CruiseControlParameters_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -723,8 +724,8 @@ void Error_Handler(void);
 #define IN2_CNTRL_ENGINE_GPIO_Port GPIOE
 #define IN1_CNTRL_ENGINE_Pin GPIO_PIN_4
 #define IN1_CNTRL_ENGINE_GPIO_Port GPIOE
-#define PWM_CRUISE_CONTROL_Pin GPIO_PIN_5
-#define PWM_CRUISE_CONTROL_GPIO_Port GPIOE
+#define EN_CRUISE_CONTROL_Pin GPIO_PIN_5
+#define EN_CRUISE_CONTROL_GPIO_Port GPIOE
 #define PWM_LCD_BACKLIGHT_Pin GPIO_PIN_6
 #define PWM_LCD_BACKLIGHT_GPIO_Port GPIOE
 #define DCDC_5V_ENABLE_Pin GPIO_PIN_10
@@ -801,6 +802,22 @@ void Error_Handler(void);
 #define CLUTCH_PEDAL_EXTI_IRQn EXTI15_10_IRQn
 #define OIL_PRESSURE_BINARY_Pin GPIO_PIN_12
 #define OIL_PRESSURE_BINARY_GPIO_Port GPIOF
+#define IN_BIN_SIG_8_Pin GPIO_PIN_13
+#define IN_BIN_SIG_8_GPIO_Port GPIOF
+#define IN_BIN_SIG_7_Pin GPIO_PIN_14
+#define IN_BIN_SIG_7_GPIO_Port GPIOF
+#define IN_BIN_SIG_6_Pin GPIO_PIN_15
+#define IN_BIN_SIG_6_GPIO_Port GPIOF
+#define IN_BIN_SIG_5_Pin GPIO_PIN_0
+#define IN_BIN_SIG_5_GPIO_Port GPIOG
+#define IN_BIN_SIG_4_Pin GPIO_PIN_1
+#define IN_BIN_SIG_4_GPIO_Port GPIOG
+#define IN_BIN_SIG_3_Pin GPIO_PIN_7
+#define IN_BIN_SIG_3_GPIO_Port GPIOE
+#define IN_BIN_SIG_2_Pin GPIO_PIN_8
+#define IN_BIN_SIG_2_GPIO_Port GPIOE
+#define IN_BIN_SIG_1_Pin GPIO_PIN_9
+#define IN_BIN_SIG_1_GPIO_Port GPIOE
 #define EEPROM_WP2_Pin GPIO_PIN_10
 #define EEPROM_WP2_GPIO_Port GPIOB
 #define EEPROM_WP1_Pin GPIO_PIN_11

@@ -25,17 +25,17 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Defines And Typedefs */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define P_REGULATOR_GAIN_SPEED			((float)(1.0))
-#define I_REGULATOR_GAIN_SPEED			((float)(0.5))
-#define D_REGULATOR_GAIN_SPEED			((float)(1.0))
+#define P_REGULATOR_GAIN_SPEED			((float)(3.0))
+#define I_REGULATOR_GAIN_SPEED			((float)(0.0001))
+#define D_REGULATOR_GAIN_SPEED			((float)(0.01))
 
 #define P_REGULATOR_GAIN_RPM			((float)(1.0))
 #define I_REGULATOR_GAIN_RPM			((float)(0.5))
 #define D_REGULATOR_GAIN_RPM			((float)(1.0))
 
 /* ADC defines */
-#define MAX_ADC_ACCELERATION_READOUT	((uint32_t)(2000))	//TODO: max what an ADC can read as a max gas pedal position
-#define MIN_ADC_ACCELERATION_READOUT	((uint32_t)(1000))	//TODO: min what an ADC can read as a min gas pedal position
+#define MAX_ADC_ACCELERATION_READOUT	((int32_t)(2900))	//TODO: max what an ADC can read as a max gas pedal position
+#define MIN_ADC_ACCELERATION_READOUT	((int32_t)(540))	//TODO: min what an ADC can read as a min gas pedal position
 
 /* RPM sefines */
 #define MAX_ALLOWED_RPM				((uint32_t)(3500))
@@ -67,7 +67,7 @@ extern volatile int8_t EncoderCounterCruiseDiff;
 /* Local variables */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 volatile CruiseControlParameters_struct cruiseControlParam = {0};	/* NOT static on purpose */
-volatile uint16_t ADCDesiredAccelerationValue = 0;	/* NOT static on purpose */
+volatile uint16_t ADCDesiredAccelerationValue = 1400;	/* NOT static on purpose */
 
 static PIDparameters_t PID_param_SPEED =
 	{ 	.P = P_REGULATOR_GAIN_SPEED,
@@ -101,7 +101,9 @@ static void valuesToStrings(void);
 extern void Complete_Shutdown(void);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-
+float CALCULATEDPosition = 0.0;
+float globalCntlValue;
+float globalTempDesired;
 
 void StartCruiseCntrlTask(void const *argument)
 {
@@ -134,12 +136,13 @@ void StartCruiseCntrlTask(void const *argument)
 
 		if (ON == cruiseControlParam.state)
 		{
+			HAL_GPIO_WritePin(POWER_ON_CRUISE_CONTROL_PORT, POWER_ON_CRUISE_CONTROL_Pin, SET);
 			/* Check the mode of the cruise control */
 			if(CONSTANT_SPEED == cruiseControlParam.mode)
 			{
 				/* If the mode is constant speed - use constant speed parameters and error */
 				PID_param_ptr = &PID_param_SPEED;
-				cruiseControlParam.error = cruiseControlParam.wantedSpeed - CarStateInfo.SPEED;
+				cruiseControlParam.error = (float)cruiseControlParam.wantedSpeed - (float)CarStateInfo.SPEED;
 			}
 			else
 			{
@@ -153,7 +156,7 @@ void StartCruiseCntrlTask(void const *argument)
 
 			/* calculate the control value */
 			controlValue = RunPIDController((float)cruiseControlParam.error, PID_param_ptr);
-
+			globalCntlValue = controlValue;
 			/* Add the calculated value to the temporary variable with desired ADC value */
 			ADCtempDesiredValue += (int32_t)controlValue;
 
@@ -168,7 +171,7 @@ void StartCruiseCntrlTask(void const *argument)
 				/* Set the maximum value when the desired was even higher */
 				ADCtempDesiredValue = MAX_ADC_ACCELERATION_READOUT;
 			}
-
+			globalTempDesired = ADCtempDesiredValue;
 			/* Write the newly calculated temporary desired value to the exported desired value */
 			ADCDesiredAccelerationValue = (uint16_t)ADCtempDesiredValue;
 		}

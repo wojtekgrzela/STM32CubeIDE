@@ -55,7 +55,8 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOE, EN_ELECTRO_CLUTCH_Pin|IN2_CNTRL_ENGINE_Pin|IN1_CNTRL_ENGINE_Pin|FRAM_WP_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOE, EN_ELECTRO_CLUTCH_Pin|IN2_CNTRL_ENGINE_Pin|IN1_CNTRL_ENGINE_Pin|EN_CRUISE_CONTROL_Pin
+                          |FRAM_WP_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOI, DCDC_5V_ENABLE_Pin|BUZZER_Pin|FAN_BOARD_Pin|POWER_ON_CRUISE_CONTROL_Pin, GPIO_PIN_RESET);
@@ -82,6 +83,13 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : PtPin */
+  GPIO_InitStruct.Pin = EN_CRUISE_CONTROL_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  HAL_GPIO_Init(EN_CRUISE_CONTROL_GPIO_Port, &GPIO_InitStruct);
+
   /*Configure GPIO pins : PIPin PIPin PIPin PIPin */
   GPIO_InitStruct.Pin = DCDC_5V_ENABLE_Pin|BUZZER_Pin|FAN_BOARD_Pin|POWER_ON_CRUISE_CONTROL_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -105,13 +113,13 @@ void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : PtPin */
   GPIO_InitStruct.Pin = BRAKE_PEDAL_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(BRAKE_PEDAL_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PtPin */
   GPIO_InitStruct.Pin = CLUTCH_PEDAL_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(CLUTCH_PEDAL_GPIO_Port, &GPIO_InitStruct);
 
@@ -120,6 +128,24 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(OIL_PRESSURE_BINARY_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PFPin PFPin PFPin */
+  GPIO_InitStruct.Pin = IN_BIN_SIG_8_Pin|IN_BIN_SIG_7_Pin|IN_BIN_SIG_6_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PGPin PGPin PGPin PGPin */
+  GPIO_InitStruct.Pin = IN_BIN_SIG_5_Pin|IN_BIN_SIG_4_Pin|KEY_CRANKING_Pin|KEY_IGNITION_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PEPin PEPin PEPin */
+  GPIO_InitStruct.Pin = IN_BIN_SIG_3_Pin|IN_BIN_SIG_2_Pin|IN_BIN_SIG_1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PBPin PBPin */
   GPIO_InitStruct.Pin = EEPROM_WP2_Pin|EEPROM_WP1_Pin;
@@ -135,15 +161,9 @@ void MX_GPIO_Init(void)
   HAL_GPIO_Init(MICROSD_DETECT_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PGPin PGPin */
-  GPIO_InitStruct.Pin = KEY_CRANKING_Pin|KEY_IGNITION_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : PGPin PGPin */
   GPIO_InitStruct.Pin = SPEED_SIGNAL_Pin|RPM_SIGNAL_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PtPin */

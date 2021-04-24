@@ -1520,7 +1520,7 @@ static LCD_board LCD_BacklightBrightnessLevel = {.name="Backlight Level",
 						.EnterFunction 		= ENTER_SaveToEEPROM,
 						.value_ptr 			= &(LCD_MainSettings.backlightLevel),
 						.valueType 			= _LCDSettings_type_,
-						.valueStepSize 		= StepByFifty,
+						.valueStepSize 		= StepByHundred,
 						.unit 				= NULL,
 						.EEPROMParameters	= &EEPROM_board,
 						.EEPROM_memAddress	= BOARD_LCD_BACKLIGHT_LEVEL_ADDRESS,
@@ -1535,7 +1535,7 @@ static LCD_board LCD_BacklightOffBrightnessLevel = {.name="Backlight Off Level",
 						.EnterFunction 		= ENTER_SaveToEEPROM,
 						.value_ptr 			= &(LCD_MainSettings.backlightOffLevel),
 						.valueType 			= _LCDSettings_type_,
-						.valueStepSize 		= StepByFifty,
+						.valueStepSize 		= StepByHundred,
 						.unit 				= NULL,
 						.EEPROMParameters	= &EEPROM_board,
 						.EEPROM_memAddress	= BOARD_LCD_BACKLIGHT_OFF_LEVEL_ADDRESS,
@@ -2743,7 +2743,6 @@ static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard)
 		case _carVoltage_type_:
 		case _boardVoltage_type_:
 		case _boardTemperature_type_:
-		case _LCDSettings_type_:
 		{
 			if(FALSE == displayAndControlValue_doneOnce)
 			{
@@ -2802,6 +2801,51 @@ static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard)
 				EEPROMData.size = FLOAT_SIZE;
 			}
 
+			break;
+		}
+		case _LCDSettings_type_:
+		{
+			if(FALSE == displayAndControlValue_doneOnce)
+			{
+				tempSetting = *((LCDBacklightSettings_type*)(currentBoard->value_ptr));
+				displayAndControlValue_doneOnce = TRUE;
+			}
+
+			switch(currentBoard->valueStepSize)
+			{
+				case StepByHundred:
+				{
+					tempSetting += EncoderCounterMenuDiff*100;
+					tempSetting -= ((LCDBacklightSettings_type)tempSetting%100);
+					tempSize = snprintf(tempSettingBuffer, 10u, "%01d ", (LCDBacklightSettings_type)tempSetting);
+					break;
+				}
+				default:
+				{
+					break;
+				}
+			}//switch(currentBoard->valueStepSize)
+
+			if(*((float*)(currentBoard->minValue)) > tempSetting)
+			{
+				tempSetting = *((float*)(currentBoard->minValue));
+			}
+			else if(*((float*)(currentBoard->maxValue)) < tempSetting)
+			{
+				tempSetting = *((float*)(currentBoard->maxValue));
+			}
+
+			*((LCDBacklightSettings_type*)(currentBoard->value_ptr)) = tempSetting;
+
+			error = copy_str_to_buffer(tempSettingBuffer, (char*)LCD_buffer[Row3], (uint8_t)(20/2-tempSize), tempSize);
+			error = copy_str_to_buffer(currentBoard->unit, (char*)LCD_buffer[Row3], (uint8_t)(20/2), currentBoard->unitSize);
+
+			if(TRUE == enterAction_save)
+			{
+				*((LCDBacklightSettings_type*)(currentBoard->value_ptr)) = tempSetting;
+				dataToSend.LCDBacklightSettings = tempSetting;
+				EEPROMData.size = UINT16_T_SIZE;
+			}
 			break;
 		}
 		case _boolean_type_:
@@ -2871,13 +2915,13 @@ static void RUNNING_DisplayAndControlValue(struct LCD_board* currentBoard)
 
 			tempLayer += EncoderCounterMenuDiff;
 
-			if(*((Enum_Layer*)(currentBoard->minValue)) > tempLayer)
+			if(*((float*)(currentBoard->minValue)) > tempLayer)
 			{
-				tempLayer = *((Enum_Layer*)(currentBoard->minValue));
+				tempLayer = *((float*)(currentBoard->minValue));
 			}
-			else if(*((Enum_Layer*)(currentBoard->maxValue)) < tempLayer)
+			else if(*((float*)(currentBoard->maxValue)) < tempLayer)
 			{
-				tempLayer = *((Enum_Layer*)(currentBoard->maxValue));
+				tempLayer = *((float*)(currentBoard->maxValue));
 			}
 
 			error = copy_str_to_buffer(mainScreensList[(uint8_t)tempLayer]->name, (char*)LCD_buffer[Row3], (uint8_t)(20-mainScreensList[(uint8_t)tempLayer]->nameSize)/2, mainScreensList[(uint8_t)tempLayer]->nameSize);
@@ -3209,6 +3253,8 @@ static void ControlBacklight(void)
 				/* If the timer is ON then turn it OFF */
 				(void)osTimerStop(My_Timer_LCD_BacklightHandle);
 			}
+
+			PWM_PULSE_LCD_BACKLIGHT = LCD_MainSettings.backlightLevel;
 		}
 	}//(ON == stateOfLCDBacklight)
 	else	/* If the backlight is OFF */
