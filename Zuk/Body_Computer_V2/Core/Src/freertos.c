@@ -296,8 +296,8 @@ LCD_message SPEEDForLCD =
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Constant value limits and check - hard-coded, to be changed only by recompilation */
 GlobalValuesLimits_struct GlobalValuesLimits =
-	{ 	.polishTimeAdj_min = 1,
-		.polishTimeAdj_max = 2,
+	{ 	.polishTimeAdj_min = 0,
+		.polishTimeAdj_max = 1,
 		.timeZoneAdj_min = -12,
 		.timeZoneAdj_max = 12,
 

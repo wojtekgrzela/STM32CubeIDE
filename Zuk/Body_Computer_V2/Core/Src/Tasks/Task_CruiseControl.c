@@ -25,9 +25,26 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Defines And Typedefs */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define P_REGULATOR_GAIN_SPEED			((float)(3.0))
-#define I_REGULATOR_GAIN_SPEED			((float)(0.0001))
-#define D_REGULATOR_GAIN_SPEED			((float)(0.01))
+#define P_REGULATOR_GAIN_SPEED_1			((float)(3.0))
+#define I_REGULATOR_GAIN_SPEED_1			((float)(0.0001))
+#define D_REGULATOR_GAIN_SPEED_1			((float)(1.0))
+
+#define P_REGULATOR_GAIN_SPEED_2			((float)(3.0))
+#define I_REGULATOR_GAIN_SPEED_2			((float)(0.0001))
+#define D_REGULATOR_GAIN_SPEED_2			((float)(1.0))
+
+#define P_REGULATOR_GAIN_SPEED_3			((float)(4.0))
+#define I_REGULATOR_GAIN_SPEED_3			((float)(0.0001))
+#define D_REGULATOR_GAIN_SPEED_3			((float)(2.0))
+
+#define P_REGULATOR_GAIN_SPEED_4			((float)(4.5))
+#define I_REGULATOR_GAIN_SPEED_4			((float)(0.001))
+#define D_REGULATOR_GAIN_SPEED_4			((float)(2.5))
+
+#define SPEED_THRESHOLD_1			((float)(100.0))
+#define SPEED_THRESHOLD_2			((float)(85.0))
+#define SPEED_THRESHOLD_3			((float)(70.0))
+#define SPEED_THRESHOLD_4			(MIN_ALLOWED_SPEED)
 
 #define P_REGULATOR_GAIN_RPM			((float)(1.0))
 #define I_REGULATOR_GAIN_RPM			((float)(0.5))
@@ -36,14 +53,6 @@
 /* ADC defines */
 #define MAX_ADC_ACCELERATION_READOUT	((int32_t)(2900))	//TODO: max what an ADC can read as a max gas pedal position
 #define MIN_ADC_ACCELERATION_READOUT	((int32_t)(540))	//TODO: min what an ADC can read as a min gas pedal position
-
-/* RPM sefines */
-#define MAX_ALLOWED_RPM				((uint32_t)(3500))
-#define MIN_ALLOWED_RPM				((uint32_t)(1200))
-#define MIN_ALLOWED_SPEED			((uint32_t)(40))
-#define MAX_ALLOWED_SPEED			((uint32_t)(130))
-#define ENCODER_RPM_SETTING_STEP	((int32_t)(20))
-#define ENCODER_SPEED_SETTING_STEP	((int32_t)(1))
 
 
 
@@ -70,9 +79,9 @@ volatile CruiseControlParameters_struct cruiseControlParam = {0};	/* NOT static 
 volatile uint16_t ADCDesiredAccelerationValue = 1400;	/* NOT static on purpose */
 
 static PIDparameters_t PID_param_SPEED =
-	{ 	.P = P_REGULATOR_GAIN_SPEED,
-		.I = I_REGULATOR_GAIN_SPEED,
-		.D = D_REGULATOR_GAIN_SPEED,
+	{ 	.P = P_REGULATOR_GAIN_SPEED_1,
+		.I = I_REGULATOR_GAIN_SPEED_1,
+		.D = D_REGULATOR_GAIN_SPEED_1,
 		.dt = MY_TASK_CRUISE_CONTROL_TIME_PERIOD };
 static PIDparameters_t PID_param_RPM =
 		{ 	.P = P_REGULATOR_GAIN_RPM,
@@ -140,6 +149,30 @@ void StartCruiseCntrlTask(void const *argument)
 			/* Check the mode of the cruise control */
 			if(CONSTANT_SPEED == cruiseControlParam.mode)
 			{
+				if (cruiseControlParam.wantedSpeed >= SPEED_THRESHOLD_1)
+				{
+					PID_param_SPEED.P = P_REGULATOR_GAIN_SPEED_1;
+					PID_param_SPEED.I = I_REGULATOR_GAIN_SPEED_1;
+					PID_param_SPEED.D = D_REGULATOR_GAIN_SPEED_1;
+				}
+				else if(cruiseControlParam.wantedSpeed >= SPEED_THRESHOLD_2)
+				{
+					PID_param_SPEED.P = P_REGULATOR_GAIN_SPEED_2;
+					PID_param_SPEED.I = I_REGULATOR_GAIN_SPEED_2;
+					PID_param_SPEED.D = D_REGULATOR_GAIN_SPEED_2;
+				}
+				else if(cruiseControlParam.wantedSpeed >= SPEED_THRESHOLD_3)
+				{
+					PID_param_SPEED.P = P_REGULATOR_GAIN_SPEED_3;
+					PID_param_SPEED.I = I_REGULATOR_GAIN_SPEED_3;
+					PID_param_SPEED.D = D_REGULATOR_GAIN_SPEED_3;
+				}
+				else
+				{
+					PID_param_SPEED.P = P_REGULATOR_GAIN_SPEED_4;
+					PID_param_SPEED.I = I_REGULATOR_GAIN_SPEED_4;
+					PID_param_SPEED.D = D_REGULATOR_GAIN_SPEED_4;
+				}
 				/* If the mode is constant speed - use constant speed parameters and error */
 				PID_param_ptr = &PID_param_SPEED;
 				cruiseControlParam.error = (float)cruiseControlParam.wantedSpeed - (float)CarStateInfo.SPEED;

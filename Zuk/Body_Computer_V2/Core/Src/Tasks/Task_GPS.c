@@ -44,6 +44,14 @@ extern GPS_data_struct GPS;
 
 
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Functions prototypes */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+static float floatModulo(float a, float b);
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+
+
 void StartGPSTask(void const * argument)
 {
 	TickType_t xLastWakeTime;
@@ -228,16 +236,29 @@ void StartGPSTask(void const * argument)
 
 		if(TRUE == GPS.Fix)
 		{
+			float tempVal = 0.0;
+			float tempPartVal = 0.0;
+			uint8_t tempBuffer[20u] = {SPACE_IN_ASCII};
+			uint16_t tempSize = 0;
+
 			GPS.forLCD.latitude.messageReadyFLAG = FALSE;
 			GPS.forLCD.latitudeIndicator.messageReadyFLAG = FALSE;
-			error = copy_str_to_buffer((char*)GPS.rawData.Latitude, (char*)GPS.message_buffers.latitude, 0u, GPS.forLCD.latitude.size);
+			tempVal = (float)atof((const char*)GPS.rawData.Latitude);
+			tempPartVal = floatModulo(tempVal, 100.0f);
+			tempVal = tempVal + (tempPartVal / 60.0f);
+			tempSize = snprintf((char*)tempBuffer, 11u, "%01" PRIu32 ".%06" PRIu32, (uint32_t)tempVal, ((uint32_t)(tempVal * 1000000u) % 1000000u));
+			error = copy_str_to_buffer((char*)tempBuffer, (char*)GPS.message_buffers.latitude, 0u, tempSize);
 			error = copy_str_to_buffer((char*)GPS.rawData.LatitudeIndicator, (char*)GPS.message_buffers.latitudeIndicator, 0u, GPS.forLCD.latitudeIndicator.size);
 			GPS.forLCD.latitude.messageReadyFLAG = TRUE;
 			GPS.forLCD.latitudeIndicator.messageReadyFLAG = TRUE;
 
 			GPS.forLCD.longitude.messageReadyFLAG = FALSE;
 			GPS.forLCD.longitudeIndicator.messageReadyFLAG = FALSE;
-			error = copy_str_to_buffer((char*)GPS.rawData.Longitude, (char*)GPS.message_buffers.longitude, 0u, GPS.forLCD.longitude.size);
+			tempVal = (float)atof((const char*)GPS.rawData.Longitude);
+			tempPartVal = floatModulo(tempVal, 100.0f);
+			tempVal = tempVal + (tempPartVal / 60.0f);
+			tempSize = snprintf((char*)tempBuffer, 12u, "%01" PRIu32 ".%06" PRIu32, (uint32_t)tempVal, ((uint32_t)(tempVal * 1000000u) % 1000000u));
+			error = copy_str_to_buffer((char*)tempBuffer, (char*)GPS.message_buffers.longitude, 0u, tempSize);
 			error = copy_str_to_buffer((char*)GPS.rawData.LongitudeIndicator, (char*)GPS.message_buffers.longitudeIndicator, 0u, GPS.forLCD.longitudeIndicator.size);
 			GPS.forLCD.longitude.messageReadyFLAG = TRUE;
 			GPS.forLCD.longitudeIndicator.messageReadyFLAG = TRUE;
@@ -307,4 +328,27 @@ void StartGPSTask(void const * argument)
 
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
+}
+
+
+
+static float floatModulo(float a, float b)
+{
+	float result = a;
+
+	if (a < 0)
+	{
+		a = -a;
+	}
+	if (b < 0)
+	{
+		b = -b;
+	}
+
+	while (result > b)
+	{
+		result -= b;
+	}
+
+	return result;
 }

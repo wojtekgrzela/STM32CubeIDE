@@ -87,8 +87,8 @@ typedef struct LCD_board
 	Enum_valueStepSize valueStepSize;
 	char* unit;
 	uint8_t unitSize;
-	const float* const minValue;
-	const float* const maxValue;
+	const void* const minValue;
+	const void* const maxValue;
 
 	/* EEPROM parameters */
 	EEPROM_parameters_struct* EEPROMParameters;

@@ -65,6 +65,7 @@ extern osTimerId My_Timer_LCD_BacklightHandle;
 
 extern EEPROM_parameters_struct EEPROM_car;
 extern EEPROM_parameters_struct EEPROM_board;
+extern EEPROM_parameters_struct FRAM_parameters;
 extern CAR_EEPROM_counters_struct CAR_EEPROM_counters;
 extern BOARD_EEPROM_counters_struct BOARD_EEPROM_counters;
 
@@ -92,6 +93,7 @@ extern LCD_message voltage5VForLCD;
 extern LCD_message voltageInForLCD;
 extern LCD_message temperature3V3DCDCForLCD;
 extern LCD_message temperature5VDCDCForLCD;
+extern LCD_message temperatureHBridgeForLCD;
 
 extern LCD_message Wanted_RPMForLCD;
 extern LCD_message Wanted_SPEEDForLCD;
@@ -122,6 +124,7 @@ static void ENTER_GoInto(void);
 static void ENTER_SaveToEEPROM(void);
 static void ENTER_ClearDiagnosticSnapshots(void);
 static void ENTER_ClearErrorSnapshots(void);
+static void ENTER_ClearTripMileage(void);
 static void ENTER_AreYouSure(void);
 
 static void RUNNING_ScrollList(struct LCD_board* currentBoard);
@@ -320,7 +323,7 @@ static LCD_board LCD_ClearTripMileage = {.name="Clear Trip Mileage",
 						.secondRow 			= NULL,
 						.thisLayer 			= ClearTripMileage,
 						.RunningFunction 	= RUNNING_ClearTripMileage,
-						.EnterFunction 		= NULL,	//TODO: implement calculating and adding mileages, then implement clearing the trip mileage and counters
+						.EnterFunction 		= ENTER_ClearTripMileage,
 						.value_ptr 			= NULL,
 						.valueType 			= _void_type_,
 						.valueStepSize 		= StepNotApplicable,
@@ -2328,8 +2331,15 @@ static void ENTER_ClearDiagnosticSnapshots(void)
 
 static void ENTER_ClearErrorSnapshots(void)
 {
-
 	LCD_AreYouSure.upperLayer_ptr = &LCD_ClearErrorSnap;
+	CurrentBoard_global = &LCD_AreYouSure;
+}
+
+
+
+static void ENTER_ClearTripMileage(void)
+{
+	LCD_AreYouSure.upperLayer_ptr = &LCD_ClearTripMileage;
 	CurrentBoard_global = &LCD_AreYouSure;
 }
 
@@ -2375,6 +2385,16 @@ static void ENTER_AreYouSure(void)
 			dataAddress[0] = NUMBER_OF_ERROR_SNAPSHOTS;
 			dataAddress[1] = NUMBER_OF_ERROR_SNAPSHOTS_OVERFLOWED_ADDRESS;
 			numberOfPacketsToSend = 2u;
+			break;
+		}
+		case ClearTripMileage:
+		{
+			CAR_mileage.tripMileage = 0u;
+			dataToSend[0].u32bit = 0u;
+			EEPROMData.EEPROMParameters = &FRAM_parameters;
+			dataSize[0] = UINT32_T_SIZE;
+			dataAddress[0] = TRIP_MILEAGE_START_ADDRESS;
+			numberOfPacketsToSend = 1u;
 			break;
 		}
 		default:
@@ -2605,6 +2625,12 @@ static void RUNNING_JarvisInfoLayer(struct LCD_board* currentBoard)
 		error = copy_str_to_buffer((char*)voltage5VForLCD.messageHandler, (char*)LCD_buffer[Row3], 5u, voltage5VForLCD.size);
 	if(TRUE == temperature5VDCDCForLCD.messageReadyFLAG)
 		error = copy_str_to_buffer((char*)temperature5VDCDCForLCD.messageHandler, (char*)LCD_buffer[Row3], (5u + voltage5VForLCD.size + 1u), temperature5VDCDCForLCD.size);
+
+	/*** Fourth Row ***/
+		/* H-bridge On Board temperature */
+	error = copy_str_to_buffer((char*)"H-bridge:", (char*)LCD_buffer[Row4], 0u, 9u);
+	if(TRUE == temperatureHBridgeForLCD.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)temperatureHBridgeForLCD.messageHandler, (char*)LCD_buffer[Row4], 10u, temperatureHBridgeForLCD.size);
 
 	if(NO_ERROR != error) my_error_handler(error);
 }
@@ -2978,8 +3004,6 @@ static void RUNNING_AreYouSure(struct LCD_board* currentBoard)
 
 	error = copy_str_to_buffer(currentBoard->name, (char*)LCD_buffer[Row1], (uint8_t)((20-currentBoard->nameSize)/2), currentBoard->nameSize);
 	error = copy_str_to_buffer("Enter to proceed", (char*)LCD_buffer[Row2], 0u, 16u);
-
-
 
 	if(NO_ERROR != error) my_error_handler(error);
 }

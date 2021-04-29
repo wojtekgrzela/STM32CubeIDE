@@ -362,6 +362,16 @@ typedef uint8_t boolean;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* RPM and SPEED defines for cruise control */
+#define MAX_ALLOWED_RPM				((uint32_t)(3500))
+#define MIN_ALLOWED_RPM				((uint32_t)(1000))
+#define MIN_ALLOWED_SPEED			((float)(40.0))
+#define MAX_ALLOWED_SPEED			((float)(130.0))
+#define ENCODER_RPM_SETTING_STEP	((int32_t)(20))
+#define ENCODER_SPEED_SETTING_STEP	((int32_t)(1))
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Sizes of variables and types in bytes */
 #define UINT8_T_SIZE			((uint8_t)(1u))
 #define INT8_T_SIZE				((uint8_t)(1u))

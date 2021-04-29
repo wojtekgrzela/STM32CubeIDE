@@ -589,10 +589,10 @@ typedef struct
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 typedef struct
 {
-	const float polishTimeAdj_min;
-	const float polishTimeAdj_max;
-	const float timeZoneAdj_min;
-	const float timeZoneAdj_max;
+	const timeHours_type polishTimeAdj_min;
+	const timeHours_type polishTimeAdj_max;
+	const timeHours_type timeZoneAdj_min;
+	const timeHours_type timeZoneAdj_max;
 
 	const float waterHighTempWarningThreshold_min;
 	const float waterHighTempWarningThreshold_max;

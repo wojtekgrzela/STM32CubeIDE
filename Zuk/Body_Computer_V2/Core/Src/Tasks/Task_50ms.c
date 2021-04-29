@@ -162,9 +162,6 @@ void Start50msTask(void const *argument)
 			}
 			else
 			{
-				/* Set the min value which is 0 - turn off the engine */
-//				Set_Engine_Off();
-
 				/* Read current ADC value for accelerator */
 				CarStateInfo.ADC_AcceleratorValue = ACC_POSITION_ADC_VALUE;
 
@@ -309,10 +306,13 @@ static void Encoder_CruiseControl_Button_Function(void)
 		}
 		else
 		{
-			cruiseControlParam.wantedSpeed = CarStateInfo.SPEED;
-			/* Set the state to ON and switch ON the electromagnetic clutch */
-			cruiseControlParam.state = ON;
-			Set_Electromagnes_On();
+			if((CarStateInfo.SPEED > MIN_ALLOWED_SPEED) && (CarStateInfo.SPEED < MAX_ALLOWED_SPEED))
+			{
+				cruiseControlParam.wantedSpeed = CarStateInfo.SPEED;
+				/* Set the state to ON and switch ON the electromagnetic clutch */
+				cruiseControlParam.state = ON;
+				Set_Electromagnes_On();
+			}
 		}
 
 		/* Clear short and long press detections */

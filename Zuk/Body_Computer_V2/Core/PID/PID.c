@@ -25,7 +25,8 @@ static inline float differentiate(float error, PIDparameters_t *PIDparam);
  */
 float RunPIDController(float error, PIDparameters_t *PIDparam)
 {
-	float i_res = integrate(error, PIDparam);
+	static float i_res = 0.0;
+	i_res += integrate(error, PIDparam);
 	float d_res = differentiate(error, PIDparam);
 
 	return ((PIDparam->P * error) + (((PIDparam->I) * i_res) / 1000) + ((PIDparam->D * d_res) * 1000));
