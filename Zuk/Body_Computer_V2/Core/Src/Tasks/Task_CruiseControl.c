@@ -26,20 +26,20 @@
 /* Defines And Typedefs */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #define P_REGULATOR_GAIN_SPEED_1			((float)(3.0))
-#define I_REGULATOR_GAIN_SPEED_1			((float)(0.0001))
-#define D_REGULATOR_GAIN_SPEED_1			((float)(1.0))
+#define I_REGULATOR_GAIN_SPEED_1			((float)(0.001))
+#define D_REGULATOR_GAIN_SPEED_1			((float)(2.0))
 
 #define P_REGULATOR_GAIN_SPEED_2			((float)(3.0))
-#define I_REGULATOR_GAIN_SPEED_2			((float)(0.0001))
-#define D_REGULATOR_GAIN_SPEED_2			((float)(1.0))
+#define I_REGULATOR_GAIN_SPEED_2			((float)(0.001))
+#define D_REGULATOR_GAIN_SPEED_2			((float)(2.0))
 
 #define P_REGULATOR_GAIN_SPEED_3			((float)(4.0))
 #define I_REGULATOR_GAIN_SPEED_3			((float)(0.0001))
 #define D_REGULATOR_GAIN_SPEED_3			((float)(2.0))
 
-#define P_REGULATOR_GAIN_SPEED_4			((float)(4.5))
-#define I_REGULATOR_GAIN_SPEED_4			((float)(0.001))
-#define D_REGULATOR_GAIN_SPEED_4			((float)(2.5))
+#define P_REGULATOR_GAIN_SPEED_4			((float)(4.0))
+#define I_REGULATOR_GAIN_SPEED_4			((float)(0.5))
+#define D_REGULATOR_GAIN_SPEED_4			((float)(6.0))
 
 #define SPEED_THRESHOLD_1			((float)(100.0))
 #define SPEED_THRESHOLD_2			((float)(85.0))
