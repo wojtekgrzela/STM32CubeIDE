@@ -113,9 +113,7 @@ typedef struct
 
 
 Error_Code parse_GPS_data(GPS_data_struct* const GPS);
-Error_Code track_GPS_movement(const GPS_data_struct* const GPS);
+boolean track_GPS_movement(const GPS_data_struct* const GPS);
 
-
-__weak Error_Code save_GPS_point(const GPS_data_struct* const GPS);
 
 #endif /* INC_GPS_PARSING_H_ */

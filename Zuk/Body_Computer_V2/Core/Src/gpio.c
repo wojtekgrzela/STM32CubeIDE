@@ -56,7 +56,7 @@ void MX_GPIO_Init(void)
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOE, EN_ELECTRO_CLUTCH_Pin|IN2_CNTRL_ENGINE_Pin|IN1_CNTRL_ENGINE_Pin|EN_CRUISE_CONTROL_Pin
-                          |FRAM_WP_Pin, GPIO_PIN_RESET);
+                          |WIPERS_SIG5_ON_Pin|WIPERS_SIG3_ON_Pin|WIPERS_SIG2_ON_Pin|FRAM_WP_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOI, DCDC_5V_ENABLE_Pin|BUZZER_Pin|FAN_BOARD_Pin|POWER_ON_CRUISE_CONTROL_Pin, GPIO_PIN_RESET);
@@ -76,8 +76,10 @@ void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOG, POWER_ON_NODEMCU_Pin|POWER_ON_GPS_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : PEPin PEPin PEPin PEPin */
-  GPIO_InitStruct.Pin = EN_ELECTRO_CLUTCH_Pin|IN2_CNTRL_ENGINE_Pin|IN1_CNTRL_ENGINE_Pin|FRAM_WP_Pin;
+  /*Configure GPIO pins : PEPin PEPin PEPin PEPin
+                           PEPin */
+  GPIO_InitStruct.Pin = EN_ELECTRO_CLUTCH_Pin|IN2_CNTRL_ENGINE_Pin|IN1_CNTRL_ENGINE_Pin|WIPERS_SIG2_ON_Pin
+                          |FRAM_WP_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -145,6 +147,19 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Pin = IN_BIN_SIG_3_Pin|IN_BIN_SIG_2_Pin|IN_BIN_SIG_1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PtPin */
+  GPIO_InitStruct.Pin = IN_WIPERS_ON_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(IN_WIPERS_ON_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PEPin PEPin */
+  GPIO_InitStruct.Pin = WIPERS_SIG5_ON_Pin|WIPERS_SIG3_ON_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PBPin PBPin */

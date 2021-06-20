@@ -97,6 +97,9 @@ extern LCD_message temperatureHBridgeForLCD;
 
 extern LCD_message Wanted_RPMForLCD;
 extern LCD_message Wanted_SPEEDForLCD;
+extern LCD_message fuelLevelValueForLCD;
+extern LCD_message oilTemperatureValueForLCD;
+extern LCD_message oilPressureValueForLCD;
 
 extern waterTempSettings_struct CAR_waterTemp;
 extern oilTempSettings_struct CAR_oilTemp;
@@ -113,6 +116,8 @@ extern LCDMainSettings_struct LCD_MainSettings;
 extern GlobalValuesLimits_struct GlobalValuesLimits;
 extern CarStateinfo_type CarStateInfo;
 extern volatile CruiseControlParameters_struct cruiseControlParam;
+
+extern SDCard_info_struct SDCard_info;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -125,6 +130,7 @@ static void ENTER_SaveToEEPROM(void);
 static void ENTER_ClearDiagnosticSnapshots(void);
 static void ENTER_ClearErrorSnapshots(void);
 static void ENTER_ClearTripMileage(void);
+static void ENTER_SaveGPSPoint(void);
 static void ENTER_AreYouSure(void);
 
 static void RUNNING_ScrollList(struct LCD_board* currentBoard);
@@ -163,12 +169,15 @@ static boolean scrollList_doneOnce = FALSE;
 static boolean displayAndControlValue_doneOnce = FALSE;
 static boolean last3snaps_doneOnce = FALSE;
 static boolean enterAction_save = FALSE;
-static boolean EEPROM_Success_Failure_Message = FALSE;
+static boolean Success_Failure_Message_FLAG = FALSE;
 static boolean stateOfLCDBacklight = OFF;
 
 boolean backlightOnRequest = TRUE;	/* It is NOT a static on purpose (used in encoder buttons actions, alarms etc.) */
 boolean EXT_boardChangeRequest = FALSE; /* It is NOT a static on purpose */
 LCD_board *EXT_boardPtr = NULL;	/* It is NOT a static on purpose */
+boolean EXT_saveSpecialGPSPoint = FALSE; /* It is NOT a static on purpose */
+boolean EXT_saveSpecialGPSPointDone = FALSE; /* It is NOT a static on purpose */
+boolean EXT_LCDReInitRequest = FALSE; /* It is NOT a static on purpose */
 
 
 /* LCD boards with its parameters and pointers to others */
@@ -213,7 +222,7 @@ static LCD_board LCD_GPS = {.name="<GPS>",
 						.secondRow 			= NULL,
 						.thisLayer 			= GPS_Layer,
 						.RunningFunction 	= RUNNING_GPSLayer,
-						.EnterFunction 		= NULL,
+						.EnterFunction 		= ENTER_SaveGPSPoint,
 						.value_ptr 			= NULL,
 						.valueType 			= _void_type_,
 						.valueStepSize 		= StepNotApplicable,
@@ -2206,15 +2215,28 @@ void StartLCDTask(void const * argument)
 		/** Cleaning the buffer by writing only spaces into it **/
 		memset(LCD_buffer, SPACE_IN_ASCII, (LCD.noOfRowsLCD * LCD.noOfColumnsLCD));
 
+		/* Check if there is a reInitialization needed */
+		if(TRUE == EXT_LCDReInitRequest)
+		{
+			(void)turnOffPower_LCD();
+			vTaskDelay(50/*50ms*/);
+			(void)turnOnPower_LCD();
+			if(TRUE != lcdInit(&hi2c2, LCD.addressLCD, LCD.noOfRowsLCD, LCD.noOfColumnsLCD))
+			{
+				error = LCD__INIT_FAIL;
+				my_error_handler(error);
+			}
+		}
+
 		/* Control back-light (check PWM state and timers) */
 		ControlBacklight();
 
 		/* Wait with proceeding if there was a "DONE" or "ERROR" message displayed.
-		 * Flag EEPROM_Success_Failure_Message is set in EEPROMWaitForWriteCheck(...). */
-		if(TRUE == EEPROM_Success_Failure_Message)
+		 * Flag Success_Failure_Message_FLAG is set in EEPROMWaitForWriteCheck(...). */
+		if(TRUE == Success_Failure_Message_FLAG)
 		{
 			vTaskDelay((TickType_t)ERROR_DONE_DISPLAY_TIME);
-			EEPROM_Success_Failure_Message = FALSE;
+			Success_Failure_Message_FLAG = FALSE;
 		}
 
 		/* Check if there is a request to change the board (alarm, cruise control etc.) */
@@ -2309,7 +2331,8 @@ void StartLCDTask(void const * argument)
 
 static void ENTER_GoInto(void)
 {
-	if(scrollList_currentlyPointedBoard) CurrentBoard_global = scrollList_currentlyPointedBoard;
+	if (scrollList_currentlyPointedBoard)
+		CurrentBoard_global = scrollList_currentlyPointedBoard;
 }
 
 
@@ -2341,6 +2364,42 @@ static void ENTER_ClearTripMileage(void)
 {
 	LCD_AreYouSure.upperLayer_ptr = &LCD_ClearTripMileage;
 	CurrentBoard_global = &LCD_AreYouSure;
+}
+
+
+
+static void ENTER_SaveGPSPoint(void)
+{
+	uint16_t i = 0u;
+	boolean errorFlag = FALSE;
+
+	if((TRUE == SDCard_info.isPresent) && (FALSE == SDCard_info.cardRequestedByUSB))
+	{
+		EXT_saveSpecialGPSPoint = TRUE;
+
+		while(FALSE == EXT_saveSpecialGPSPointDone)
+		{
+			++i;
+			vTaskDelay((TickType_t)10u);	/* wait for 10 ms for SDCard to process that */
+			if(MAX_WAIT_TIME_FOR_SD_CARD < i)
+			{
+				EXT_saveSpecialGPSPoint = FALSE;
+				errorFlag = TRUE;
+				break;
+			}
+		}
+
+		EXT_saveSpecialGPSPointDone = FALSE;
+
+		if(TRUE == errorFlag)
+			(void)copy_str_to_buffer("ERROR! Saving failed", (char*)LCD_buffer[Row4], 0u, 20u);
+	}
+	else
+	{
+		(void)copy_str_to_buffer("ERROR! No SD or busy", (char*)LCD_buffer[Row4], 0u, 20u);
+	}
+
+	Success_Failure_Message_FLAG = TRUE; /* It will give a delay to display a message of saving the point */
 }
 
 
@@ -2586,7 +2645,54 @@ static void RUNNING_GPSLayer(struct LCD_board* currentBoard)
 
 static void RUNNING_CarInfoLayer(struct LCD_board* currentBoard)
 {
-	(void)copy_str_to_buffer("Nothing yet :)", (char*)LCD_buffer[Row2], 3u, 14u);
+	Error_Code error = NO_ERROR;
+
+	/*** First Row ***/	/*xy.zzV xy.zzV  xx:xx*/
+		/* Main Battery Voltage */
+	if(TRUE == mainBatteryVoltageValueForLCD.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)mainBatteryVoltageValueForLCD.messageHandler, (char*)LCD_buffer[Row1], 0, mainBatteryVoltageValueForLCD.size);
+	error = copy_str_to_buffer("V", (char*)LCD_buffer[Row1], 5, 1);
+		/* Aux Battery Voltage */
+	if(TRUE == auxiliaryBatteryVoltageValueForLCD.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)auxiliaryBatteryVoltageValueForLCD.messageHandler, (char*)LCD_buffer[Row1], 7, auxiliaryBatteryVoltageValueForLCD.size);
+	error = copy_str_to_buffer("V", (char*)LCD_buffer[Row1], 12, 1);
+		/* clock */
+	if((TRUE == GPS.forLCD.hours.messageReadyFLAG) && (TRUE == GPS.forLCD.minutes.messageReadyFLAG))
+	{
+		error = copy_str_to_buffer((char*)GPS.forLCD.hours.messageHandler, (char*)LCD_buffer[Row1], 15, GPS.forLCD.hours.size);
+		error = copy_str_to_buffer(":", (char*)LCD_buffer[Row1], (15+GPS.forLCD.hours.size), 1);
+		error = copy_str_to_buffer((char*)GPS.forLCD.minutes.messageHandler, (char*)LCD_buffer[Row1], (15+GPS.forLCD.hours.size+1), GPS.forLCD.minutes.size);
+	}
+
+	if(NO_ERROR != error) my_error_handler(error);
+
+	/*** Second Row ***/ /*H2O: xyz*C Fuel: xxL*/
+		/* Water temperature */ /*H2O: xyz*C*/
+	error = copy_str_to_buffer("H2O:", (char*)LCD_buffer[Row2], 0u, 4u);
+	if(TRUE == waterTemperatureValueForLCD.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)waterTemperatureValueForLCD.messageHandler, (char*)LCD_buffer[Row2], 5u, waterTemperatureValueForLCD.size);
+	error = copy_str_to_buffer((char*)degreeSymbolCharacter, (char*)LCD_buffer[Row2], 5u+waterTemperatureValueForLCD.size, 1u);
+	error = copy_str_to_buffer("C", (char*)LCD_buffer[Row2], 5u+waterTemperatureValueForLCD.size+1u, 1u);
+		/* Fuel level */ /*Fuel: xxL*/
+	error = copy_str_to_buffer("Fuel:", (char*)LCD_buffer[Row2], 10u, 5u);
+	if(TRUE == fuelLevelValueForLCD.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)fuelLevelValueForLCD.messageHandler, (char*)LCD_buffer[Row2], 16u, fuelLevelValueForLCD.size);
+	error = copy_str_to_buffer("L", 16u+fuelLevelValueForLCD.size+1u, 19u, 1u);
+
+	/*** Third Row ***/	/*Oil: xyz*C P: xxpsi*/
+		/* Oil temperature */ /*Oil: xyz*C*/
+	error = copy_str_to_buffer("Oil:", (char*)LCD_buffer[Row3], 0u, 4u);
+	if(TRUE == oilTemperatureValueForLCD.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)oilTemperatureValueForLCD.messageHandler, (char*)LCD_buffer[Row3], 5u, oilTemperatureValueForLCD.size);
+	error = copy_str_to_buffer((char*)degreeSymbolCharacter, (char*)LCD_buffer[Row3], 5u+oilTemperatureValueForLCD.size, 1u);
+	error = copy_str_to_buffer("C", (char*)LCD_buffer[Row3], 5u+oilTemperatureValueForLCD.size+1u, 1u);
+		/* Oil pressure */ /*P: xxpsi*/
+	error = copy_str_to_buffer("P:", (char*)LCD_buffer[Row3], 11u, 2u);
+	if(TRUE == oilPressureValueForLCD.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)oilPressureValueForLCD.messageHandler, (char*)LCD_buffer[Row3], 14u, oilPressureValueForLCD.size);
+	error = copy_str_to_buffer("psi", (char*)LCD_buffer[Row3], 14u+oilPressureValueForLCD.size+1u, 3u);
+
+	if(NO_ERROR != error) my_error_handler(error);
 }
 
 
@@ -3078,7 +3184,7 @@ static void RUNNING_CruiseControlLayer(struct LCD_board* currentBoard)
 	/*** First Row ***/
 		/* Cruise Control Mode and State: SPEED / RPM, ON / OFF */
 	error = copy_str_to_buffer("Mode", (char*)LCD_buffer[Row1], 0u, 4u);
-	error = copy_str_to_buffer(((CONSTANT_SPEED == cruiseControlParam.mode) ? "SPEED" : "RPM"), (char*)LCD_buffer[Row1], 5u, ((CONSTANT_SPEED == cruiseControlParam.mode) ? 5u : 3u));
+	error = copy_str_to_buffer(((CONSTANT_SPEED == cruiseControlParam.mode) ? "SPEED" : "GAS"), (char*)LCD_buffer[Row1], 5u, ((CONSTANT_SPEED == cruiseControlParam.mode) ? 5u : 3u));
 	error = copy_str_to_buffer(((TRUE == cruiseControlParam.state) ? "ON" : "OFF"), (char*)LCD_buffer[Row1], 11u, ((TRUE == cruiseControlParam.state) ? 2u : 3u));
 		/* clock */
 	if((TRUE == GPS.forLCD.hours.messageReadyFLAG) && (TRUE == GPS.forLCD.minutes.messageReadyFLAG))
@@ -3102,15 +3208,17 @@ static void RUNNING_CruiseControlLayer(struct LCD_board* currentBoard)
 		if(TRUE == Wanted_SPEEDForLCD.messageReadyFLAG)
 			error = copy_str_to_buffer((char*)Wanted_SPEEDForLCD.messageHandler, (char*)LCD_buffer[Row2], 11u, Wanted_SPEEDForLCD.size);
 	}
-	else
+	else /* Constant GAS mode */
 	{
-		error = copy_str_to_buffer("RPM:", (char*)LCD_buffer[Row2], 0u, 4u);
-		error = copy_str_to_buffer("-", (char*)LCD_buffer[Row2], 10u, 1u);
+		/* Displaying Speed and RPMs */
+		error = copy_str_to_buffer("km/h:", (char*)LCD_buffer[Row2], 0u, 5u);
+		error = copy_str_to_buffer("RPM:", (char*)LCD_buffer[Row2], 11u, 4u);
 
+		/* There is no set-point displayed, only the values */
+		if(TRUE == SPEEDForLCD.messageReadyFLAG)
+			error = copy_str_to_buffer((char*)SPEEDForLCD.messageHandler, (char*)LCD_buffer[Row2], /*km/h: xyz*/6u, SPEEDForLCD.size);
 		if(TRUE == RPMForLCD.messageReadyFLAG)
-			error = copy_str_to_buffer((char*)RPMForLCD.messageHandler, (char*)LCD_buffer[Row2], (10u-RPMForLCD.size), RPMForLCD.size);
-		if(TRUE == Wanted_RPMForLCD.messageReadyFLAG)
-			error = copy_str_to_buffer((char*)Wanted_RPMForLCD.messageHandler, (char*)LCD_buffer[Row2], 11u, Wanted_RPMForLCD.size);
+			error = copy_str_to_buffer((char*)RPMForLCD.messageHandler, (char*)LCD_buffer[Row2], /*km/h: xyz  RPM: xyzz*/16u, RPMForLCD.size);
 	}
 
 	if(NO_ERROR != error) my_error_handler(error);
@@ -3219,7 +3327,7 @@ static void EEPROMWaitForWriteCheck(EEPROM_data_struct* EEPROMData)
 		(void)copy_str_to_buffer("DONE!", (char*)LCD_buffer[Row4], 7u, 5u);
 	}
 
-	EEPROM_Success_Failure_Message = TRUE;
+	Success_Failure_Message_FLAG = TRUE;
 }
 
 

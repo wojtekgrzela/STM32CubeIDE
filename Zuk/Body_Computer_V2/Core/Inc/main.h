@@ -682,7 +682,7 @@ typedef enum {
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 typedef enum {
 	CONSTANT_SPEED = 0,
-	CONSTANT_RPM   = 1
+	CONSTANT_GAS   = 1
 }Enum_CruiseMode;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -691,7 +691,7 @@ typedef struct {
 	boolean state;
 	Enum_CruiseMode mode;
 	uint32_t wantedSpeed;
-	uint32_t wantedRPM;
+	uint32_t wantedGas;
 	float error;
 }CruiseControlParameters_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -818,6 +818,14 @@ void Error_Handler(void);
 #define IN_BIN_SIG_2_GPIO_Port GPIOE
 #define IN_BIN_SIG_1_Pin GPIO_PIN_9
 #define IN_BIN_SIG_1_GPIO_Port GPIOE
+#define IN_WIPERS_ON_Pin GPIO_PIN_11
+#define IN_WIPERS_ON_GPIO_Port GPIOE
+#define WIPERS_SIG5_ON_Pin GPIO_PIN_13
+#define WIPERS_SIG5_ON_GPIO_Port GPIOE
+#define WIPERS_SIG3_ON_Pin GPIO_PIN_14
+#define WIPERS_SIG3_ON_GPIO_Port GPIOE
+#define WIPERS_SIG2_ON_Pin GPIO_PIN_15
+#define WIPERS_SIG2_ON_GPIO_Port GPIOE
 #define EEPROM_WP2_Pin GPIO_PIN_10
 #define EEPROM_WP2_GPIO_Port GPIOB
 #define EEPROM_WP1_Pin GPIO_PIN_11

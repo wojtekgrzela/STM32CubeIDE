@@ -13,6 +13,8 @@
 #define TRUE	(uint8_t)(1)
 #endif
 
+extern boolean EXT_LCDReInitRequest;
+
 void my_error_handler(Error_Code error)
 {
 	static uint32_t debugCounter = 0;	//A counter of errors for debugging purposes
@@ -77,6 +79,11 @@ void my_error_handler(Error_Code error)
 		{
 			while(TRUE) {}
 			break;
+		}
+
+		case LCD__ERROR:
+		{
+			EXT_LCDReInitRequest = TRUE;
 		}
 
 		default:							//By default the uC should be stopped

@@ -397,6 +397,7 @@ osTimerId My_Timer_carOilBinaryPressureValueCheckHandle;
 osTimerId My_Timer_BuzzerHandle;
 osTimerId My_Timer_carAuxBattVoltageValueCheckHandle;
 osTimerId My_Timer_LCD_BacklightHandle;
+osTimerId My_Timer_WIPERSHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -432,6 +433,7 @@ extern void Timer_carOilBinaryPressureValueCheck(void const * argument);
 extern void Timer_Buzzer(void const * argument);
 extern void Timer_carAuxBattVoltageValueCheck(void const * argument);
 extern void Timer_LCD_Backlight(void const * argument);
+extern void Timer_WIPERS(void const * argument);
 
 extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -602,6 +604,10 @@ void MX_FREERTOS_Init(void) {
   /* definition and creation of My_Timer_LCD_Backlight */
   osTimerDef(My_Timer_LCD_Backlight, Timer_LCD_Backlight);
   My_Timer_LCD_BacklightHandle = osTimerCreate(osTimer(My_Timer_LCD_Backlight), osTimerOnce, NULL);
+
+  /* definition and creation of My_Timer_WIPERS */
+  osTimerDef(My_Timer_WIPERS, Timer_WIPERS);
+  My_Timer_WIPERSHandle = osTimerCreate(osTimer(My_Timer_WIPERS), osTimerOnce, NULL);
 
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */

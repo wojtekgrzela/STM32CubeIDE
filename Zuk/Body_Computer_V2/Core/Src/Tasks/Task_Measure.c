@@ -29,6 +29,15 @@
 #define ON_BOARD_FAN_HBRIDGE_TEMP_ON_THRESHOLD		((float)(50.0))
 #define RPM_DIVIDER_COEFFICIENT						((uint32_t)(3u))
 #define SPEED_DIVIDER_COEFFICIENT					((float)(9.0/*Reaction for two edges (rising, falling)*/))
+
+#define WIPERS_TIMING_DELTA_THRESHOLD				((uint32_t)(50u))
+#define WIPERS_TIMING_MINIMUM_IDLE_OFFSET			((uint32_t)(3000u))	/* Timer for wipers will be set for at least 3 seconds */
+
+typedef enum
+{
+	WIPERS_SLOW_INPUT_NO = 0,
+	WIPERS_FAST_INPUT_NO = 1
+} wipers_status_enum;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -38,6 +47,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 extern osMessageQId Queue_EEPROM_writeHandle;
 extern USBD_HandleTypeDef hUsbDeviceHS;
+extern osTimerId My_Timer_WIPERSHandle;
 
 extern EEPROM_parameters_struct FRAM_parameters;
 
@@ -111,7 +121,8 @@ extern SDCard_info_struct SDCard_info;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 static uint16_t inBinSignalsPinTable[8u] = {IN_BIN_SIG_1_Pin, IN_BIN_SIG_2_Pin, IN_BIN_SIG_3_Pin, IN_BIN_SIG_4_Pin, IN_BIN_SIG_5_Pin, IN_BIN_SIG_6_Pin, IN_BIN_SIG_7_Pin, IN_BIN_SIG_8_Pin};
 static GPIO_TypeDef* inBinSignalsPortTable[8u] = {IN_BIN_SIG_1_GPIO_Port, IN_BIN_SIG_2_GPIO_Port, IN_BIN_SIG_3_GPIO_Port, IN_BIN_SIG_4_GPIO_Port, IN_BIN_SIG_5_GPIO_Port, IN_BIN_SIG_6_GPIO_Port, IN_BIN_SIG_7_GPIO_Port, IN_BIN_SIG_8_GPIO_Port};
-GPIO_PinState inBinSignalsTable[8u] = {RESET};
+GPIO_PinState inBinSignalsTable[8u] = {RESET};	/* not static on purpose */
+GPIO_PinState inWipersOnSignal = {RESET};	/* not static on purpose */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -142,6 +153,7 @@ static void checkUSBMSCState(void);
 
 static void controlOnBoardFan(boolean state);
 static void checkInBinSignals(void);
+static void controlWipers(void);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -515,10 +527,9 @@ void StartMeasureTask(void const *argument)
 		snprintf((char*)oilTemperatureValueForLCD.messageHandler, 4, "%3" PRIi16, (int16_t)oilTemperatureValue);
 		oilTemperatureValueForLCD.size = strlen((char*)oilTemperatureValueForLCD.messageHandler);
 		oilTemperatureValueForLCD.messageReadyFLAG = TRUE;
-		/*** Car oil analog pressure ***/
+		/*** Car oil analog pressure in psi ***/
 		oilPressureValueForLCD.messageReadyFLAG = FALSE;
-		snprintf((char*)oilPressureValueForLCD.messageHandler, 4, "%01" PRIu16 ".%01" PRIu16, (uint16_t)oilPressureValue,
-				(uint16_t)(oilPressureValue * 10) % 10);
+		snprintf((char*)oilPressureValueForLCD.messageHandler, 3, "%01" PRIu16, (uint16_t)oilPressureValue);
 		oilPressureValueForLCD.size = strlen((char*)oilPressureValueForLCD.messageHandler);
 		oilPressureValueForLCD.messageReadyFLAG = TRUE;
 		/*** Car oil binary pressure ***/
@@ -594,6 +605,9 @@ void StartMeasureTask(void const *argument)
 		checkUSBMSCState();
 		/* Check state of input GPIOs */
 		checkInBinSignals();
+
+		/* Control the wipers */
+		controlWipers();
 
 
 		if (halfSecond_FLAG)
@@ -940,6 +954,105 @@ static void checkInBinSignals(void)
 	{
 		inBinSignalsTable[i] = HAL_GPIO_ReadPin(inBinSignalsPortTable[i], inBinSignalsPinTable[i]);
 	}
+	/* Read also the state of the wipers signal */
+	inWipersOnSignal = HAL_GPIO_ReadPin(IN_WIPERS_ON_GPIO_Port, IN_WIPERS_ON_Pin);
 }
 
 
+static void controlWipers(void)
+{
+	/* Signals to the wipers:
+	 * 1. Mass
+	 * 2. Switch for slow gear
+	 * 3. Switch for fast gear
+	 * 4. Constant +12V, engine running and stopping after a bit
+	 * 5. +12, engine running for ever
+	 *
+	 * We are obtaining info from the shifter on the steering wheel
+	 * as well as from a switch from panel (0, 1, 2).
+	 */
+
+	static TickType_t lastCalledTimerTime = 0;
+	int32_t int_tempValue = 0;
+	uint32_t uint_tempValue = 0;
+	uint16_t lastCalledTimerWipersTimingValue = 0u;
+
+	uint32_t WIPERS_TIMING_VALUE = WIPERS_TIMING_MINIMUM_IDLE_OFFSET + WIPERS_POTENTIOMETER_ADC_VALUE * 2u;
+
+	HAL_GPIO_WritePin(WIPERS_SIG2_ON_GPIO_Port, WIPERS_SIG2_ON_Pin, SET);	/* Slow gear and home switch - it must be always ON */
+
+
+	/* If the wipers signal is on then proceed */
+	if(GPIO_PIN_SET == inWipersOnSignal)
+	{
+		/* Wipers in timer and slow gear - when swich is in 1 position */
+		if((GPIO_PIN_SET == inBinSignalsTable[WIPERS_SLOW_INPUT_NO]) && (GPIO_PIN_RESET == inBinSignalsTable[WIPERS_FAST_INPUT_NO]))
+		{
+			if(pdFALSE == xTimerIsTimerActive(My_Timer_WIPERSHandle))
+			{
+				HAL_GPIO_WritePin(WIPERS_SIG5_ON_GPIO_Port, WIPERS_SIG5_ON_Pin, SET);	/* Power for engine */
+				(void)xTimerChangePeriod(My_Timer_WIPERSHandle, WIPERS_TIMING_VALUE, (TickType_t)0);	/* Change the timer period and Start the timer */
+				lastCalledTimerTime = xTaskGetTickCount();	/* Saving when the timer was set to run */
+				lastCalledTimerWipersTimingValue = WIPERS_TIMING_VALUE;	/* Saving the value which the timer was started with */
+			}
+			else /* if the timer is ACTIVE */
+			{
+				/* calculate difference between the period which the timer was called with and current setting (maybe it has changed in the meantime?) */
+				uint_tempValue = (lastCalledTimerWipersTimingValue > WIPERS_TIMING_VALUE) ? (lastCalledTimerWipersTimingValue - WIPERS_TIMING_VALUE) : (WIPERS_TIMING_VALUE - lastCalledTimerWipersTimingValue);
+				if(uint_tempValue > WIPERS_TIMING_DELTA_THRESHOLD)	/* If the change is bigger than the minimum threshold then proceed */
+				{
+					/* Calculate the time which has already passed from starting the timer */
+					int_tempValue = WIPERS_TIMING_VALUE - (xTaskGetTickCount() - lastCalledTimerTime);
+					uint_tempValue = (int_tempValue > 0) ? int_tempValue : -int_tempValue;
+
+					if(int_tempValue < 0) /* value below 0 means that it passed more time in timer than the set period now and we should run the wipers and new timer */
+					{
+						HAL_GPIO_WritePin(WIPERS_SIG5_ON_GPIO_Port, WIPERS_SIG5_ON_Pin, SET);	/* Power for engine */
+						(void)xTimerChangePeriod(My_Timer_WIPERSHandle, WIPERS_TIMING_VALUE, (TickType_t)0);	/* Change the timer period and Start the timer */
+						lastCalledTimerTime = xTaskGetTickCount();	/* Saving when the timer was set to run */
+						lastCalledTimerWipersTimingValue = WIPERS_TIMING_VALUE;	/* Saving the value which the timer was started with */
+					}
+					else	/* value is positive so there passed some time but still some is remaining to run the wipers, so we do not set the WPIERS_SIG5 to SET */
+					{
+						(void)xTimerChangePeriod(My_Timer_WIPERSHandle, WIPERS_TIMING_VALUE, (TickType_t)0);	/* Change the timer period and Start the timer */
+						lastCalledTimerTime = xTaskGetTickCount();	/* Saving when the timer was set to run */
+						lastCalledTimerWipersTimingValue = WIPERS_TIMING_VALUE;	/* Saving the value which the timer was started with */
+					}
+				}
+			}
+		}
+		else /* If there is no more "timer" mode */
+		{
+			/* Check if there is a timer running - if yes then stop it */
+			if(pdFALSE == xTimerIsTimerActive(My_Timer_WIPERSHandle))
+			{
+				(void)xTimerStop(My_Timer_WIPERSHandle, (TickType_t)0);
+			}
+		}
+
+		/* Wipers in slow gear - when swich is in 0 position */
+		if((GPIO_PIN_RESET == inBinSignalsTable[WIPERS_SLOW_INPUT_NO]) && (GPIO_PIN_RESET == inBinSignalsTable[WIPERS_FAST_INPUT_NO]))
+		{
+			HAL_GPIO_WritePin(WIPERS_SIG5_ON_GPIO_Port, WIPERS_SIG5_ON_Pin, SET);	/* Power for engine */
+		}
+
+		/* Wipers in fast gear - when switch is in 2 position */
+		if((GPIO_PIN_SET == inBinSignalsTable[WIPERS_FAST_INPUT_NO]) && (GPIO_PIN_RESET == inBinSignalsTable[WIPERS_FAST_INPUT_NO]))
+		{
+			HAL_GPIO_WritePin(WIPERS_SIG3_ON_GPIO_Port, WIPERS_SIG3_ON_Pin, SET);	/* Fast gear switch */
+			HAL_GPIO_WritePin(WIPERS_SIG5_ON_GPIO_Port, WIPERS_SIG5_ON_Pin, SET);	/* Power for engine */
+		}
+	} //if(SET == inWipersOnSignal)
+	else	/* If wipers are OFF */
+	{
+		HAL_GPIO_WritePin(WIPERS_SIG3_ON_GPIO_Port, WIPERS_SIG3_ON_Pin, RESET);	/* Fast gear switch */
+		HAL_GPIO_WritePin(WIPERS_SIG5_ON_GPIO_Port, WIPERS_SIG5_ON_Pin, RESET);	/* Power for engine */
+	}
+}
+
+
+
+void Timer_WIPERS(void const * argument)
+{
+	HAL_GPIO_WritePin(WIPERS_SIG5_ON_GPIO_Port, WIPERS_SIG5_ON_Pin, SET);	/* Power impulse for engine */
+}

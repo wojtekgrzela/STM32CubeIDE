@@ -286,7 +286,7 @@ static void Encoder_CruiseControl_Button_Function(void)
 	{
 		if(CONSTANT_SPEED == cruiseControlParam.mode)
 		{
-			cruiseControlParam.mode = CONSTANT_RPM; /* If it was a constant speed - set constant RPM */
+			cruiseControlParam.mode = CONSTANT_GAS; /* If it was a constant speed - set constant RPM */
 		}
 		else
 		{

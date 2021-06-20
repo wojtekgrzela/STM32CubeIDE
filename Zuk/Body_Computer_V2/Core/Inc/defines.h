@@ -216,7 +216,7 @@ typedef uint8_t boolean;
 #define BOARD_TEMPERATURE_3V3DCDC_ADC_VALUE		BOARD_TEMP_1_ADC_VALUE
 #define BOARD_TEMPERATURE_5VDCDC_ADC_VALUE		BOARD_TEMP_2_ADC_VALUE
 #define BOARD_TEMPERATURE_HBRIDGE_ADC_VALUE		BOARD_TEMP_3_ADC_VALUE
-
+#define WIPERS_POTENTIOMETER_ADC_VALUE			POTENTIOMETER_1_ADC_VALUE
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -349,6 +349,7 @@ typedef uint8_t boolean;
 #define NO_OF_COLUMNS_IN_LCD		((uint8_t)(20u))
 
 #define MAX_WAIT_TIME_FOR_EEPROM	((uint32_t)(500U))
+#define MAX_WAIT_TIME_FOR_SD_CARD	((uint32_t)(3000U))
 #define ERROR_DONE_DISPLAY_TIME		((TickType_t)(2000U))
 #define HELLO_MESSAGE_DISPLAY_TIME	((TickType_t)(2000U))
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -367,7 +368,7 @@ typedef uint8_t boolean;
 #define MIN_ALLOWED_RPM				((uint32_t)(1000))
 #define MIN_ALLOWED_SPEED			((float)(40.0))
 #define MAX_ALLOWED_SPEED			((float)(130.0))
-#define ENCODER_RPM_SETTING_STEP	((int32_t)(20))
+#define ENCODER_GAS_SETTING_STEP	((int32_t)(20))
 #define ENCODER_SPEED_SETTING_STEP	((int32_t)(1))
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 

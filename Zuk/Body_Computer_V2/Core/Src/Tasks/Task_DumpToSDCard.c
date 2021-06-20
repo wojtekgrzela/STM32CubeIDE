@@ -32,8 +32,8 @@
 #define STRINGS_DELIMITER		(",")			/* This is used for csv data */
 #define STRINGS_ENDING			("\n\r\0")		/* This is used to finish a string */
 
-#define MAX_LENGTH_CSV_HEADER_TABLE		(125u)
-#define MAX_LENGTH_CSV_DATA_TABLE		(512u)
+#define MAX_LENGTH_CSV_HEADER_TABLE		(128u)
+#define MAX_LENGTH_CSV_DATA_TABLE		(128u)
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -48,6 +48,9 @@ extern GPS_data_struct GPS;
 extern LCD_message RPMForLCD;
 extern LCD_message SPEEDForLCD;
 extern LCD_message waterTemperatureValueForLCD;
+
+extern boolean EXT_saveSpecialGPSPointDone;
+extern boolean EXT_saveSpecialGPSPoint;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -55,7 +58,6 @@ extern LCD_message waterTemperatureValueForLCD;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Local variables */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-//static FATFS SD_FATFS;
 static FIL fileObj;
 static boolean InitialIteration = TRUE;
 static uint8_t CSVDataTable[MAX_LENGTH_CSV_DATA_TABLE] = "";
@@ -75,6 +77,7 @@ static inline void addCSVLineEnd(uint8_t* CSVDataTable, uint16_t* dataBufferPosi
 static Error_Code unmountIfNecessary(void);
 static Error_Code mountIfNecessary(void);
 static Error_Code initializeIfNecessary(void);
+static void prepareDataToSave(uint16_t* dataBufferPosition);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 uint32_t savedBytes = 0u;
@@ -206,106 +209,77 @@ void StartDumpToSDCardTask(void const *argument)
 					InitialIteration = FALSE;
 				}
 
-				/* FA_OPEN_APPEND - opens the file if it is existing. If not, a new file will be created.
-				 * The read/write pointer is set end of the file.
-				 */
-				result = f_open(&fileObj, (char*)fileName, (FA_OPEN_APPEND | FA_WRITE));
-				if (FR_OK != result)
+				/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+				/* Here is the process of copying data to a buffer which will be written to the file */
+				dataBufferPosition = 0u;	/* Clearing the data position value */
+				prepareDataToSave(&dataBufferPosition);
+				/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+				/* Check if GPS point should be saved and do it if so */
+				if(TRUE == track_GPS_movement(&GPS))
 				{
-					error = SDCARD__FILE_OPEN_FAILED;
-					my_error_handler(error);
-				}
-				else
-				{
-					/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-					/* Here is the process of copying data to a buffer which will be written to the file */
-					dataBufferPosition = 0u;	/* Clearing the data position value */
-
-					if(TRUE == GPS.forLCD.clock.messageReadyFLAG) /* Saving clock */
-					{
-						copy_str_to_buffer((char*)GPS.forLCD.clock.messageHandler, (char*)CSVDataTable, dataBufferPosition, GPS.forLCD.clock.size);
-						dataBufferPosition += GPS.forLCD.clock.size;
-					}
-					addCSVDelimiter(CSVDataTable, &dataBufferPosition);
-					if(TRUE == GPS.forLCD.latitude.messageReadyFLAG) /* Saving latitude */
-					{
-						copy_str_to_buffer((char*)GPS.forLCD.latitude.messageHandler, (char*)CSVDataTable, dataBufferPosition, GPS.forLCD.latitude.size);
-						dataBufferPosition += GPS.forLCD.latitude.size;
-					}
-					addCSVDelimiter(CSVDataTable, &dataBufferPosition);
-					if(TRUE == GPS.forLCD.latitudeIndicator.messageReadyFLAG) /* Saving latitude indicator */
-					{
-						copy_str_to_buffer((char*)GPS.forLCD.latitudeIndicator.messageHandler, (char*)CSVDataTable, dataBufferPosition, GPS.forLCD.latitudeIndicator.size);
-						dataBufferPosition += GPS.forLCD.latitudeIndicator.size;
-					}
-					addCSVDelimiter(CSVDataTable, &dataBufferPosition);
-					if(TRUE == GPS.forLCD.longitude.messageReadyFLAG) /* Saving longitude */
-					{
-						copy_str_to_buffer((char*)GPS.forLCD.longitude.messageHandler, (char*)CSVDataTable, dataBufferPosition, GPS.forLCD.longitude.size);
-						dataBufferPosition += GPS.forLCD.longitude.size;
-					}
-					addCSVDelimiter(CSVDataTable, &dataBufferPosition);
-					if(TRUE == GPS.forLCD.longitudeIndicator.messageReadyFLAG) /* Saving longitude indicator */
-					{
-						copy_str_to_buffer((char*)GPS.forLCD.longitudeIndicator.messageHandler, (char*)CSVDataTable, dataBufferPosition, GPS.forLCD.longitudeIndicator.size);
-						dataBufferPosition += GPS.forLCD.longitudeIndicator.size;
-					}
-					addCSVDelimiter(CSVDataTable, &dataBufferPosition);
-					if(TRUE == GPS.forLCD.altitude.messageReadyFLAG) /* Saving altitude */
-					{
-						copy_str_to_buffer((char*)GPS.forLCD.altitude.messageHandler, (char*)CSVDataTable, dataBufferPosition, GPS.forLCD.altitude.size);
-						dataBufferPosition += GPS.forLCD.altitude.size;
-					}
-					addCSVDelimiter(CSVDataTable, &dataBufferPosition);
-					if(TRUE == GPS.forLCD.speed.messageReadyFLAG) /* Saving speed from GPS */
-					{
-						copy_str_to_buffer((char*)GPS.forLCD.speed.messageHandler, (char*)CSVDataTable, dataBufferPosition, GPS.forLCD.speed.size);
-						dataBufferPosition += GPS.forLCD.speed.size;
-					}
-					addCSVDelimiter(CSVDataTable, &dataBufferPosition);
-					if(TRUE == GPS.forLCD.satellitesUsed.messageReadyFLAG) /* Saving number of used satellites */
-					{
-						copy_str_to_buffer((char*)GPS.forLCD.satellitesUsed.messageHandler, (char*)CSVDataTable, dataBufferPosition, GPS.forLCD.satellitesUsed.size);
-						dataBufferPosition += GPS.forLCD.satellitesUsed.size;
-					}
-					addCSVDelimiter(CSVDataTable, &dataBufferPosition);
-					if(TRUE == SPEEDForLCD.messageReadyFLAG) /* Saving speed calculated from a sensor */
-					{
-						copy_str_to_buffer((char*)SPEEDForLCD.messageHandler, (char*)CSVDataTable, dataBufferPosition, SPEEDForLCD.size);
-						dataBufferPosition += SPEEDForLCD.size;
-					}
-					addCSVDelimiter(CSVDataTable, &dataBufferPosition);
-					if(TRUE == RPMForLCD.messageReadyFLAG) /* Saving RPM calculated */
-					{
-						copy_str_to_buffer((char*)RPMForLCD.messageHandler, (char*)CSVDataTable, dataBufferPosition, RPMForLCD.size);
-						dataBufferPosition += RPMForLCD.size;
-					}
-					addCSVDelimiter(CSVDataTable, &dataBufferPosition);
-					if(TRUE == waterTemperatureValueForLCD.messageReadyFLAG) /* Saving coolant temperature */
-					{
-						copy_str_to_buffer((char*)waterTemperatureValueForLCD.messageHandler, (char*)CSVDataTable, dataBufferPosition, waterTemperatureValueForLCD.size);
-						dataBufferPosition += waterTemperatureValueForLCD.size;
-					}
-
-					addCSVLineEnd(CSVDataTable, &dataBufferPosition); /* Line ending added */
-
-					/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-					/* Write GPS data, parameters data, etc. */
-					result = f_write(&fileObj, (char*)CSVDataTable, dataBufferPosition, (UINT*)&savedBytes);
+					/* FA_OPEN_APPEND - opens the file if it is existing. If not, a new file will be created.
+					 * The read/write pointer is set end of the file.
+					 */
+					result = f_open(&fileObj, (char*)fileName, (FA_OPEN_APPEND | FA_WRITE));
 					if (FR_OK != result)
 					{
-						error = SDCARD__WRITING_FAILED;
+						error = SDCARD__FILE_OPEN_FAILED;
 						my_error_handler(error);
 					}
+					else
+					{
+						result = f_write(&fileObj, (char*)CSVDataTable, dataBufferPosition, (UINT*)&savedBytes);
+						if (FR_OK != result)
+						{
+							error = SDCARD__WRITING_FAILED;
+							my_error_handler(error);
+						}
 
-					/* Close the file after writing to it. */
-					result = f_close(&fileObj);
+						/* Close the file after writing to it. */
+						result = f_close(&fileObj);
+						if (FR_OK != result)
+						{
+							error = SDCARD__FILE_CLOSE_FAILED;
+							my_error_handler(error);
+						}//(FR_OK != result)
+					}
+				}//if(TRUE == track_GPS_movement(&GPS))
+
+				/* Write GPS data, parameters data, etc. */
+				if(TRUE == EXT_saveSpecialGPSPoint)
+				{
+					EXT_saveSpecialGPSPoint = FALSE;
+
+					/* FA_OPEN_APPEND - opens the file if it is existing. If not, a new file will be created.
+					 * The read/write pointer is set end of the file.
+					 */
+					result = f_open(&fileObj, "SpecialPoints.csv", (FA_OPEN_APPEND | FA_WRITE));
 					if (FR_OK != result)
 					{
-						error = SDCARD__FILE_CLOSE_FAILED;
+						error = SDCARD__FILE_OPEN_FAILED;
 						my_error_handler(error);
 					}
-				}
+					else
+					{
+						result = f_write(&fileObj, (char*)CSVDataTable, dataBufferPosition, (UINT*)&savedBytes);
+						if (FR_OK != result)
+						{
+							error = SDCARD__WRITING_FAILED;
+							my_error_handler(error);
+						}
+
+						/* Close the file after writing to it. */
+						result = f_close(&fileObj);
+						if (FR_OK != result)
+						{
+							error = SDCARD__FILE_CLOSE_FAILED;
+							my_error_handler(error);
+						}//(FR_OK != result)
+					}
+
+					EXT_saveSpecialGPSPointDone = TRUE;
+				}//if(TRUE == EXT_saveSpecialGPSPoint)
 			}
 		}
 
@@ -437,6 +411,78 @@ static Error_Code initializeIfNecessary(void)
 	return error;
 }
 
+
+
+static void prepareDataToSave(uint16_t* dataBufferPosition)
+{
+	if(TRUE == GPS.forLCD.clock.messageReadyFLAG) /* Saving clock */
+	{
+		copy_str_to_buffer((char*)GPS.forLCD.clock.messageHandler, (char*)CSVDataTable, *dataBufferPosition, GPS.forLCD.clock.size);
+		dataBufferPosition += GPS.forLCD.clock.size;
+	}
+	addCSVDelimiter(CSVDataTable, dataBufferPosition);
+	if(TRUE == GPS.forLCD.latitude.messageReadyFLAG) /* Saving latitude */
+	{
+		copy_str_to_buffer((char*)GPS.forLCD.latitude.messageHandler, (char*)CSVDataTable, *dataBufferPosition, GPS.forLCD.latitude.size);
+		dataBufferPosition += GPS.forLCD.latitude.size;
+	}
+	addCSVDelimiter(CSVDataTable, dataBufferPosition);
+	if(TRUE == GPS.forLCD.latitudeIndicator.messageReadyFLAG) /* Saving latitude indicator */
+	{
+		copy_str_to_buffer((char*)GPS.forLCD.latitudeIndicator.messageHandler, (char*)CSVDataTable, *dataBufferPosition, GPS.forLCD.latitudeIndicator.size);
+		dataBufferPosition += GPS.forLCD.latitudeIndicator.size;
+	}
+	addCSVDelimiter(CSVDataTable, dataBufferPosition);
+	if(TRUE == GPS.forLCD.longitude.messageReadyFLAG) /* Saving longitude */
+	{
+		copy_str_to_buffer((char*)GPS.forLCD.longitude.messageHandler, (char*)CSVDataTable, *dataBufferPosition, GPS.forLCD.longitude.size);
+		dataBufferPosition += GPS.forLCD.longitude.size;
+	}
+	addCSVDelimiter(CSVDataTable, dataBufferPosition);
+	if(TRUE == GPS.forLCD.longitudeIndicator.messageReadyFLAG) /* Saving longitude indicator */
+	{
+		copy_str_to_buffer((char*)GPS.forLCD.longitudeIndicator.messageHandler, (char*)CSVDataTable, *dataBufferPosition, GPS.forLCD.longitudeIndicator.size);
+		dataBufferPosition += GPS.forLCD.longitudeIndicator.size;
+	}
+	addCSVDelimiter(CSVDataTable, dataBufferPosition);
+	if(TRUE == GPS.forLCD.altitude.messageReadyFLAG) /* Saving altitude */
+	{
+		copy_str_to_buffer((char*)GPS.forLCD.altitude.messageHandler, (char*)CSVDataTable, *dataBufferPosition, GPS.forLCD.altitude.size);
+		dataBufferPosition += GPS.forLCD.altitude.size;
+	}
+	addCSVDelimiter(CSVDataTable, dataBufferPosition);
+	if(TRUE == GPS.forLCD.speed.messageReadyFLAG) /* Saving speed from GPS */
+	{
+		copy_str_to_buffer((char*)GPS.forLCD.speed.messageHandler, (char*)CSVDataTable, *dataBufferPosition, GPS.forLCD.speed.size);
+		dataBufferPosition += GPS.forLCD.speed.size;
+	}
+	addCSVDelimiter(CSVDataTable, dataBufferPosition);
+	if(TRUE == GPS.forLCD.satellitesUsed.messageReadyFLAG) /* Saving number of used satellites */
+	{
+		copy_str_to_buffer((char*)GPS.forLCD.satellitesUsed.messageHandler, (char*)CSVDataTable, *dataBufferPosition, GPS.forLCD.satellitesUsed.size);
+		dataBufferPosition += GPS.forLCD.satellitesUsed.size;
+	}
+	addCSVDelimiter(CSVDataTable, dataBufferPosition);
+	if(TRUE == SPEEDForLCD.messageReadyFLAG) /* Saving speed calculated from a sensor */
+	{
+		copy_str_to_buffer((char*)SPEEDForLCD.messageHandler, (char*)CSVDataTable, *dataBufferPosition, SPEEDForLCD.size);
+		dataBufferPosition += SPEEDForLCD.size;
+	}
+	addCSVDelimiter(CSVDataTable, dataBufferPosition);
+	if(TRUE == RPMForLCD.messageReadyFLAG) /* Saving RPM calculated */
+	{
+		copy_str_to_buffer((char*)RPMForLCD.messageHandler, (char*)CSVDataTable, *dataBufferPosition, RPMForLCD.size);
+		dataBufferPosition += RPMForLCD.size;
+	}
+	addCSVDelimiter(CSVDataTable, dataBufferPosition);
+	if(TRUE == waterTemperatureValueForLCD.messageReadyFLAG) /* Saving coolant temperature */
+	{
+		copy_str_to_buffer((char*)waterTemperatureValueForLCD.messageHandler, (char*)CSVDataTable, *dataBufferPosition, waterTemperatureValueForLCD.size);
+		dataBufferPosition += waterTemperatureValueForLCD.size;
+	}
+
+	addCSVLineEnd(CSVDataTable, dataBufferPosition); /* Line ending added */
+}
 
 
 

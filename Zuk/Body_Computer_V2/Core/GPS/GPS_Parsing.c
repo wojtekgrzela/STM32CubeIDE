@@ -18,6 +18,7 @@
 #define MINIMUM_ANGLE_TO_RECORD			((float)(4.0))
 #define MAX_SPEED_IN_TRAFFIC_JAM		((float)(2.0))
 #define MAX_DISTANCE_IN_TRAFFIC_JAM		((int32_t)(50))
+#define MIN_ALTITUDE_CHANGE				((float)(20.0))
 
 static float calculate_Course(float latitudeStart, float longitudeStart, float latitudeEnd, float longitudeEnd);
 static float calculate_Distance(float latitudeStart, float longitudeStart, float latitudeEnd, float longitudeEnd);
@@ -527,29 +528,35 @@ Error_Code parse_GPS_data(GPS_data_struct* const GPS)
  *
  * @param GPS: a pointer to a structure with multiple parameters,
  * buffers and pointers (look in GPS_parsing.h)
- * @retval Error_Code: gives a value of error if one occurs
+ * @retval boolean: TRUE if the position should be saved, FALSE if not
  */
-Error_Code track_GPS_movement(const GPS_data_struct* const GPS)
+boolean track_GPS_movement(const GPS_data_struct* const GPS)
 {
-	Error_Code error = NO_ERROR;
-
-	uint8_t Write_FLAG = 0;
+	boolean Write_FLAG = 0;
 
 	int32_t distance = 0;
 	float angle = 0;
 	float course = 0.0;
 	float speed = 0.0;
+	float altitudeDiff = 0.0;
 
 	static float courseOld = 0.0;
 	static float latitudeOld = 0.0;
 	static float longitudeOld = 0.0;
+	static float altitudeOld = 0.0;
 
 	float latitude = atoff((char*)(GPS->rawData.Latitude));
 	float longitude = atoff((char*)(GPS->rawData.Longitude));
-
+	float altitude = atoff((char*)(GPS->rawData.Altitude));
 
 	course = calculate_Course(latitudeOld, longitudeOld, latitude, longitude);
 	speed = atoff((char*)(GPS->rawData.Speed));
+	altitudeDiff = altitude - altitudeOld;
+
+	if (0 > altitudeDiff)
+	{
+		altitudeDiff *= (-1);
+	}
 
 	if(course > courseOld)
 	{
@@ -560,7 +567,8 @@ Error_Code track_GPS_movement(const GPS_data_struct* const GPS)
 		angle = 360 - course + courseOld;
 	}
 
-	if((MINIMUM_SPEED_TO_RECORD < speed) && (MINIMUM_ANGLE_TO_RECORD < angle))
+	if( ((MINIMUM_SPEED_TO_RECORD < speed) && (MINIMUM_ANGLE_TO_RECORD < angle)) ||
+			(MIN_ALTITUDE_CHANGE < altitudeDiff) )
 	{
 		Write_FLAG = TRUE;
 	}
@@ -577,17 +585,13 @@ Error_Code track_GPS_movement(const GPS_data_struct* const GPS)
 
 	if(TRUE == Write_FLAG)
 	{
-		error = save_GPS_point(GPS);
-
 		courseOld = course;
 		latitudeOld = latitude;
 		longitudeOld = longitude;
-
-		Write_FLAG = FALSE;
+		altitudeOld = altitude;
 	}
 
-
-	return error;
+	return Write_FLAG;
 }
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -728,15 +732,4 @@ static inline float pow2(float var)
 }
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-
-
-__weak Error_Code save_GPS_point(const GPS_data_struct* const GPS)
-{
-	Error_Code error = NO_ERROR;
-
-
-
-	return error;
-}
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
