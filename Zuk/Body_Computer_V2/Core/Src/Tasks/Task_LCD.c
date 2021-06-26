@@ -18,6 +18,8 @@
 #include "../../EEPROM/EEPROM.h"
 #include "../../GPS/GPS_Parsing.h"
 #include "../../lcd_hd44780_i2c/lcd_hd44780_i2c.h"
+
+#include "i2c.h"
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -150,6 +152,8 @@ static void ScrollBack(LCD_board* displayTable[NUMBER_OF_SCROLLED_LINES], int8_t
 static void EEPROMWaitForWriteCheck(EEPROM_data_struct* EEPROMData);
 
 static void ControlBacklight(void);
+
+void ReinitializationOfLCD(void);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -2218,14 +2222,7 @@ void StartLCDTask(void const * argument)
 		/* Check if there is a reInitialization needed */
 		if(TRUE == EXT_LCDReInitRequest)
 		{
-			(void)turnOffPower_LCD();
-			vTaskDelay(50/*50ms*/);
-			(void)turnOnPower_LCD();
-			if(TRUE != lcdInit(&hi2c2, LCD.addressLCD, LCD.noOfRowsLCD, LCD.noOfColumnsLCD))
-			{
-				error = LCD__INIT_FAIL;
-				my_error_handler(error);
-			}
+			ReinitializationOfLCD();
 		}
 
 		/* Control back-light (check PWM state and timers) */
@@ -2677,7 +2674,7 @@ static void RUNNING_CarInfoLayer(struct LCD_board* currentBoard)
 	error = copy_str_to_buffer("Fuel:", (char*)LCD_buffer[Row2], 10u, 5u);
 	if(TRUE == fuelLevelValueForLCD.messageReadyFLAG)
 		error = copy_str_to_buffer((char*)fuelLevelValueForLCD.messageHandler, (char*)LCD_buffer[Row2], 16u, fuelLevelValueForLCD.size);
-	error = copy_str_to_buffer("L", 16u+fuelLevelValueForLCD.size+1u, 19u, 1u);
+	error = copy_str_to_buffer("L", (char*)LCD_buffer[Row2], 16u+fuelLevelValueForLCD.size, 1u);
 
 	/*** Third Row ***/	/*Oil: xyz*C P: xxpsi*/
 		/* Oil temperature */ /*Oil: xyz*C*/
@@ -3403,6 +3400,26 @@ static void ControlBacklight(void)
 		}
 	}
 }
+
+
+
+void ReinitializationOfLCD(void)
+{
+	NVIC_SystemReset();
+//	(void)turnOffPower_LCD();
+//	HAL_I2C_DeInit(&hi2c2);
+//	vTaskDelay(300/*100ms*/);
+//	__HAL_I2C_CLEAR_FLAG(&hi2c2, I2C_FLAG_BUSY);
+//	MX_I2C2_Init();
+//	hi2c2.Mode = HAL_I2C_MODE_MASTER;
+//	(void)turnOnPower_LCD();
+//	if(TRUE != lcdInit(&hi2c2, LCD.addressLCD, LCD.noOfRowsLCD, LCD.noOfColumnsLCD))
+//	{
+//		my_error_handler(LCD__INIT_FAIL);
+//	}
+//	vTaskDelay(100);
+}
+
 
 
 void Timer_LCD_Backlight(void const * argument)

@@ -61,9 +61,9 @@ Error_Code turnOffPower_CruiseControl(void);
 
 uint8_t compare_two_strings(const char *const str1/*The short one*/,
 		const char *const str2/*The one you compare to*/,
-		const uint8_t start /*Start position of the comparison*/,
-		const uint8_t size /*Number of characters to compare*/);
+		const uint16_t start /*Start position of the comparison*/,
+		const uint16_t size /*Number of characters to compare*/);
 int16_t find_nearest_symbol(const char symbol, const char *const str,
-		const uint8_t start /*start position in string to look for the symbol*/);
+		const uint16_t start /*start position in string to look for the symbol*/);
 
 #endif /* INC_FUNCTIONS_H_ */

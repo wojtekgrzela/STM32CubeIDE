@@ -351,7 +351,7 @@ typedef uint8_t boolean;
 #define MAX_WAIT_TIME_FOR_EEPROM	((uint32_t)(500U))
 #define MAX_WAIT_TIME_FOR_SD_CARD	((uint32_t)(3000U))
 #define ERROR_DONE_DISPLAY_TIME		((TickType_t)(2000U))
-#define HELLO_MESSAGE_DISPLAY_TIME	((TickType_t)(2000U))
+#define HELLO_MESSAGE_DISPLAY_TIME	((TickType_t)(1000U))
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */

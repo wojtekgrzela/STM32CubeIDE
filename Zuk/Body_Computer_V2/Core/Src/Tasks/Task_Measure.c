@@ -975,19 +975,21 @@ static void controlWipers(void)
 	static TickType_t lastCalledTimerTime = 0;
 	int32_t int_tempValue = 0;
 	uint32_t uint_tempValue = 0;
-	uint16_t lastCalledTimerWipersTimingValue = 0u;
+	static uint16_t lastCalledTimerWipersTimingValue = 0u;
 
 	uint32_t WIPERS_TIMING_VALUE = WIPERS_TIMING_MINIMUM_IDLE_OFFSET + WIPERS_POTENTIOMETER_ADC_VALUE * 2u;
 
-	HAL_GPIO_WritePin(WIPERS_SIG2_ON_GPIO_Port, WIPERS_SIG2_ON_Pin, SET);	/* Slow gear and home switch - it must be always ON */
-
+	HAL_GPIO_WritePin(WIPERS_SIG5_ON_GPIO_Port, WIPERS_SIG5_ON_Pin, RESET);	/* Power for engine OFF */
 
 	/* If the wipers signal is on then proceed */
 	if(GPIO_PIN_SET == inWipersOnSignal)
 	{
 		/* Wipers in timer and slow gear - when swich is in 1 position */
-		if((GPIO_PIN_SET == inBinSignalsTable[WIPERS_SLOW_INPUT_NO]) && (GPIO_PIN_RESET == inBinSignalsTable[WIPERS_FAST_INPUT_NO]))
+		if((GPIO_PIN_RESET == inBinSignalsTable[WIPERS_SLOW_INPUT_NO]) && (GPIO_PIN_SET == inBinSignalsTable[WIPERS_FAST_INPUT_NO]))
 		{
+			HAL_GPIO_WritePin(WIPERS_SIG2_ON_GPIO_Port, WIPERS_SIG2_ON_Pin, SET);	/* Slow gear and home switch - it must be ON */
+			HAL_GPIO_WritePin(WIPERS_SIG3_ON_GPIO_Port, WIPERS_SIG3_ON_Pin, RESET);	/* Fast gear switch OFF */
+
 			if(pdFALSE == xTimerIsTimerActive(My_Timer_WIPERSHandle))
 			{
 				HAL_GPIO_WritePin(WIPERS_SIG5_ON_GPIO_Port, WIPERS_SIG5_ON_Pin, SET);	/* Power for engine */
@@ -1014,7 +1016,7 @@ static void controlWipers(void)
 					}
 					else	/* value is positive so there passed some time but still some is remaining to run the wipers, so we do not set the WPIERS_SIG5 to SET */
 					{
-						(void)xTimerChangePeriod(My_Timer_WIPERSHandle, WIPERS_TIMING_VALUE, (TickType_t)0);	/* Change the timer period and Start the timer */
+						(void)xTimerChangePeriod(My_Timer_WIPERSHandle, (WIPERS_TIMING_VALUE-uint_tempValue), (TickType_t)0);	/* Change the timer period and Start the timer */
 						lastCalledTimerTime = xTaskGetTickCount();	/* Saving when the timer was set to run */
 						lastCalledTimerWipersTimingValue = WIPERS_TIMING_VALUE;	/* Saving the value which the timer was started with */
 					}
@@ -1024,27 +1026,37 @@ static void controlWipers(void)
 		else /* If there is no more "timer" mode */
 		{
 			/* Check if there is a timer running - if yes then stop it */
-			if(pdFALSE == xTimerIsTimerActive(My_Timer_WIPERSHandle))
+			if(pdFALSE != xTimerIsTimerActive(My_Timer_WIPERSHandle))
 			{
 				(void)xTimerStop(My_Timer_WIPERSHandle, (TickType_t)0);
 			}
 		}
 
 		/* Wipers in slow gear - when swich is in 0 position */
-		if((GPIO_PIN_RESET == inBinSignalsTable[WIPERS_SLOW_INPUT_NO]) && (GPIO_PIN_RESET == inBinSignalsTable[WIPERS_FAST_INPUT_NO]))
+		if((GPIO_PIN_SET == inBinSignalsTable[WIPERS_SLOW_INPUT_NO]) && (GPIO_PIN_SET == inBinSignalsTable[WIPERS_FAST_INPUT_NO]))
 		{
+			HAL_GPIO_WritePin(WIPERS_SIG2_ON_GPIO_Port, WIPERS_SIG2_ON_Pin, SET);	/* Slow gear and home switch - it must be ON */
+			HAL_GPIO_WritePin(WIPERS_SIG3_ON_GPIO_Port, WIPERS_SIG3_ON_Pin, RESET);	/* Fast gear switch OFF */
 			HAL_GPIO_WritePin(WIPERS_SIG5_ON_GPIO_Port, WIPERS_SIG5_ON_Pin, SET);	/* Power for engine */
 		}
 
 		/* Wipers in fast gear - when switch is in 2 position */
-		if((GPIO_PIN_SET == inBinSignalsTable[WIPERS_FAST_INPUT_NO]) && (GPIO_PIN_RESET == inBinSignalsTable[WIPERS_FAST_INPUT_NO]))
+		if((GPIO_PIN_SET == inBinSignalsTable[WIPERS_SLOW_INPUT_NO]) && (GPIO_PIN_RESET == inBinSignalsTable[WIPERS_FAST_INPUT_NO]))
 		{
+			HAL_GPIO_WritePin(WIPERS_SIG2_ON_GPIO_Port, WIPERS_SIG2_ON_Pin, RESET);	/* Slow gear and home switch - it must be OFF for fast gear to work */
 			HAL_GPIO_WritePin(WIPERS_SIG3_ON_GPIO_Port, WIPERS_SIG3_ON_Pin, SET);	/* Fast gear switch */
 			HAL_GPIO_WritePin(WIPERS_SIG5_ON_GPIO_Port, WIPERS_SIG5_ON_Pin, SET);	/* Power for engine */
 		}
 	} //if(SET == inWipersOnSignal)
 	else	/* If wipers are OFF */
 	{
+		/* Check if there is a timer running - if yes then stop it */
+		if(pdFALSE != xTimerIsTimerActive(My_Timer_WIPERSHandle))
+		{
+			(void)xTimerStop(My_Timer_WIPERSHandle, (TickType_t)0);
+		}
+
+		HAL_GPIO_WritePin(WIPERS_SIG2_ON_GPIO_Port, WIPERS_SIG2_ON_Pin, SET);	/* Slow gear and home switch - it must be always ON */
 		HAL_GPIO_WritePin(WIPERS_SIG3_ON_GPIO_Port, WIPERS_SIG3_ON_Pin, RESET);	/* Fast gear switch */
 		HAL_GPIO_WritePin(WIPERS_SIG5_ON_GPIO_Port, WIPERS_SIG5_ON_Pin, RESET);	/* Power for engine */
 	}

@@ -39,6 +39,9 @@
 #include "task.h"
 #include "lcd_hd44780_i2c.h"
 
+extern void ReinitializationOfLCD(void);
+#define MAX_WAIT_FOR_LCD_TIME	((uint32_t)(10))
+
 uint8_t lcdCommandBuffer[6] = {0x00};
 
 static LCDParams lcdParams;
@@ -82,7 +85,6 @@ bool lcdInit(I2C_HandleTypeDef *hi2c, uint8_t address, uint8_t lines, uint8_t co
 
         while (HAL_I2C_GetState(lcdParams.hi2c) != HAL_I2C_STATE_READY) {
             vTaskDelay(1);
-//            lcdParams.hi2c->State = HAL_I2C_STATE_READY;
         }
 
         if (i == 2) {
@@ -356,6 +358,8 @@ bool lcdLoadCustomChar(uint8_t cell, uint8_t * charMap) {
  */
 static bool lcdWriteByte(uint8_t rsRwBits, uint8_t * data) {
 
+	static uint32_t waitingCounter = 0u;
+
     /* Higher 4 bits*/
     lcdCommandBuffer[0] = rsRwBits | LCD_BIT_E | lcdParams.backlight | (*data & 0xF0);  // Send data and set strobe
     lcdCommandBuffer[1] = lcdCommandBuffer[0];                                          // Strobe turned on
@@ -372,8 +376,15 @@ static bool lcdWriteByte(uint8_t rsRwBits, uint8_t * data) {
     }
 
     while (HAL_I2C_GetState(lcdParams.hi2c) != HAL_I2C_STATE_READY) {
+    	++waitingCounter;
+    	if(waitingCounter > MAX_WAIT_FOR_LCD_TIME)
+    	{
+    		ReinitializationOfLCD();
+    		break;
+    	}
         vTaskDelay(1);
     }
+	waitingCounter = 0u;
 
     return true;
 }

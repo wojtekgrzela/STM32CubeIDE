@@ -9,6 +9,10 @@
 #include "Functions.h"
 
 
+#define FUEL_LEVEL_ADC_ERROR_THRESHOLD		((uint16_t)(4000))	/* When disconnected / broken cable the value goes above 4000 */
+#define FUEL_EQUATION_COEFF1	((float)(-0.0346f))	/* a: y = a*x + b */
+#define FUEL_EQUATION_COEFF2	((float)(110.536f)) /* b: y = a*x + b */
+
 
 /**
  * A function that copies the given string (source) to the buffer (destiny)
@@ -88,7 +92,6 @@ Error_Code calculate_NTC_temperature(boardTemperature_type *temperature, const u
 	 *********************************************************************************************************/
 
 	Error_Code error = NO_ERROR;
-//	int32_t coeff = 1000;
 
 	if((MIN_ADC_VALUE > ADC_value) || (MAX_ADC_VALUE < ADC_value))
 	{
@@ -96,7 +99,7 @@ Error_Code calculate_NTC_temperature(boardTemperature_type *temperature, const u
 	}
 	else
 	{
-		float R = NTC->Rgnd * (((float)(MAX_ADC_VALUE) / (float)ADC_value) - 1.0);
+		float R = NTC->Rgnd * (((float)(MAX_ADC_VALUE) / (float)ADC_value) - 1.0f);
 
 		float step2 = log((R / NTC->R25));
 
@@ -208,7 +211,16 @@ Error_Code calculate_fuelLevel(cafFuelLevel_type *result, const uint16_t measure
 	}
 	else
 	{
-		*result = (cafFuelLevel_type)measure / ADC_RESOLUTION_X_REF_VOLTAGE_float * 10;	//TODO - value just for reference
+		if(FUEL_LEVEL_ADC_ERROR_THRESHOLD < measure)
+		{
+			*result = 99.0f;
+			error = ADC__VALUE_INCORRECT;
+		}
+		else
+		{
+			/* Equation coefficients calculated in Matlab basing on measurements during vehicle refilling */
+			*result = (cafFuelLevel_type)measure * (FUEL_EQUATION_COEFF1) + (FUEL_EQUATION_COEFF2);
+		}
 	}
 
 	return error;
@@ -414,12 +426,12 @@ Error_Code turnOffPower_CruiseControl(void)
  */
 uint8_t compare_two_strings(const char *const str1/*The short one*/,
 		const char *const str2/*The one you compare to*/,
-		const uint8_t start /*Start position of the comparison*/,
-		const uint8_t size /*Number of characters to compare*/)
+		const uint16_t start /*Start position of the comparison*/,
+		const uint16_t size /*Number of characters to compare*/)
 {
 	uint8_t result = TRUE;
 
-	for (uint8_t i = 0; i < (size); ++i)
+	for (uint16_t i = 0; i < (size); ++i)
 	{
 		if (str1[i] != str2[i + start])
 		{
@@ -447,12 +459,12 @@ uint8_t compare_two_strings(const char *const str1/*The short one*/,
  * @retval index: the index in the string where the symbol is located
  */
 int16_t find_nearest_symbol(const char symbol, const char *const str,
-		const uint8_t start /*start position in string to look for the symbol*/)
+		const uint16_t start /*start position in string to look for the symbol*/)
 {
 	int16_t index = -1;
-	uint8_t strLength = strlen(str);
+	uint16_t strLength = strlen(str);
 
-	for (uint8_t i = start; i < strLength; ++i)
+	for (uint16_t i = start; i < strLength; ++i)
 	{
 		if (str[i] == symbol)
 		{
