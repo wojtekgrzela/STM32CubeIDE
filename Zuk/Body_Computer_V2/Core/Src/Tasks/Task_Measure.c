@@ -367,7 +367,9 @@ void StartMeasureTask(void const *argument)
 		carMainBatteryVoltage_Average = carMainBatteryVoltage_SUM / NO_OF_CAR_VOLTAGES_MEASUREMENTS_ADDED;
 		carAuxBatteryVoltage_Average = carAuxBatteryVoltage_SUM / NO_OF_CAR_VOLTAGES_MEASUREMENTS_ADDED;
 		if (tenSeconds_FLAG)
+		{
 			carFuelLevel_Average = carFuelLevel_SUM / NO_OF_FUEL_LEVEL_MEASUREMENTS_ADDED; /* This will execute every 10 seconds */
+		}
 
 		temperature3V3DCDC_Average = temperature3V3DCDC_SUM / NO_OF_BOARD_TEMPERATURES_MEASUREMENTS_ADDED;
 		temperature5VDCDC_Average = temperature5VDCDC_SUM / NO_OF_BOARD_TEMPERATURES_MEASUREMENTS_ADDED;
@@ -408,14 +410,16 @@ void StartMeasureTask(void const *argument)
 
 		if (NO_ERROR != error)
 			my_error_handler(error); /* In case of an error go to the error handler function */
-
+#if 0
 		/* Here we add the new measurement */
 		carWaterTemp_Average += carWaterTemp_NewValue;
 		carOilTemp_Average += carOilTemp_NewValue;
 		carMainBatteryVoltage_Average += carMainBatteryVoltage_NewValue;
 		carAuxBatteryVoltage_Average += carAuxBatteryVoltage_NewValue;
 		if (tenSeconds_FLAG)
+		{
 			carFuelLevel_Average += carFuelLevel_NewValue; /* This will execute every 10 seconds */
+		}
 
 		temperature3V3DCDC_Average += temperature3V3DCDC_NewValue;
 		temperature5VDCDC_Average += temperature5VDCDC_NewValue;
@@ -430,7 +434,9 @@ void StartMeasureTask(void const *argument)
 		carMainBatteryVoltage_Average -= carMainBatteryVoltageTable[0];
 		carAuxBatteryVoltage_Average -= carAuxBatteryVoltageTable[0];
 		if (tenSeconds_FLAG)
+		{
 			carFuelLevel_Average -= carFuelLevelTable[0]; /* This will execute every 10 seconds */
+		}
 
 		temperature3V3DCDC_Average -= temperature3V3DCDCTable[0];
 		temperature5VDCDC_Average -= temperature5VDCDCTable[0];
@@ -438,7 +444,7 @@ void StartMeasureTask(void const *argument)
 		voltage3V3_Average -= voltage3V3Table[0];
 		voltage5V_Average -= voltage5VTable[0];
 		voltageIn_Average -= voltageInTable[0];
-
+#endif
 		/* In this for loops we shift the values in the table */
 		for (uint16_t i = 1u; i <= (NO_OF_ENGINE_TEMPERATURE_MEASUREMENTS_ADDED - 1u) /*1u - because we subtract 1 below from i*/; ++i)
 		{
@@ -476,7 +482,9 @@ void StartMeasureTask(void const *argument)
 		carMainBatteryVoltageTable[NO_OF_CAR_VOLTAGES_MEASUREMENTS_ADDED - 1u] = carMainBatteryVoltage_NewValue;
 		carAuxBatteryVoltageTable[NO_OF_CAR_VOLTAGES_MEASUREMENTS_ADDED - 1u] = carAuxBatteryVoltage_NewValue;
 		if (tenSeconds_FLAG)
+		{
 			carFuelLevelTable[NO_OF_FUEL_LEVEL_MEASUREMENTS_ADDED - 1u] = carFuelLevel_NewValue;
+		}
 
 		temperature3V3DCDCTable[NO_OF_BOARD_TEMPERATURES_MEASUREMENTS_ADDED - 1u] = temperature3V3DCDC_NewValue;
 		temperature5VDCDCTable[NO_OF_BOARD_TEMPERATURES_MEASUREMENTS_ADDED - 1u] = temperature5VDCDC_NewValue;
@@ -491,7 +499,9 @@ void StartMeasureTask(void const *argument)
 		mainBatteryVoltageValue = carMainBatteryVoltage_Average;
 		auxiliaryBatteryVoltageValue = carAuxBatteryVoltage_Average;
 		if (tenSeconds_FLAG)
+		{
 			fuelLevelValue = carFuelLevel_Average;
+		}
 
 		oilPressureValue = carOilAnalogPressure_NewValue; /* This value is not filtered */
 		oilPressureValueBinary = carOilBinaryPressure_NewValue; /* This value is not filtered */
@@ -508,6 +518,7 @@ void StartMeasureTask(void const *argument)
 		carOilTemp_SUM = 0;
 		carMainBatteryVoltage_SUM = 0;
 		carAuxBatteryVoltage_SUM = 0;
+		carFuelLevel_SUM = 0;
 
 		temperature3V3DCDC_SUM = 0;
 		temperature5VDCDC_SUM = 0;
@@ -553,7 +564,7 @@ void StartMeasureTask(void const *argument)
 		if (tenSeconds_FLAG) /* This will execute every 10 seconds */
 		{
 			fuelLevelValueForLCD.messageReadyFLAG = FALSE;
-			snprintf((char*)fuelLevelValueForLCD.messageHandler, 4, "%3" PRIu16, (uint16_t)fuelLevelValue);
+			snprintf((char*)fuelLevelValueForLCD.messageHandler, 3, "%2" PRIu16, (uint16_t)fuelLevelValue);
 			fuelLevelValueForLCD.size = strlen((char*)fuelLevelValueForLCD.messageHandler);
 			fuelLevelValueForLCD.messageReadyFLAG = TRUE;
 		}

@@ -2550,11 +2550,17 @@ static void RUNNING_DesktopLayer(struct LCD_board* currentBoard)
 
 	/*** Second Row ***/
 		/* Water temperature */
-	error = copy_str_to_buffer("Water: ", (char*)LCD_buffer[Row2], 0, 7);
+	error = copy_str_to_buffer("H2O: ", (char*)LCD_buffer[Row2], 0u, 4u);
 	if(TRUE == waterTemperatureValueForLCD.messageReadyFLAG)
-		error = copy_str_to_buffer((char*)waterTemperatureValueForLCD.messageHandler, (char*)LCD_buffer[Row2], 7, waterTemperatureValueForLCD.size);
-	error = copy_str_to_buffer((char*)degreeSymbolCharacter, (char*)LCD_buffer[Row2], 7+waterTemperatureValueForLCD.size, 1);
-	error = copy_str_to_buffer("C", (char*)LCD_buffer[Row2], 7+waterTemperatureValueForLCD.size+1, 1);
+		error = copy_str_to_buffer((char*)waterTemperatureValueForLCD.messageHandler, (char*)LCD_buffer[Row2], 5u, waterTemperatureValueForLCD.size);
+	error = copy_str_to_buffer((char*)degreeSymbolCharacter, (char*)LCD_buffer[Row2], 5u+waterTemperatureValueForLCD.size, 1u);
+	error = copy_str_to_buffer("C", (char*)LCD_buffer[Row2], 5u+waterTemperatureValueForLCD.size+1u, 1u);
+		/* Fuel level */
+	error = copy_str_to_buffer("Fuel: ", (char*)LCD_buffer[Row2], 11u, 5u);
+	if(TRUE == fuelLevelValueForLCD.messageReadyFLAG)
+		error = copy_str_to_buffer((char*)fuelLevelValueForLCD.messageHandler, (char*)LCD_buffer[Row2], 17u, fuelLevelValueForLCD.size);
+	error = copy_str_to_buffer("L", (char*)LCD_buffer[Row2], 17u+fuelLevelValueForLCD.size, 1u);
+
 
 	if(NO_ERROR != error) my_error_handler(error);
 
@@ -2671,10 +2677,10 @@ static void RUNNING_CarInfoLayer(struct LCD_board* currentBoard)
 	error = copy_str_to_buffer((char*)degreeSymbolCharacter, (char*)LCD_buffer[Row2], 5u+waterTemperatureValueForLCD.size, 1u);
 	error = copy_str_to_buffer("C", (char*)LCD_buffer[Row2], 5u+waterTemperatureValueForLCD.size+1u, 1u);
 		/* Fuel level */ /*Fuel: xxL*/
-	error = copy_str_to_buffer("Fuel:", (char*)LCD_buffer[Row2], 10u, 5u);
+	error = copy_str_to_buffer("Fuel:", (char*)LCD_buffer[Row2], 11u, 5u);
 	if(TRUE == fuelLevelValueForLCD.messageReadyFLAG)
-		error = copy_str_to_buffer((char*)fuelLevelValueForLCD.messageHandler, (char*)LCD_buffer[Row2], 16u, fuelLevelValueForLCD.size);
-	error = copy_str_to_buffer("L", (char*)LCD_buffer[Row2], 16u+fuelLevelValueForLCD.size, 1u);
+		error = copy_str_to_buffer((char*)fuelLevelValueForLCD.messageHandler, (char*)LCD_buffer[Row2], 17u, fuelLevelValueForLCD.size);
+	error = copy_str_to_buffer("L", (char*)LCD_buffer[Row2], 17u+fuelLevelValueForLCD.size, 1u);
 
 	/*** Third Row ***/	/*Oil: xyz*C P: xxpsi*/
 		/* Oil temperature */ /*Oil: xyz*C*/
