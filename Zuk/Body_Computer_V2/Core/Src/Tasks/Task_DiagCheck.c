@@ -197,7 +197,7 @@ void StartDiagCheckTask(void const * argument)
 				Check_CarOilPressure();
 				Check_CarMainBattVoltage();
 				Check_CarAuxBattVoltage();
-//				Check_CarFuelLevel();
+				Check_CarFuelLevel();
 				break;
 			}
 			case CarState_Error:

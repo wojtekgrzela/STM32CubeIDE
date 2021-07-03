@@ -121,6 +121,9 @@ void StartCruiseCntrlTask(void const *argument)
 	cruiseControlParam.wantedGas = MIN_ALLOWED_RPM;
 	cruiseControlParam.wantedSpeed = MIN_ALLOWED_SPEED;
 
+	/* Turn the power on */
+	HAL_GPIO_WritePin(POWER_ON_CRUISE_CONTROL_PORT, POWER_ON_CRUISE_CONTROL_Pin, SET);
+
 	xLastWakeTime = xTaskGetTickCount();
 
 	/* Infinite loop */
@@ -134,7 +137,6 @@ void StartCruiseCntrlTask(void const *argument)
 
 		if (ON == cruiseControlParam.state)
 		{
-			HAL_GPIO_WritePin(POWER_ON_CRUISE_CONTROL_PORT, POWER_ON_CRUISE_CONTROL_Pin, SET);
 			/* Check the mode of the cruise control */
 			if(CONSTANT_SPEED == cruiseControlParam.mode)
 			{

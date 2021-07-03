@@ -32,7 +32,7 @@ typedef uint8_t boolean;
 #define MY_EEPROM_TASK_TIME_PERIOD			(TickType_t)(200)	/* Would be good to decrease this number significantly, as it only executes when it has data from a Queue */
 #define MY_DUMP_TO_EEPROM_TASK_TIME_PERIOD 	(TickType_t)(1000)
 #define MY_DUMP_TO_SDCARD_TASK_TIME_PERIOD	(TickType_t)(1000)
-#define MY_TASK_50_MS_TIME_PERIOD			(TickType_t)(10)
+#define MY_TASK_50_MS_TIME_PERIOD			(TickType_t)(50)
 #define MY_TASK_MEASURE_TIME_PERIOD			(TickType_t)(250)
 #define MY_TASK_500_MS_TIME_PERIOD			(TickType_t)(500)
 #define MY_TASK_CRUISE_CONTROL_TIME_PERIOD	(TickType_t)(500)

@@ -977,10 +977,10 @@ static void controlWipers(void)
 	 * 2. Switch for slow gear
 	 * 3. Switch for fast gear
 	 * 4. Constant +12V, engine running and stopping after a bit
-	 * 5. +12, engine running for ever
+	 * 5. +12, engine running constantly
 	 *
 	 * We are obtaining info from the shifter on the steering wheel
-	 * as well as from a switch from panel (0, 1, 2).
+	 * as well as from a switch from panel (0, 1, 2 positions).
 	 */
 
 	static TickType_t lastCalledTimerTime = 0;
@@ -995,7 +995,7 @@ static void controlWipers(void)
 	/* If the wipers signal is on then proceed */
 	if(GPIO_PIN_SET == inWipersOnSignal)
 	{
-		/* Wipers in timer and slow gear - when swich is in 1 position */
+		/* Wipers in timer and slow gear - when switch is in 1 position */
 		if((GPIO_PIN_RESET == inBinSignalsTable[WIPERS_SLOW_INPUT_NO]) && (GPIO_PIN_SET == inBinSignalsTable[WIPERS_FAST_INPUT_NO]))
 		{
 			HAL_GPIO_WritePin(WIPERS_SIG2_ON_GPIO_Port, WIPERS_SIG2_ON_Pin, SET);	/* Slow gear and home switch - it must be ON */
@@ -1043,7 +1043,7 @@ static void controlWipers(void)
 			}
 		}
 
-		/* Wipers in slow gear - when swich is in 0 position */
+		/* Wipers in slow gear - when switch is in 0 position */
 		if((GPIO_PIN_SET == inBinSignalsTable[WIPERS_SLOW_INPUT_NO]) && (GPIO_PIN_SET == inBinSignalsTable[WIPERS_FAST_INPUT_NO]))
 		{
 			HAL_GPIO_WritePin(WIPERS_SIG2_ON_GPIO_Port, WIPERS_SIG2_ON_Pin, SET);	/* Slow gear and home switch - it must be ON */
