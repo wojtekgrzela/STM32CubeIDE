@@ -51,6 +51,8 @@ extern LCD_message waterTemperatureValueForLCD;
 
 extern boolean EXT_saveSpecialGPSPointDone;
 extern boolean EXT_saveSpecialGPSPoint;
+
+extern WDGCounter task_DumpToSDCard_WDG;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -283,6 +285,7 @@ void StartDumpToSDCardTask(void const *argument)
 			}
 		}
 
+		++task_DumpToSDCard_WDG;
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */

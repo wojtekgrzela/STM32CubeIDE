@@ -61,6 +61,7 @@ extern I2C_HandleTypeDef hi2c1;
 extern I2C_HandleTypeDef hi2c3;
 extern TIM_HandleTypeDef htim8;
 extern SD_HandleTypeDef hsd;
+extern IWDG_HandleTypeDef hiwdg;
 
 extern boolean backlightOnRequest;
 
@@ -70,6 +71,9 @@ extern TIM_HandleTypeDef htim7;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* To indicate that the system is fully initialized */
+boolean SYSTEM_IS_UP_FLAG = FALSE;
+
 /* For debugging - task time etc. */
 volatile uint32_t Tim7_Counter_100us = 0u;
 
@@ -738,6 +742,9 @@ void StartStartUpTask(void const * argument)
 	 *
 	 ***** ***** ***** ***** ***** ***** ***** ***** ***** *****/
 
+  	/* Refresh the IWDG in order not to get a reset in initialization process. */
+	(void)HAL_IWDG_Refresh(&hiwdg); /* 600ms till WDG reset */
+
 	/*** Step 1 ***/
  	(void)enable_5VDCDC(); /* Enable 5V DCDC converter */
 	osDelay(50U); /* Wait 50ms for the voltage to set properly */
@@ -789,6 +796,9 @@ void StartStartUpTask(void const * argument)
 	/*** Step 12 ***/
 	vTaskResume(My_AlarmControlHandle); /* Turn on Alarm Control task */
 	osDelay(50U); /* Wait 50ms for the task to run a bit */
+
+	/* Set the SYSTEM_IS_UP_FLAG to SET */
+	SYSTEM_IS_UP_FLAG = TRUE;
 
 	/* After successful start up - suspend the task.
 	 * The task could be destroyed but it may be useful later.

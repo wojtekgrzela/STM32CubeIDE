@@ -37,6 +37,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 extern osMessageQId Queue_EEPROM_readHandle;
 extern osMessageQId Queue_EEPROM_writeHandle;
+
+extern WDGCounter task_EEPROM_WDG;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -144,6 +146,7 @@ void StartEEPROMTask(void const * argument)
 			}
 		}
 
+		++task_EEPROM_WDG;
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
 	/* USER CODE END StartTaskEEPROM */

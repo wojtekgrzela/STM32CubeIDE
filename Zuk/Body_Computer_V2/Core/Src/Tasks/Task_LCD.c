@@ -120,6 +120,8 @@ extern CarStateinfo_type CarStateInfo;
 extern volatile CruiseControlParameters_struct cruiseControlParam;
 
 extern SDCard_info_struct SDCard_info;
+
+extern WDGCounter task_LCD_WDG;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -2318,6 +2320,7 @@ void StartLCDTask(void const * argument)
 		}
 		vTaskDelay(1);
 
+		++task_LCD_WDG;
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */

@@ -26,6 +26,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Defines And Typedefs */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#define ITERATION_1			(uint32_t)(1u)
+#define ITERATION_2			(uint32_t)(2u)
+#define ITERATION_10		(uint32_t)(10u)
+
 #define ON_BOARD_FAN_HBRIDGE_TEMP_ON_THRESHOLD		((float)(50.0))
 #define RPM_DIVIDER_COEFFICIENT						((uint32_t)(3u))
 #define SPEED_DIVIDER_COEFFICIENT					((float)(9.0/*Reaction for two edges (rising, falling)*/))
@@ -112,6 +116,8 @@ extern volatile ENCButton_struct ENC_button_menu;
 extern volatile int8_t EncoderCounterMenuDiff;
 
 extern SDCard_info_struct SDCard_info;
+
+extern WDGCounter task_Measure_WDG;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -722,6 +728,7 @@ void StartMeasureTask(void const *argument)
 		/***** Iteration counters managing end *****/
 		/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+		++task_Measure_WDG;
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
