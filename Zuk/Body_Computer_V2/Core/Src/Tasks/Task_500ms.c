@@ -92,7 +92,7 @@ void Start500msTask(void const *argument)
 	static uint16_t IterationCounter_2sec = 0u;
 	static uint16_t IterationCounter_3sec = 0u;
 
-	static boolean task_50ms_counter_FAILED = FALSE;
+	static boolean task_50ms_FAILED = FALSE;
 	static boolean task_AlarmControl_FAILED = FALSE;
 	static boolean task_CruiseControl_FAILED = FALSE;
 	static boolean task_DiagCheck_FAILED = FALSE;
@@ -111,53 +111,78 @@ void Start500msTask(void const *argument)
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 	for (;;)
 	{
-		(ITERATION_2 == IterationCounter_1sec) ? (oneSecond_FLAG = TRUE) : (oneSecond_FLAG = FALSE);		/* If 1 second passed - set flag ON */
-		(ITERATION_4 == IterationCounter_2sec) ? (twoSecond_FLAG = TRUE) : (twoSecond_FLAG = FALSE);		/* If 2 seconds passed - set flag ON */
-		(ITERATION_6 == IterationCounter_3sec) ? (threeSecond_FLAG = TRUE) : (threeSecond_FLAG = FALSE);	/* If 3 seconds passed - set flag ON */
-
-		/* Tasks checked every 500ms: */
-		(task_50ms_counter_MIN <= task_50ms_counter_WDG) ? (task_50ms_counter_FAILED = FALSE) : (task_50ms_counter_FAILED = TRUE);
-		task_50ms_counter_WDG = 0;
-		(task_AlarmControl_MIN <= task_AlarmControl_WDG) ? (task_AlarmControl_FAILED = FALSE) : (task_AlarmControl_FAILED = TRUE);
-		task_AlarmControl_WDG = 0;
-		(task_EEPROM_MIN <= task_EEPROM_WDG) ? (task_EEPROM_FAILED = FALSE) : (task_EEPROM_FAILED = TRUE);
-		task_EEPROM_WDG = 0;
-		(task_Measure_MIN <= task_Measure_WDG) ? (task_Measure_FAILED = FALSE) : (task_Measure_FAILED = TRUE);
-		task_Measure_WDG = 0;
-
-		if(TRUE == oneSecond_FLAG)	/* Tasks checked every 1000ms: */
-		{
-			(task_CruiseControl_MIN <= task_CruiseControl_WDG) ? (task_CruiseControl_FAILED = FALSE) : (task_CruiseControl_FAILED = TRUE);
-			task_CruiseControl_WDG = 0;
-		}
-		if(TRUE == twoSecond_FLAG)	/* Tasks checked every 2000ms: */
-		{
-			(task_DiagCheck_MIN <= task_DiagCheck_WDG) ? (task_DiagCheck_FAILED = FALSE) : (task_DiagCheck_FAILED = TRUE);
-			task_DiagCheck_WDG = 0;
-			(task_DumpToEEPROM_MIN <= task_DiagCheck_WDG) ? (task_DumpToEEPROM_FAILED = FALSE) : (task_DumpToEEPROM_FAILED = TRUE);
-			task_DiagCheck_WDG = 0;
-			(task_DumpToSDCard_MIN <= task_DiagCheck_WDG) ? (task_DumpToSDCard_FAILED = FALSE) : (task_DumpToSDCard_FAILED = TRUE);
-			task_DiagCheck_WDG = 0;
-			(task_GPS_MIN <= task_GPS_WDG) ? (task_GPS_FAILED = FALSE) : (task_GPS_FAILED = TRUE);
-			task_GPS_WDG = 0;
-		}
-		if(TRUE == threeSecond_FLAG)/* Tasks checked every 3000ms: */
-		{
-			(task_LCD_MIN <= task_LCD_WDG) ? (task_LCD_FAILED = FALSE) : (task_LCD_FAILED = TRUE);
-			task_LCD_WDG = 0;
-		}
-
 		/* Check if system is up or not yet */
-		if(FALSE == SYSTEM_IS_UP_FLAG)
+		if(TRUE == SYSTEM_IS_UP_FLAG)
 		{
+			(ITERATION_2 == IterationCounter_1sec) ? (oneSecond_FLAG = TRUE) : (oneSecond_FLAG = FALSE);		/* If 1 second passed - set flag ON */
+			(ITERATION_4 == IterationCounter_2sec) ? (twoSecond_FLAG = TRUE) : (twoSecond_FLAG = FALSE);		/* If 2 seconds passed - set flag ON */
+			(ITERATION_6 == IterationCounter_3sec) ? (threeSecond_FLAG = TRUE) : (threeSecond_FLAG = FALSE);	/* If 3 seconds passed - set flag ON */
+
+			/* Tasks checked every 500ms: */
+			(task_50ms_counter_MIN <= task_50ms_counter_WDG) ? (task_50ms_FAILED = FALSE) : (task_50ms_FAILED = TRUE);
+			task_50ms_counter_WDG = 0;
+			(task_AlarmControl_MIN <= task_AlarmControl_WDG) ? (task_AlarmControl_FAILED = FALSE) : (task_AlarmControl_FAILED = TRUE);
+			task_AlarmControl_WDG = 0;
+			(task_EEPROM_MIN <= task_EEPROM_WDG) ? (task_EEPROM_FAILED = FALSE) : (task_EEPROM_FAILED = TRUE);
+			task_EEPROM_WDG = 0;
+			(task_Measure_MIN <= task_Measure_WDG) ? (task_Measure_FAILED = FALSE) : (task_Measure_FAILED = TRUE);
+			task_Measure_WDG = 0;
+
+			if(TRUE == oneSecond_FLAG)	/* Tasks checked every 1000ms: */
+			{
+				(task_CruiseControl_MIN <= task_CruiseControl_WDG) ? (task_CruiseControl_FAILED = FALSE) : (task_CruiseControl_FAILED = TRUE);
+				task_CruiseControl_WDG = 0;
+			}
+			if(TRUE == twoSecond_FLAG)	/* Tasks checked every 2000ms: */
+			{
+				(task_DiagCheck_MIN <= task_DiagCheck_WDG) ? (task_DiagCheck_FAILED = FALSE) : (task_DiagCheck_FAILED = TRUE);
+				task_DiagCheck_WDG = 0;
+				(task_DumpToEEPROM_MIN <= task_DiagCheck_WDG) ? (task_DumpToEEPROM_FAILED = FALSE) : (task_DumpToEEPROM_FAILED = TRUE);
+				task_DiagCheck_WDG = 0;
+				(task_DumpToSDCard_MIN <= task_DiagCheck_WDG) ? (task_DumpToSDCard_FAILED = FALSE) : (task_DumpToSDCard_FAILED = TRUE);
+				task_DiagCheck_WDG = 0;
+				(task_GPS_MIN <= task_GPS_WDG) ? (task_GPS_FAILED = FALSE) : (task_GPS_FAILED = TRUE);
+				task_GPS_WDG = 0;
+			}
+			if(TRUE == threeSecond_FLAG)/* Tasks checked every 3000ms: */
+			{
+				(task_LCD_MIN <= task_LCD_WDG) ? (task_LCD_FAILED = FALSE) : (task_LCD_FAILED = TRUE);
+				task_LCD_WDG = 0;
+			}
+
 			/* If system is fully up - check flags */
-			if ((FALSE == task_50ms_counter_FAILED) && (FALSE == task_AlarmControl_FAILED) && (FALSE == task_EEPROM_FAILED)
-					&& (FALSE == task_Measure_FAILED) && (FALSE == task_CruiseControl_FAILED) && (FALSE == task_CruiseControl_FAILED)
-					&& (FALSE == task_DiagCheck_FAILED) && (FALSE == task_DumpToEEPROM_FAILED) && (FALSE == task_DumpToSDCard_FAILED)
-					&& (FALSE == task_GPS_FAILED) && (FALSE == task_LCD_FAILED))
+			if ((FALSE == task_50ms_FAILED) && (FALSE == task_AlarmControl_FAILED) && (FALSE == task_EEPROM_FAILED)
+					&& (FALSE == task_Measure_FAILED) && (FALSE == task_CruiseControl_FAILED) && (FALSE == task_DiagCheck_FAILED)
+					&& (FALSE == task_DumpToEEPROM_FAILED) && (FALSE == task_DumpToSDCard_FAILED) && (FALSE == task_GPS_FAILED)
+					&& (FALSE == task_LCD_FAILED))
 			{
 				/* If no FAILURE flag is TRUE then reset IWDG */
 				(void)HAL_IWDG_Refresh(&hiwdg);
+			}
+
+			if(TRUE == oneSecond_FLAG)
+			{
+				IterationCounter_1sec = ITERATION_1;
+			}
+			else
+			{
+				++IterationCounter_1sec;
+			}
+			if(TRUE == twoSecond_FLAG)
+			{
+				IterationCounter_2sec = ITERATION_1;
+			}
+			else
+			{
+				++IterationCounter_2sec;
+			}
+			if(TRUE == threeSecond_FLAG)
+			{
+				IterationCounter_3sec = ITERATION_1;
+			}
+			else
+			{
+				++IterationCounter_3sec;
 			}
 		}
 		else
@@ -175,31 +200,6 @@ void Start500msTask(void const *argument)
 		HAL_GPIO_TogglePin(DIAG_LED_3_GPIO_Port, DIAG_LED_3_Pin);
 		HAL_GPIO_TogglePin(DIAG_LED_4_GPIO_Port, DIAG_LED_4_Pin);
 
-
-		if(TRUE == oneSecond_FLAG)
-		{
-			IterationCounter_1sec = ITERATION_1;
-		}
-		else
-		{
-			++IterationCounter_1sec;
-		}
-		if(TRUE == twoSecond_FLAG)
-		{
-			IterationCounter_2sec = ITERATION_1;
-		}
-		else
-		{
-			++IterationCounter_2sec;
-		}
-		if(TRUE == threeSecond_FLAG)
-		{
-			IterationCounter_3sec = ITERATION_1;
-		}
-		else
-		{
-			++IterationCounter_3sec;
-		}
 
 		++IterationCounter;
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);

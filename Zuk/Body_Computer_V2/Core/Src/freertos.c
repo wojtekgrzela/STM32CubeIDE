@@ -791,7 +791,7 @@ void StartStartUpTask(void const * argument)
 
 	/*** Step 11 ***/
 	vTaskResume(My_DiagCheck_TaHandle); /* Turn on Diagnostic task */
-	osDelay(1000U); /* Wait 50ms for the task to run a bit */
+	osDelay(1000U); /* Wait 1000ms for the task to run a bit */
 
 	/*** Step 12 ***/
 	vTaskResume(My_AlarmControlHandle); /* Turn on Alarm Control task */
