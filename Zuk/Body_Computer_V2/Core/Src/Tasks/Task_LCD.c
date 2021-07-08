@@ -20,6 +20,7 @@
 #include "../../lcd_hd44780_i2c/lcd_hd44780_i2c.h"
 
 #include "i2c.h"
+#include "dma.h"
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -122,6 +123,9 @@ extern volatile CruiseControlParameters_struct cruiseControlParam;
 extern SDCard_info_struct SDCard_info;
 
 extern WDGCounter task_LCD_WDG;
+
+extern DMA_HandleTypeDef hdma_i2c2_tx;
+extern DMA_HandleTypeDef hdma_i2c2_rx;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -1530,20 +1534,6 @@ static LCD_board LCD_BuzzerWhenLongPressOnOff = {.name="Long Button Buzzer",
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* LCD Settings Boards */
-static LCD_board LCD_BacklightBrightnessLevel = {.name="Backlight Level",
-						.firstRow 			= "Backlight LCD",
-						.secondRow 			= "Brightness Level",
-						.thisLayer 			= BacklightBrightnessLevel,
-						.RunningFunction 	= RUNNING_DisplayAndControlValue,
-						.EnterFunction 		= ENTER_SaveToEEPROM,
-						.value_ptr 			= &(LCD_MainSettings.backlightLevel),
-						.valueType 			= _LCDSettings_type_,
-						.valueStepSize 		= StepByHundred,
-						.unit 				= NULL,
-						.EEPROMParameters	= &EEPROM_board,
-						.EEPROM_memAddress	= BOARD_LCD_BACKLIGHT_LEVEL_ADDRESS,
-						.minValue			= &(GlobalValuesLimits.backlightLevel_min),
-						.maxValue			= &(GlobalValuesLimits.backlightLevel_max) };
 
 static LCD_board LCD_BacklightOffBrightnessLevel = {.name="Backlight Off Level",
 						.firstRow 			= "Backlight Off LCD",
@@ -1823,7 +1813,6 @@ void StartLCDTask(void const * argument)
 	PREPARE_LCD_board(LCD_BuzzerWhenShortPressOnOff);
 	PREPARE_LCD_board(LCD_BuzzerWhenLongPressOnOff);
 
-	PREPARE_LCD_board(LCD_BacklightBrightnessLevel);
 	PREPARE_LCD_board(LCD_BacklightOffBrightnessLevel);
 	PREPARE_LCD_board(LCD_SecondsToTurnLCDBacklightOff);
 	PREPARE_LCD_board(LCD_AutoBacklightOffStartHour);
@@ -1918,7 +1907,7 @@ void StartLCDTask(void const * argument)
 	LCD_BuzzerSettings.nextLayer_ptr 		= &LCD_LCDSettings;
 	LCD_LCDSettings.previousLayer_ptr 		= &LCD_InternalTempSett;
 	LCD_LCDSettings.upperLayer_ptr 			= &LCD_JarvisSettings;
-	LCD_LCDSettings.lowerLayer_ptr			= &LCD_BacklightBrightnessLevel;
+	LCD_LCDSettings.lowerLayer_ptr			= &LCD_BacklightOffBrightnessLevel;
 
 	/* CarSettings_Layer -> WaterSettings_Layer */
 	LCD_WaterHighTempWarningThreshold.upperLayer_ptr 		= &LCD_WaterTempSettings;
@@ -2131,9 +2120,6 @@ void StartLCDTask(void const * argument)
 	LCD_BuzzerWhenLongPressOnOff.upperLayer_ptr					= &LCD_BuzzerSettings;
 
 	/* JarvisSettings_Layer -> LCDSettings_Layer */
-	LCD_BacklightBrightnessLevel.upperLayer_ptr					= &LCD_LCDSettings;
-	LCD_BacklightBrightnessLevel.nextLayer_ptr					= &LCD_BacklightOffBrightnessLevel;
-	LCD_BacklightOffBrightnessLevel.previousLayer_ptr			= &LCD_BacklightBrightnessLevel;
 	LCD_BacklightOffBrightnessLevel.upperLayer_ptr				= &LCD_LCDSettings;
 	LCD_BacklightOffBrightnessLevel.nextLayer_ptr				= &LCD_SecondsToTurnLCDBacklightOff;
 	LCD_SecondsToTurnLCDBacklightOff.previousLayer_ptr			= &LCD_BacklightOffBrightnessLevel;
@@ -2218,6 +2204,9 @@ void StartLCDTask(void const * argument)
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 	for (;;)
 	{
+		/* Setting LCD Back-light to a set level */
+		PWM_PULSE_LCD_BACKLIGHT = LCD_MainSettings.backlightLevel;
+
 		/** Cleaning the buffer by writing only spaces into it **/
 		memset(LCD_buffer, SPACE_IN_ASCII, (LCD.noOfRowsLCD * LCD.noOfColumnsLCD));
 
@@ -3416,12 +3405,19 @@ void ReinitializationOfLCD(void)
 {
 	NVIC_SystemReset();
 //	(void)turnOffPower_LCD();
+//	PWM_PULSE_LCD_BACKLIGHT = 0;
 //	HAL_I2C_DeInit(&hi2c2);
-//	vTaskDelay(300/*100ms*/);
-//	__HAL_I2C_CLEAR_FLAG(&hi2c2, I2C_FLAG_BUSY);
-//	MX_I2C2_Init();
-//	hi2c2.Mode = HAL_I2C_MODE_MASTER;
+//	HAL_DMA_DeInit(&hdma_i2c2_tx);
+//	HAL_DMA_DeInit(&hdma_i2c2_rx);
+//	vTaskDelay(100/*10ms*/);
+//	HAL_DMA_Init(&hdma_i2c2_tx);
+//	HAL_DMA_Init(&hdma_i2c2_rx);
+//	HAL_I2C_Init(&hi2c2);
+//	vTaskDelay(200/*10ms*/);
 //	(void)turnOnPower_LCD();
+//	PWM_PULSE_LCD_BACKLIGHT = LCD_MainSettings.backlightLevel;
+//	vTaskDelay(200/*10ms*/);
+//	__HAL_I2C_CLEAR_FLAG(&hi2c2, I2C_FLAG_BUSY);
 //	if(TRUE != lcdInit(&hi2c2, LCD.addressLCD, LCD.noOfRowsLCD, LCD.noOfColumnsLCD))
 //	{
 //		my_error_handler(LCD__INIT_FAIL);

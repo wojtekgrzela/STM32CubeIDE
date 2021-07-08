@@ -49,6 +49,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 extern IWDG_HandleTypeDef hiwdg;
 extern boolean SYSTEM_IS_UP_FLAG;
+
+extern CruiseControlParameters_struct cruiseControlParam;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -137,10 +139,10 @@ void Start500msTask(void const *argument)
 			{
 				(task_DiagCheck_MIN <= task_DiagCheck_WDG) ? (task_DiagCheck_FAILED = FALSE) : (task_DiagCheck_FAILED = TRUE);
 				task_DiagCheck_WDG = 0;
-				(task_DumpToEEPROM_MIN <= task_DiagCheck_WDG) ? (task_DumpToEEPROM_FAILED = FALSE) : (task_DumpToEEPROM_FAILED = TRUE);
-				task_DiagCheck_WDG = 0;
-				(task_DumpToSDCard_MIN <= task_DiagCheck_WDG) ? (task_DumpToSDCard_FAILED = FALSE) : (task_DumpToSDCard_FAILED = TRUE);
-				task_DiagCheck_WDG = 0;
+				(task_DumpToEEPROM_MIN <= task_DumpToEEPROM_WDG) ? (task_DumpToEEPROM_FAILED = FALSE) : (task_DumpToEEPROM_FAILED = TRUE);
+				task_DumpToEEPROM_WDG = 0;
+				(task_DumpToSDCard_MIN <= task_DumpToSDCard_WDG) ? (task_DumpToSDCard_FAILED = FALSE) : (task_DumpToSDCard_FAILED = TRUE);
+				task_DumpToSDCard_WDG = 0;
 				(task_GPS_MIN <= task_GPS_WDG) ? (task_GPS_FAILED = FALSE) : (task_GPS_FAILED = TRUE);
 				task_GPS_WDG = 0;
 			}
@@ -162,6 +164,7 @@ void Start500msTask(void const *argument)
 
 			if(TRUE == oneSecond_FLAG)
 			{
+				HAL_GPIO_TogglePin(DIAG_LED_3_GPIO_Port, DIAG_LED_3_Pin);	/* GREEN */
 				IterationCounter_1sec = ITERATION_1;
 			}
 			else
@@ -195,10 +198,17 @@ void Start500msTask(void const *argument)
 		}
 
 
-		HAL_GPIO_TogglePin(DIAG_LED_1_GPIO_Port, DIAG_LED_1_Pin);
-		HAL_GPIO_TogglePin(DIAG_LED_2_GPIO_Port, DIAG_LED_2_Pin);
-		HAL_GPIO_TogglePin(DIAG_LED_3_GPIO_Port, DIAG_LED_3_Pin);
-		HAL_GPIO_TogglePin(DIAG_LED_4_GPIO_Port, DIAG_LED_4_Pin);
+//		HAL_GPIO_TogglePin(DIAG_LED_1_GPIO_Port, DIAG_LED_1_Pin);	/* RED */
+//		HAL_GPIO_TogglePin(DIAG_LED_2_GPIO_Port, DIAG_LED_2_Pin);	/* YELLOW */
+
+		if (ON == cruiseControlParam.state)
+		{
+			HAL_GPIO_WritePin(DIAG_LED_4_GPIO_Port, DIAG_LED_4_Pin, SET);	/* BLUE */
+		}
+		else
+		{
+			HAL_GPIO_WritePin(DIAG_LED_4_GPIO_Port, DIAG_LED_4_Pin, RESET);	/* BLUE */
+		}
 
 
 		++IterationCounter;
