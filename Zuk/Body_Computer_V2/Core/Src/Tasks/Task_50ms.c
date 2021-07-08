@@ -59,6 +59,8 @@ extern volatile ENCButton_struct ENC_button_cruise;
 extern boolean EXT_boardChangeRequest;
 extern LCD_board *EXT_boardPtr;
 extern LCD_board LCD_CruiseControl;
+
+extern WDGCounter task_50ms_counter_WDG;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -201,6 +203,7 @@ void Start50msTask(void const *argument)
 			previousState = OFF;
 		}
 
+		++task_50ms_counter_WDG;
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */

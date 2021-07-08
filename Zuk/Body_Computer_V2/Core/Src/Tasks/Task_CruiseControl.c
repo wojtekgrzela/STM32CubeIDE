@@ -68,6 +68,8 @@ extern CarStateinfo_type CarStateInfo;
 extern volatile ENCButton_struct ENC_button_cruise;
 extern volatile uint16_t ADC1Measures[NO_OF_ADC1_MEASURES];
 extern volatile int8_t EncoderCounterCruiseDiff;
+
+extern WDGCounter task_CruiseControl_WDG;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -201,6 +203,7 @@ void StartCruiseCntrlTask(void const *argument)
 			Complete_Shutdown();
 		}
 
+		++task_CruiseControl_WDG;
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */

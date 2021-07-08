@@ -32,6 +32,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 extern UART_HandleTypeDef huart1;
 extern GPS_data_struct GPS;
+
+extern WDGCounter task_GPS_WDG;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -326,6 +328,7 @@ void StartGPSTask(void const * argument)
 		}
 #endif
 
+		++task_GPS_WDG;
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
 }

@@ -298,6 +298,8 @@ typedef uint8_t LCDSettings_type;
 typedef uint16_t LCDBacklightSettings_type;
 
 typedef int8_t timeHours_type;
+
+typedef uint16_t WDGCounter;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */

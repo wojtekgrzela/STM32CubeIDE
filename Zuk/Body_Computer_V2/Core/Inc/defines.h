@@ -54,12 +54,6 @@ typedef uint8_t boolean;
 #define BOARD_VIN_VOLTAGE_VALUE_CHECK_TIMER_TIME		((TickType_t)(10000))	/* Value in milliseconds */	/* 10 seconds */
 #define BOARD_3V3_TEMP_VALUE_CHECK_TIMER_TIME			((TickType_t)(4000))	/* Value in milliseconds */	/* 4 seconds  */
 #define BOARD_5V_TEMP_VALUE_CHECK_TIMER_TIME			((TickType_t)(4000))	/* Value in milliseconds */	/* 4 seconds  */
-
-#define ITERATION_INIT		(uint32_t)(0u)
-#define ITERATION_1			(uint32_t)(1u)
-#define ITERATION_2			(uint32_t)(2u)
-#define ITERATION_10		(uint32_t)(10u)
-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -222,8 +216,8 @@ typedef uint8_t boolean;
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Measurements */
-#define NO_OF_ENGINE_TEMPERATURE_MEASUREMENTS_ADDED			((uint8_t)(16u))
-#define NO_OF_CAR_VOLTAGES_MEASUREMENTS_ADDED				((uint8_t)(16u))
+#define NO_OF_ENGINE_TEMPERATURE_MEASUREMENTS_ADDED			((uint8_t)(4u))
+#define NO_OF_CAR_VOLTAGES_MEASUREMENTS_ADDED				((uint8_t)(4u))
 #define NO_OF_FUEL_LEVEL_MEASUREMENTS_ADDED					((uint8_t)(10u))
 
 #define NO_OF_BOARD_TEMPERATURES_MEASUREMENTS_ADDED			((uint8_t)(4u))

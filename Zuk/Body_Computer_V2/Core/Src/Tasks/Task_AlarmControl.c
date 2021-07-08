@@ -37,6 +37,8 @@
 extern volatile ENCButton_struct ENC_button_menu;
 extern buzzerMainSettings_struct BUZZER_settings;
 extern osTimerId My_Timer_BuzzerHandle;
+
+extern WDGCounter task_AlarmControl_WDG;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -177,6 +179,7 @@ void StartAlarmControlTask(void const * argument)
 			ENC_button_menu.allFlags &= 0b11100111;	/* Clear the button alarms bits (long and short press buzzer) */
 		}
 
+		++task_AlarmControl_WDG;
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */

@@ -40,6 +40,8 @@ extern EEPROM_parameters_struct EEPROM_car;
 extern EEPROM_parameters_struct EEPROM_board;
 
 extern GPS_data_struct GPS;
+
+extern WDGCounter task_DumpToEEPROM_WDG;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -144,6 +146,7 @@ void StartDumpToEEPROMTask(void const * argument)
 		  }
 	  }
 
+	  ++task_DumpToEEPROM_WDG;
 	  vTaskDelayUntil(&xLastWakeTime, xFrequency);
   }
 }

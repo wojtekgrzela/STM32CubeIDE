@@ -26,9 +26,15 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Defines And Typedefs */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#define ITERATION_1			(uint32_t)(1u)
+#define ITERATION_2			(uint32_t)(2u)
+#define ITERATION_10		(uint32_t)(10u)
+
+#define MIN_LCD_BACKLIGHT_LEVEL		((uint16_t)(3u))
+
 #define ON_BOARD_FAN_HBRIDGE_TEMP_ON_THRESHOLD		((float)(50.0))
 #define RPM_DIVIDER_COEFFICIENT						((uint32_t)(3u))
-#define SPEED_DIVIDER_COEFFICIENT					((float)(9.0/*Reaction for two edges (rising, falling)*/))
+#define SPEED_DIVIDER_COEFFICIENT					((float)(11.20392503/*Reaction for two edges (rising, falling)*/ / 2.0f /*/ 2.0f (2 because we calculate every 0.5s) */))
 
 #define WIPERS_TIMING_DELTA_THRESHOLD				((uint32_t)(50u))
 #define WIPERS_TIMING_MINIMUM_IDLE_OFFSET			((uint32_t)(3000u))	/* Timer for wipers will be set for at least 3 seconds */
@@ -112,6 +118,10 @@ extern volatile ENCButton_struct ENC_button_menu;
 extern volatile int8_t EncoderCounterMenuDiff;
 
 extern SDCard_info_struct SDCard_info;
+
+extern WDGCounter task_Measure_WDG;
+
+extern LCDMainSettings_struct LCD_MainSettings;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -320,7 +330,7 @@ void StartMeasureTask(void const *argument)
 //		taskENTER_CRITICAL();
 		if (halfSecond_FLAG)
 		{
-			temp_SPEED_counter = (float)SPEED_counter / SPEED_DIVIDER_COEFFICIENT ;
+			temp_SPEED_counter = (float)SPEED_counter / (SPEED_DIVIDER_COEFFICIENT); /* temp_SPEED_counter is in meters/s */
 			SPEED_counter = 0;
 		}
 		if (oneSecond_FLAG)
@@ -329,6 +339,16 @@ void StartMeasureTask(void const *argument)
 			RPM_counter = 0;
 		}
 //		taskEXIT_CRITICAL();
+
+		/* Backlight calculations */
+		if(POTENTIOMETER_2_ADC_VALUE > 4050)
+		{
+			LCD_MainSettings.backlightLevel = MIN_LCD_BACKLIGHT_LEVEL;
+		}
+		else
+		{
+			LCD_MainSettings.backlightLevel = 10000 - (POTENTIOMETER_2_ADC_VALUE*2.442f);
+		}
 
 		/* In this for loop we make the sum of our measurements */
 		for (uint16_t i = 0; i < NO_OF_ENGINE_TEMPERATURE_MEASUREMENTS_ADDED; ++i)
@@ -623,8 +643,8 @@ void StartMeasureTask(void const *argument)
 
 		if (halfSecond_FLAG)
 		{
-			temp_mileage = temp_SPEED_counter; /* Because temp_SPEED_counter is in meters/0.5s */
-			CarStateInfo.SPEED = temp_SPEED_counter * (SECONDS_IN_ONE_HOUR / METERS_IN_KILOMETER) * 2u; /* mileage in meters * 3600 / 1000 * 2u (2u because we calculate every 0.5s) */
+			temp_mileage = temp_SPEED_counter; /* Because temp_SPEED_counter is in meters/s */
+			CarStateInfo.SPEED = temp_SPEED_counter * (SECONDS_IN_ONE_HOUR / METERS_IN_KILOMETER); /* (mileage in meters * 3600 / 1000) */
 
 			temp_mileage = INTEGER_DIVISION_ROUNDING((temp_mileage * 2), 2); /* Thanks to that operation we will obtain a rounded integer after truncating */
 			CAR_mileage.totalMileage += temp_mileage; /* Adding the mileage to the global counter */
@@ -722,6 +742,7 @@ void StartMeasureTask(void const *argument)
 		/***** Iteration counters managing end *****/
 		/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+		++task_Measure_WDG;
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */

@@ -125,6 +125,8 @@ extern valueSignal_type board5VVoltage_alarm;
 extern valueSignal_type boardVinVoltage_alarm;
 extern valueSignal_type board3V3Temp_alarm;
 extern valueSignal_type board5VTemp_alarm;
+
+extern WDGCounter task_DiagCheck_WDG;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -212,7 +214,7 @@ void StartDiagCheckTask(void const * argument)
 		 * (for example - start a timer etc.). */
 		CheckValuesStateAndSendAlarmRequests();
 
-
+		++task_DiagCheck_WDG;
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
