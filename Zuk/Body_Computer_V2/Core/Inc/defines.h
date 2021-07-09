@@ -356,6 +356,12 @@ typedef uint8_t boolean;
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* LCD */
+#ifdef WOJTEK
+#define LCD_I2C_ADDRESS				((uint8_t)(0x27))
+#endif
+#ifdef ANDRZEJ
+#define LCD_I2C_ADDRESS				((uint8_t)(0x31))
+#endif
 #define NO_OF_ROWS_IN_LCD			((uint8_t)(4u))
 #define NO_OF_COLUMNS_IN_LCD		((uint8_t)(20u))
 

@@ -122,7 +122,7 @@ SDCard_info_struct SDCard_info =
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* For LCD parameters and settings */
 LCD_parameters_struct LCD =
-	{ 	.addressLCD = 0x27,
+	{ 	.addressLCD = LCD_I2C_ADDRESS,
 		.noOfRowsLCD = NO_OF_ROWS_IN_LCD,
 		.noOfColumnsLCD = NO_OF_COLUMNS_IN_LCD };
 

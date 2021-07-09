@@ -32,13 +32,13 @@
 
 #define MIN_LCD_BACKLIGHT_LEVEL		((uint16_t)(3u))
 
-#define ON_BOARD_FAN_HBRIDGE_TEMP_ON_THRESHOLD		((float)(50.0))
+#define ON_BOARD_FAN_HBRIDGE_TEMP_ON_THRESHOLD		((float)(50.0f))
 #define RPM_DIVIDER_COEFFICIENT						((uint32_t)(3u))
 #ifdef WOJTEK
-#define SPEED_DIVIDER_COEFFICIENT					((float)(11.20392503/*Reaction for two edges (rising, falling)*/ / 2.0f /*/ 2.0f (2 because we calculate every 0.5s) */))
+#define SPEED_DIVIDER_COEFFICIENT					((float)(11.9f/*Reaction for two edges (rising, falling)*/))
 #endif
 #ifdef ANDRZEJ
-#define SPEED_DIVIDER_COEFFICIENT					((float)(11.20392503/*Reaction for two edges (rising, falling)*/ / 2.0f /*/ 2.0f (2 because we calculate every 0.5s) */))
+#define SPEED_DIVIDER_COEFFICIENT					((float)(11.20392503f/*Reaction for two edges (rising, falling)*/))
 #endif
 
 #define WIPERS_TIMING_DELTA_THRESHOLD				((uint32_t)(50u))
