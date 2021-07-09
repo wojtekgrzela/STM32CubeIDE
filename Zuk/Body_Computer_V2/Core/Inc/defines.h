@@ -15,6 +15,15 @@ typedef uint8_t boolean;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Comment out proper define */
+#define WOJTEK
+//#define ANDRZEJ
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #define RUNTIME_STATS_AND_DEBUG
 
@@ -100,7 +109,6 @@ typedef uint8_t boolean;
 #define MIN_ADC_VALUE							((uint16_t)(0))
 #define MAX_ADC_VALUE							((uint16_t)(4095))
 #define MIN_LM35_ADC_VALUE						((int16_t)(-400)) 	/* This value corresponds to the -0.4V under the negative line (~-40*C) */
-//#define MAX_LM35_ADC_VALUE						((int16_t)(2482)) 	/* This value corresponds to the 2V over the negative line (~+200*C) */
 #define MAX_LM35_ADC_VALUE						((int16_t)(5000)) 	/* This value corresponds to the 2V over the negative line (~+200*C) */
 #define REFERENCE_VOLTAGE						((float)(3.3))
 #define NO_OF_ADC1_MEASURES						((uint32_t)(13))
@@ -204,6 +212,7 @@ typedef uint8_t boolean;
 #define BOARD_VOLTAGE_VIN_ADC_VALUE	BOARD_VOLTAGE_VIN_MEM_TABLE[BOARD_VOLTAGE_VIN_RANK]
 
 
+#ifdef WOJTEK
 #define CAR_WATER_TEMPERATURE_LM35_ADC_VALUE	(int16_t)(LM35_1_P_ADC_VALUE - LM35_1_N_ADC_VALUE)
 #define CAR_OIL_TEMPERATURE_ADC_VALUE			(RESISTANCE_SENSOR_1_ADC_VALUE)
 #define CAR_OIL_ANALOG_PRESSURE_ADC_VALUE		(RESISTANCE_SENSOR_2_ADC_VALUE)
@@ -211,6 +220,16 @@ typedef uint8_t boolean;
 #define BOARD_TEMPERATURE_5VDCDC_ADC_VALUE		BOARD_TEMP_2_ADC_VALUE
 #define BOARD_TEMPERATURE_HBRIDGE_ADC_VALUE		BOARD_TEMP_3_ADC_VALUE
 #define WIPERS_POTENTIOMETER_ADC_VALUE			POTENTIOMETER_1_ADC_VALUE
+#endif
+#ifdef ANDRZEJ
+#define CAR_WATER_TEMPERATURE_LM35_ADC_VALUE	(int16_t)(LM35_1_P_ADC_VALUE - LM35_1_N_ADC_VALUE)
+#define CAR_OIL_TEMPERATURE_ADC_VALUE			(RESISTANCE_SENSOR_1_ADC_VALUE)
+#define CAR_OIL_ANALOG_PRESSURE_ADC_VALUE		(RESISTANCE_SENSOR_2_ADC_VALUE)
+#define BOARD_TEMPERATURE_3V3DCDC_ADC_VALUE		BOARD_TEMP_1_ADC_VALUE
+#define BOARD_TEMPERATURE_5VDCDC_ADC_VALUE		BOARD_TEMP_2_ADC_VALUE
+#define BOARD_TEMPERATURE_HBRIDGE_ADC_VALUE		BOARD_TEMP_3_ADC_VALUE
+#define WIPERS_POTENTIOMETER_ADC_VALUE			POTENTIOMETER_1_ADC_VALUE
+#endif
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -231,8 +250,6 @@ typedef uint8_t boolean;
 #define RPM_ENGINE_CRANK_MAX_THRESHOLD		(uint32_t)(600U)
 #define RPM_ENGINE_IDLE_MIN_THRESHOLD		(uint32_t)(600U)
 #define RPM_ENGINE_IDLE_MAX_THRESHOLD		(uint32_t)(1000U)
-
-#define SPEED_ENGINE_IDLE_MAX_THRESHOLD		(uint32_t)(5U)
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -350,8 +367,6 @@ typedef uint8_t boolean;
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* SD CARD */
-#define TEST_MESSAGE_FOR_CHECK		("This is a test text.")
-
 #define MOUNT_IMMEDIATELY			((uint8_t)(1u))
 #define UNMOUNT_PARAMETER			((uint8_t)(1u))
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -422,5 +437,9 @@ typedef uint8_t boolean;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
+
+#if !defined(WOJTEK) && !defined(ANDRZEJ)
+#error "ERROR - SW VERSION NOT SPECIFIED - choose WOJTEK or ANDRZEJ in define.h file!!!"
+#endif
 
 #endif /* INC_DEFINES_H_ */

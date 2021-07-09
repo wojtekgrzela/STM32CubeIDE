@@ -34,7 +34,12 @@
 
 #define ON_BOARD_FAN_HBRIDGE_TEMP_ON_THRESHOLD		((float)(50.0))
 #define RPM_DIVIDER_COEFFICIENT						((uint32_t)(3u))
+#ifdef WOJTEK
 #define SPEED_DIVIDER_COEFFICIENT					((float)(11.20392503/*Reaction for two edges (rising, falling)*/ / 2.0f /*/ 2.0f (2 because we calculate every 0.5s) */))
+#endif
+#ifdef ANDRZEJ
+#define SPEED_DIVIDER_COEFFICIENT					((float)(11.20392503/*Reaction for two edges (rising, falling)*/ / 2.0f /*/ 2.0f (2 because we calculate every 0.5s) */))
+#endif
 
 #define WIPERS_TIMING_DELTA_THRESHOLD				((uint32_t)(50u))
 #define WIPERS_TIMING_MINIMUM_IDLE_OFFSET			((uint32_t)(3000u))	/* Timer for wipers will be set for at least 3 seconds */

@@ -14,11 +14,10 @@
 #endif
 
 extern boolean EXT_LCDReInitRequest;
+static uint32_t debugCounter = 0;	//A counter of errors for debugging purposes
 
 void my_error_handler(Error_Code error)
 {
-	static uint32_t debugCounter = 0;	//A counter of errors for debugging purposes
-
 	switch (error)
 	{
 		case 0:		/*NO_ERROR / HAL__OK__ / OS__OK */ //Not an error - everything is OK

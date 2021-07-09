@@ -38,17 +38,13 @@
 #define D_REGULATOR_GAIN_SPEED_3			((float)(2.0))
 
 #define P_REGULATOR_GAIN_SPEED_4			((float)(4.0))
-#define I_REGULATOR_GAIN_SPEED_4			((float)(0.5))
+#define I_REGULATOR_GAIN_SPEED_4			((float)(0.1))
 #define D_REGULATOR_GAIN_SPEED_4			((float)(6.0))
 
 #define SPEED_THRESHOLD_1			((float)(100.0))
 #define SPEED_THRESHOLD_2			((float)(85.0))
 #define SPEED_THRESHOLD_3			((float)(70.0))
 #define SPEED_THRESHOLD_4			(MIN_ALLOWED_SPEED)
-
-#define P_REGULATOR_GAIN_RPM			((float)(1.0))
-#define I_REGULATOR_GAIN_RPM			((float)(0.5))
-#define D_REGULATOR_GAIN_RPM			((float)(1.0))
 
 /* ADC defines */
 #define MAX_ADC_ACCELERATION_READOUT	((int32_t)(2900))	/* max what an ADC can read as a max gas pedal position */

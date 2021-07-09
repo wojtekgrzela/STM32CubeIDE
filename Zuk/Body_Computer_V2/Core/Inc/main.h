@@ -170,7 +170,6 @@ typedef enum
 			BuzzerWhenLongPress			=	0x865,
 
 			/* JarvisSettings_Layer -> LCDSettings_Layer */
-			BacklightBrightnessLevel	=	0x871,
 			BacklightOffBrightnessLevel	=	0x872,
 			SecondsToTurnOffBacklight	=	0x873,
 			AutoBacklightOffStartHour	=	0x874,
