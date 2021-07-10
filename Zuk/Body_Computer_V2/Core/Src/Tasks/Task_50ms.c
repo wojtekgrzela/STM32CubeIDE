@@ -44,7 +44,7 @@
 #define INCREASE_ENG_TERMINAL_PIN	(IN1_CNTRL_ENGINE_Pin)
 #endif
 
-#define DEAD_ZONE_HYSTERESIS		((int16_t)(30))
+#define DEAD_ZONE_HYSTERESIS		((int16_t)(35))
 
 #define SHUTDOWN_HIGH_RPM			((uint32_t)(3500))
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */

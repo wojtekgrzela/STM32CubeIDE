@@ -38,8 +38,8 @@
 #define D_REGULATOR_GAIN_SPEED_3			((float)(2.0))
 
 #define P_REGULATOR_GAIN_SPEED_4			((float)(4.0))
-#define I_REGULATOR_GAIN_SPEED_4			((float)(0.1))
-#define D_REGULATOR_GAIN_SPEED_4			((float)(6.0))
+#define I_REGULATOR_GAIN_SPEED_4			((float)(0.001))
+#define D_REGULATOR_GAIN_SPEED_4			((float)(2.0))
 
 #define SPEED_THRESHOLD_1			((float)(100.0))
 #define SPEED_THRESHOLD_2			((float)(85.0))
