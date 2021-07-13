@@ -34,7 +34,7 @@
 #define D_REGULATOR_GAIN_SPEED_2			((float)(2.0))
 
 #define P_REGULATOR_GAIN_SPEED_3			((float)(4.0))
-#define I_REGULATOR_GAIN_SPEED_3			((float)(0.0001))
+#define I_REGULATOR_GAIN_SPEED_3			((float)(0.001))
 #define D_REGULATOR_GAIN_SPEED_3			((float)(2.0))
 
 #define P_REGULATOR_GAIN_SPEED_4			((float)(4.0))
