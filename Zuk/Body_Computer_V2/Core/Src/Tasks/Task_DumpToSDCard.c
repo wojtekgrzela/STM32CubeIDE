@@ -32,8 +32,8 @@
 #define STRINGS_DELIMITER		(",")			/* This is used for csv data */
 #define STRINGS_ENDING			("\n\r\0")		/* This is used to finish a string */
 
-#define MAX_LENGTH_CSV_HEADER_TABLE		(128u)
-#define MAX_LENGTH_CSV_DATA_TABLE		(128u)
+#define MAX_LENGTH_CSV_HEADER_TABLE		(192u)
+#define MAX_LENGTH_CSV_DATA_TABLE		(256u)
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -54,6 +54,8 @@ extern boolean EXT_saveSpecialGPSPointDone;
 extern boolean EXT_saveSpecialGPSPoint;
 
 extern WDGCounter task_DumpToSDCard_WDG;
+
+extern CruiseControlParameters_struct cruiseControlParam;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
