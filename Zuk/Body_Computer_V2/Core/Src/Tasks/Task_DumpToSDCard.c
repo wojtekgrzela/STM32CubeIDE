@@ -48,6 +48,7 @@ extern GPS_data_struct GPS;
 extern LCD_message RPMForLCD;
 extern LCD_message SPEEDForLCD;
 extern LCD_message waterTemperatureValueForLCD;
+extern LCD_message Wanted_SPEEDForLCD;
 
 extern boolean EXT_saveSpecialGPSPointDone;
 extern boolean EXT_saveSpecialGPSPoint;
@@ -64,7 +65,7 @@ static FIL fileObj;
 static boolean InitialIteration = TRUE;
 static uint8_t CSVDataTable[MAX_LENGTH_CSV_DATA_TABLE] = "";
 static uint8_t CSVHeadersTable[MAX_LENGTH_CSV_HEADER_TABLE] =
-		"Time,Latitude,LatitudeIndicator,Longitude,LongitudeIndicator,Altitude,SpeedByGPS,SatelitesUsed,Speed,RPM,CoolantTemp";
+		"Time,Latitude,LatitudeIndicator,Longitude,LongitudeIndicator,Altitude,SpeedByGPS,SatelitesUsed,Speed,CruiseControlOn,SetSpeed,CoolantTemp\n\r";
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -420,67 +421,68 @@ static void prepareDataToSave(uint16_t* dataBufferPosition)
 {
 	if(TRUE == GPS.forLCD.clock.messageReadyFLAG) /* Saving clock */
 	{
-		copy_str_to_buffer((char*)GPS.forLCD.clock.messageHandler, (char*)CSVDataTable, *dataBufferPosition, GPS.forLCD.clock.size);
+		(void)copy_str_to_buffer((char*)GPS.forLCD.clock.messageHandler, (char*)CSVDataTable, *dataBufferPosition, GPS.forLCD.clock.size);
 		*dataBufferPosition += GPS.forLCD.clock.size;
 	}
 	addCSVDelimiter(CSVDataTable, dataBufferPosition);
 	if(TRUE == GPS.forLCD.latitude.messageReadyFLAG) /* Saving latitude */
 	{
-		copy_str_to_buffer((char*)GPS.forLCD.latitude.messageHandler, (char*)CSVDataTable, *dataBufferPosition, GPS.forLCD.latitude.size);
+		(void)copy_str_to_buffer((char*)GPS.forLCD.latitude.messageHandler, (char*)CSVDataTable, *dataBufferPosition, GPS.forLCD.latitude.size);
 		*dataBufferPosition += GPS.forLCD.latitude.size;
 	}
 	addCSVDelimiter(CSVDataTable, dataBufferPosition);
 	if(TRUE == GPS.forLCD.latitudeIndicator.messageReadyFLAG) /* Saving latitude indicator */
 	{
-		copy_str_to_buffer((char*)GPS.forLCD.latitudeIndicator.messageHandler, (char*)CSVDataTable, *dataBufferPosition, GPS.forLCD.latitudeIndicator.size);
+		(void)copy_str_to_buffer((char*)GPS.forLCD.latitudeIndicator.messageHandler, (char*)CSVDataTable, *dataBufferPosition, GPS.forLCD.latitudeIndicator.size);
 		*dataBufferPosition += GPS.forLCD.latitudeIndicator.size;
 	}
 	addCSVDelimiter(CSVDataTable, dataBufferPosition);
 	if(TRUE == GPS.forLCD.longitude.messageReadyFLAG) /* Saving longitude */
 	{
-		copy_str_to_buffer((char*)GPS.forLCD.longitude.messageHandler, (char*)CSVDataTable, *dataBufferPosition, GPS.forLCD.longitude.size);
+		(void)copy_str_to_buffer((char*)GPS.forLCD.longitude.messageHandler, (char*)CSVDataTable, *dataBufferPosition, GPS.forLCD.longitude.size);
 		*dataBufferPosition += GPS.forLCD.longitude.size;
 	}
 	addCSVDelimiter(CSVDataTable, dataBufferPosition);
 	if(TRUE == GPS.forLCD.longitudeIndicator.messageReadyFLAG) /* Saving longitude indicator */
 	{
-		copy_str_to_buffer((char*)GPS.forLCD.longitudeIndicator.messageHandler, (char*)CSVDataTable, *dataBufferPosition, GPS.forLCD.longitudeIndicator.size);
+		(void)copy_str_to_buffer((char*)GPS.forLCD.longitudeIndicator.messageHandler, (char*)CSVDataTable, *dataBufferPosition, GPS.forLCD.longitudeIndicator.size);
 		*dataBufferPosition += GPS.forLCD.longitudeIndicator.size;
 	}
 	addCSVDelimiter(CSVDataTable, dataBufferPosition);
 	if(TRUE == GPS.forLCD.altitude.messageReadyFLAG) /* Saving altitude */
 	{
-		copy_str_to_buffer((char*)GPS.forLCD.altitude.messageHandler, (char*)CSVDataTable, *dataBufferPosition, GPS.forLCD.altitude.size);
+		(void)copy_str_to_buffer((char*)GPS.forLCD.altitude.messageHandler, (char*)CSVDataTable, *dataBufferPosition, GPS.forLCD.altitude.size);
 		*dataBufferPosition += GPS.forLCD.altitude.size;
 	}
 	addCSVDelimiter(CSVDataTable, dataBufferPosition);
 	if(TRUE == GPS.forLCD.speed.messageReadyFLAG) /* Saving speed from GPS */
 	{
-		copy_str_to_buffer((char*)GPS.forLCD.speed.messageHandler, (char*)CSVDataTable, *dataBufferPosition, GPS.forLCD.speed.size);
+		(void)copy_str_to_buffer((char*)GPS.forLCD.speed.messageHandler, (char*)CSVDataTable, *dataBufferPosition, GPS.forLCD.speed.size);
 		*dataBufferPosition += GPS.forLCD.speed.size;
 	}
 	addCSVDelimiter(CSVDataTable, dataBufferPosition);
 	if(TRUE == GPS.forLCD.satellitesUsed.messageReadyFLAG) /* Saving number of used satellites */
 	{
-		copy_str_to_buffer((char*)GPS.forLCD.satellitesUsed.messageHandler, (char*)CSVDataTable, *dataBufferPosition, GPS.forLCD.satellitesUsed.size);
+		(void)copy_str_to_buffer((char*)GPS.forLCD.satellitesUsed.messageHandler, (char*)CSVDataTable, *dataBufferPosition, GPS.forLCD.satellitesUsed.size);
 		*dataBufferPosition += GPS.forLCD.satellitesUsed.size;
 	}
 	addCSVDelimiter(CSVDataTable, dataBufferPosition);
 	if(TRUE == SPEEDForLCD.messageReadyFLAG) /* Saving speed calculated from a sensor */
 	{
-		copy_str_to_buffer((char*)SPEEDForLCD.messageHandler, (char*)CSVDataTable, *dataBufferPosition, SPEEDForLCD.size);
+		(void)copy_str_to_buffer((char*)SPEEDForLCD.messageHandler, (char*)CSVDataTable, *dataBufferPosition, SPEEDForLCD.size);
 		*dataBufferPosition += SPEEDForLCD.size;
 	}
 	addCSVDelimiter(CSVDataTable, dataBufferPosition);
-	if(TRUE == RPMForLCD.messageReadyFLAG) /* Saving RPM calculated */
+	copy_str_to_buffer(((TRUE == cruiseControlParam.state) ? "ON" : "OFF"), (char*)CSVDataTable, *dataBufferPosition, ((TRUE == cruiseControlParam.state) ? 2u : 3u));
+	if(TRUE == Wanted_SPEEDForLCD.messageReadyFLAG) /* Saving speed calculated from a sensor */
 	{
-		copy_str_to_buffer((char*)RPMForLCD.messageHandler, (char*)CSVDataTable, *dataBufferPosition, RPMForLCD.size);
-		*dataBufferPosition += RPMForLCD.size;
+		(void)copy_str_to_buffer((char*)Wanted_SPEEDForLCD.messageHandler, (char*)CSVDataTable, *dataBufferPosition, Wanted_SPEEDForLCD.size);
+		*dataBufferPosition += Wanted_SPEEDForLCD.size;
 	}
 	addCSVDelimiter(CSVDataTable, dataBufferPosition);
 	if(TRUE == waterTemperatureValueForLCD.messageReadyFLAG) /* Saving coolant temperature */
 	{
-		copy_str_to_buffer((char*)waterTemperatureValueForLCD.messageHandler, (char*)CSVDataTable, *dataBufferPosition, waterTemperatureValueForLCD.size);
+		(void)copy_str_to_buffer((char*)waterTemperatureValueForLCD.messageHandler, (char*)CSVDataTable, *dataBufferPosition, waterTemperatureValueForLCD.size);
 		*dataBufferPosition += waterTemperatureValueForLCD.size;
 	}
 

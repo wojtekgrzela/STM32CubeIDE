@@ -404,37 +404,22 @@ void StartMeasureTask(void const *argument)
 		voltageIn_Average = voltageIn_SUM / NO_OF_BOARD_VOLTAGES_MEASUREMENTS_ADDED;
 
 		/* Here we calculate the new measurement */
-		if (NO_ERROR == error)
 			error = calculate_waterTemperature(&carWaterTemp_NewValue);
-		if (NO_ERROR == error)
 			error = calculate_oilTemperature(&carOilTemp_NewValue);
-		if (NO_ERROR == error)
 			error = calculate_mainBattVoltage(&carMainBatteryVoltage_NewValue);
-		if (NO_ERROR == error)
 			error = calculate_auxBattVoltage(&carAuxBatteryVoltage_NewValue);
-		if (NO_ERROR == error)
 			error = calculate_CarfuelLevel(&carFuelLevel_NewValue);
 
-		if (NO_ERROR == error)
 			error = calculate_oilPressure(&carOilAnalogPressure_NewValue); /* This value is not filtered */
-		if (NO_ERROR == error)
 			error = check_oilBinaryPressure(&carOilBinaryPressure_NewValue); /* This value is not filtered */
 
-		if (NO_ERROR == error)
 			error = calculate_3V3Voltage(&voltage3V3_NewValue);
-		if (NO_ERROR == error)
 			error = calculate_5VVoltage(&voltage5V_NewValue);
-		if (NO_ERROR == error)
 			error = calculate_VinVoltage(&voltageIn_NewValue);
-		if (NO_ERROR == error)
 			error = calculate_3V3DCDCTemperatur(&temperature3V3DCDC_NewValue);
-		if (NO_ERROR == error)
 			error = calculate_5VDCDCTemperature(&temperature5VDCDC_NewValue);
-		if (NO_ERROR == error)
 			error = calculate_HBridgeTemperature(&temperatureHBridge_NewValue);
 
-		if (NO_ERROR != error)
-			my_error_handler(error); /* In case of an error go to the error handler function */
 #if 0
 		/* Here we add the new measurement */
 		carWaterTemp_Average += carWaterTemp_NewValue;
@@ -651,7 +636,7 @@ void StartMeasureTask(void const *argument)
 			temp_mileage = temp_SPEED_counter; /* Because temp_SPEED_counter is in meters/s */
 			CarStateInfo.SPEED = temp_SPEED_counter * (SECONDS_IN_ONE_HOUR / METERS_IN_KILOMETER); /* (mileage in meters * 3600 / 1000) */
 
-			temp_mileage = INTEGER_DIVISION_ROUNDING((temp_mileage * 2), 2); /* Thanks to that operation we will obtain a rounded integer after truncating */
+			temp_mileage = INTEGER_DIVISION_ROUNDING((temp_mileage), 2); /* Thanks to that operation we will obtain a rounded integer after truncating */
 			CAR_mileage.totalMileage += temp_mileage; /* Adding the mileage to the global counter */
 			CAR_mileage.tripMileage += temp_mileage; /* Adding the mileage to the global counter */
 		}
