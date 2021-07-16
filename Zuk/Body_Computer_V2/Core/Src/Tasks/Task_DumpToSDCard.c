@@ -34,6 +34,9 @@
 
 #define MAX_LENGTH_CSV_HEADER_TABLE		(192u)
 #define MAX_LENGTH_CSV_DATA_TABLE		(256u)
+
+#define MIN_TIME_BETWEEN_DUMPS			((uint32_t)(5u))	/* in seconds */
+#define MIN_DISTANCE_BETWEEN_DUMPS		((uint32_t)(100u))	/* in meters */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -56,6 +59,7 @@ extern boolean EXT_saveSpecialGPSPoint;
 extern WDGCounter task_DumpToSDCard_WDG;
 
 extern CruiseControlParameters_struct cruiseControlParam;
+extern CAR_mileage_struct CAR_mileage;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -94,6 +98,9 @@ void StartDumpToSDCardTask(void const *argument)
 	Error_Code error = NO_ERROR;
 	FRESULT result = FR_OK;
 
+	static uint32_t iterationNumber = 0u;
+	static uint32_t temp_mileage = 0u;
+
 	static uint8_t fileName[FILE_NAME_LENGTH] = {SPACE_IN_ASCII};
 	uint16_t dataBufferPosition = 0u;
 
@@ -116,6 +123,8 @@ void StartDumpToSDCardTask(void const *argument)
 		error = SDCARD__INIT_FAILED;
 		my_error_handler(error);
 	}
+
+	temp_mileage = CAR_mileage.totalMileage;
 
 	xLastWakeTime = xTaskGetTickCount();
 	/* Infinite loop */
@@ -221,7 +230,8 @@ void StartDumpToSDCardTask(void const *argument)
 				/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 				/* Check if GPS point should be saved and do it if so */
-				if(TRUE == track_GPS_movement(&GPS))
+//				if(TRUE == track_GPS_movement(&GPS))
+				if((MIN_TIME_BETWEEN_DUMPS <= iterationNumber) && (MIN_DISTANCE_BETWEEN_DUMPS <= (CAR_mileage.totalMileage - temp_mileage))) /* Effectively every MIN_TIME_BETWEEN_DUMPS seconds max */
 				{
 					/* FA_OPEN_APPEND - opens the file if it is existing. If not, a new file will be created.
 					 * The read/write pointer is set end of the file.
@@ -249,6 +259,7 @@ void StartDumpToSDCardTask(void const *argument)
 							my_error_handler(error);
 						}//(FR_OK != result)
 					}
+					iterationNumber = 0u;
 				}//if(TRUE == track_GPS_movement(&GPS))
 
 				/* Write GPS data, parameters data, etc. */
@@ -288,6 +299,7 @@ void StartDumpToSDCardTask(void const *argument)
 			}
 		}
 
+		++iterationNumber;
 		++task_DumpToSDCard_WDG;
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
