@@ -488,6 +488,8 @@ static void prepareDataToSave(uint16_t* dataBufferPosition)
 	}
 	addCSVDelimiter(CSVDataTable, dataBufferPosition);
 	copy_str_to_buffer(((TRUE == cruiseControlParam.state) ? "ON" : "OFF"), (char*)CSVDataTable, *dataBufferPosition, ((TRUE == cruiseControlParam.state) ? 2u : 3u));
+	*dataBufferPosition += (TRUE == cruiseControlParam.state) ? 2u : 3u;
+	addCSVDelimiter(CSVDataTable, dataBufferPosition);
 	if(TRUE == Wanted_SPEEDForLCD.messageReadyFLAG) /* Saving speed calculated from a sensor */
 	{
 		(void)copy_str_to_buffer((char*)Wanted_SPEEDForLCD.messageHandler, (char*)CSVDataTable, *dataBufferPosition, Wanted_SPEEDForLCD.size);

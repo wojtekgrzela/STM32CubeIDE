@@ -29,13 +29,6 @@ typedef enum
 	val_alarm	= 2
 }Enum_ValueState;
 
-typedef enum
-{
-	val_notApplicable	= 0,
-	val_tooLow			= 1,
-	val_tooHigh			= 2
-}Enum_valueTooLowHigh;
-
 typedef struct
 {
 	Enum_ValueState carWaterTemp_ValueState;
@@ -54,15 +47,6 @@ typedef struct
 	Enum_ValueState boardHBridgeTemp_ValueState;
 }Diagnostic_ValueStates_struct;
 
-typedef struct
-{
-	Enum_valueTooLowHigh carOilAnalogPressure_ValueState;
-	Enum_valueTooLowHigh carMainBattVoltage_ValueState;
-	Enum_valueTooLowHigh carAuxBattVoltage_ValueState;
-
-	Enum_valueTooLowHigh board3V3Voltage_ValueState;
-	Enum_valueTooLowHigh board5VVoltage_ValueState;
-}Diagnostic_ValueTooLowHigh_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -135,7 +119,7 @@ extern WDGCounter task_DiagCheck_WDG;
 /* Local variables */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 static Diagnostic_ValueStates_struct valueStates = {val_OK};
-static Diagnostic_ValueTooLowHigh_struct valueStatesLowHigh = {val_notApplicable};
+Diagnostic_ValueTooLowHigh_struct valueStatesLowHigh = {val_notApplicable};
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 

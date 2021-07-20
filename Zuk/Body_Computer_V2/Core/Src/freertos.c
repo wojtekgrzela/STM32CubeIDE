@@ -599,7 +599,7 @@ void MX_FREERTOS_Init(void) {
 
   /* definition and creation of My_Timer_Buzzer */
   osTimerDef(My_Timer_Buzzer, Timer_Buzzer);
-  My_Timer_BuzzerHandle = osTimerCreate(osTimer(My_Timer_Buzzer), osTimerOnce, NULL);
+  My_Timer_BuzzerHandle = osTimerCreate(osTimer(My_Timer_Buzzer), osTimerPeriodic, NULL);
 
   /* definition and creation of My_Timer_carAuxBattVoltageValueCheck */
   osTimerDef(My_Timer_carAuxBattVoltageValueCheck, Timer_carAuxBattVoltageValueCheck);
@@ -656,7 +656,7 @@ void MX_FREERTOS_Init(void) {
   My_LCD_TaskHandle = osThreadCreate(osThread(My_LCD_Task), NULL);
 
   /* definition and creation of My_GPS_Task */
-  osThreadDef(My_GPS_Task, StartGPSTask, osPriorityNormal, 0, 128);
+  osThreadDef(My_GPS_Task, StartGPSTask, osPriorityNormal, 0, 192);
   My_GPS_TaskHandle = osThreadCreate(osThread(My_GPS_Task), NULL);
 
   /* definition and creation of My_EEPROM_Task */
@@ -668,7 +668,7 @@ void MX_FREERTOS_Init(void) {
   My_DumpToEEPROMHandle = osThreadCreate(osThread(My_DumpToEEPROM), NULL);
 
   /* definition and creation of My_DumpToSDCard */
-  osThreadDef(My_DumpToSDCard, StartDumpToSDCardTask, osPriorityBelowNormal, 0, 1024);
+  osThreadDef(My_DumpToSDCard, StartDumpToSDCardTask, osPriorityBelowNormal, 0, 1536);
   My_DumpToSDCardHandle = osThreadCreate(osThread(My_DumpToSDCard), NULL);
 
   /* definition and creation of My_Measure_Task */

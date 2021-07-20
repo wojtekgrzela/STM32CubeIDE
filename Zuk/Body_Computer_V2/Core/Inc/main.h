@@ -581,8 +581,8 @@ typedef struct
 	boolean signalBuzzerDone;
 	boolean signalSnapshotIndication;
 	boolean signalSnapshotDone;
-	boolean* signalSetting1;
-	boolean* signalSetting2;
+	boolean signalSetting1;
+	boolean signalSetting2;
 	void (*BuzzerSignal)(void);
 }valueSignal_type;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -695,6 +695,28 @@ typedef struct {
 	uint32_t wantedGas;
 	float error;
 }CruiseControlParameters_struct;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef enum
+{
+	val_notApplicable	= 0,
+	val_normal			= 0,
+	val_tooLow			= 1,
+	val_tooHigh			= 2
+}Enum_valueTooLowHigh;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+typedef struct
+{
+	Enum_valueTooLowHigh carOilAnalogPressure_ValueState;
+	Enum_valueTooLowHigh carMainBattVoltage_ValueState;
+	Enum_valueTooLowHigh carAuxBattVoltage_ValueState;
+
+	Enum_valueTooLowHigh board3V3Voltage_ValueState;
+	Enum_valueTooLowHigh board5VVoltage_ValueState;
+}Diagnostic_ValueTooLowHigh_struct;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */

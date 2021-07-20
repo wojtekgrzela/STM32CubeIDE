@@ -39,6 +39,14 @@ extern buzzerMainSettings_struct BUZZER_settings;
 extern osTimerId My_Timer_BuzzerHandle;
 
 extern WDGCounter task_AlarmControl_WDG;
+
+extern waterTempSettings_struct CAR_waterTemp;
+extern oilTempSettings_struct CAR_oilTemp;
+extern oilPressureSettings_struct CAR_oilPressure;
+extern batterySettings_struct CAR_mainBattery;
+extern batterySettings_struct CAR_auxiliaryBattery;
+
+extern Diagnostic_ValueTooLowHigh_struct valueStatesLowHigh;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -132,14 +140,65 @@ void StartAlarmControlTask(void const * argument)
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 	for (;;)
 	{
+		carWaterTemp_warning.signalSetting1 = CAR_waterTemp.waterTempWarningOn;
+		carWaterTemp_warning.signalSetting2 = CAR_waterTemp.waterTempWarningBuzzerOn;
+		carWaterTemp_alarm.signalSetting1 = CAR_waterTemp.waterTempAlarmOn;
+		carWaterTemp_alarm.signalSetting2 = CAR_waterTemp.waterTempAlarmBuzzerOn;
+
+		carOilTemp_warning.signalSetting1 = CAR_oilTemp.oilTempWarningOn;
+		carOilTemp_warning.signalSetting2 = CAR_oilTemp.oilTempWarningBuzzerOn;
+		carOilTemp_alarm.signalSetting1 = CAR_oilTemp.oilTempAlarmOn;
+		carOilTemp_alarm.signalSetting2 = CAR_oilTemp.oilTempAlarmBuzzerOn;
+
+		if(valueStatesLowHigh.carOilAnalogPressure_ValueState == val_tooHigh)
+		{
+			carOilAnalogPressure_alarm.signalSetting1 = CAR_oilPressure.oilHighPressureAlarmOn;
+			carOilAnalogPressure_alarm.signalSetting2 = CAR_oilPressure.oilPressureAlarmBuzzerOn;
+		}
+		else
+		{
+			carOilAnalogPressure_alarm.signalSetting1 = CAR_oilPressure.oilLowPressureAlarmOn;
+			carOilAnalogPressure_alarm.signalSetting2 = CAR_oilPressure.oilPressureAlarmBuzzerOn;
+		}
+		carOilBinaryPressure_alarm.signalSetting1 = TRUE;	/* Hardcoded because it should be always TRUE */
+		carOilBinaryPressure_alarm.signalSetting2 = TRUE;	/* Hardcoded because it should be always TRUE */
+
+		if(valueStatesLowHigh.carMainBattVoltage_ValueState == val_tooHigh)
+		{
+			carMainBattVoltage_alarm.signalSetting1 = CAR_mainBattery.highVoltageAlarmOn;
+			carMainBattVoltage_alarm.signalSetting2 = CAR_mainBattery.highVoltageAlarmBuzzerOn;
+		}
+		else
+		{
+			carMainBattVoltage_alarm.signalSetting1 = CAR_mainBattery.lowVoltageAlarmOn;
+			carMainBattVoltage_alarm.signalSetting2 = CAR_mainBattery.lowVoltageAlarmBuzzerOn;
+		}
+
+		if(valueStatesLowHigh.carAuxBattVoltage_ValueState == val_tooHigh)
+		{
+			carAuxBattVoltage_alarm.signalSetting1 = CAR_auxiliaryBattery.highVoltageAlarmOn;
+			carAuxBattVoltage_alarm.signalSetting2 = CAR_auxiliaryBattery.highVoltageAlarmBuzzerOn;
+		}
+		else
+		{
+			carAuxBattVoltage_alarm.signalSetting1 = CAR_auxiliaryBattery.lowVoltageAlarmOn;
+			carAuxBattVoltage_alarm.signalSetting2 = CAR_auxiliaryBattery.lowVoltageAlarmBuzzerOn;
+		}
+
+		carFuelLevel_warning.signalSetting1 = CAR_fuel.lowFuelLevelWarningOn;
+		carFuelLevel_warning.signalSetting2 = CAR_fuel.lowFuelLevelWarningBuzzerOn;
+
+
 		/* Go through the list of possible alarms and check if there is any */
 		for(uint8_t i = 0u; i < valueSignalPtrTableSize; ++i)
 		{
+			currentValueSignalTypePtr = NULL;
 			if(TRUE == valueSignalPtrTable[i]->signalBuzzerIndication) /* If there is an indication alarm */
 			{
 				if(FALSE == BuzzerSignalInProgress)	/* Check if there is another alarm in progress */
 				{
 					currentValueSignalTypePtr = valueSignalPtrTable[i];	/* Write an alarm structure pointer to current variable */
+					break;
 				}
 			}
 			else /* If there is no indication of alarm then clear the "done" flag - it is used to make the alarm go only once */
@@ -152,8 +211,8 @@ void StartAlarmControlTask(void const * argument)
 		 * Check if the buzzer is ON in current alarm signal structure in the 2nd setting.
 		 * Check if main switch for the buzzer is ON.
 		 * Check if main alarm switch for buzzer is ON. */
-		if( (currentValueSignalTypePtr ? *(currentValueSignalTypePtr->signalSetting1) : FALSE) &&
-				(currentValueSignalTypePtr ? *(currentValueSignalTypePtr->signalSetting2) : FALSE) &&
+		if( (currentValueSignalTypePtr ? currentValueSignalTypePtr->signalSetting1 : FALSE) &&
+				(currentValueSignalTypePtr ? currentValueSignalTypePtr->signalSetting2 : FALSE) &&
 				(BUZZER_settings.buzzerMainSwitchOn) &&
 				(BUZZER_settings.buzzerMainAlarmsSwitchOn))
 		{
@@ -236,20 +295,19 @@ static void BuzzerSignal_shortTwo(void)
 		HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);	/* Turn the buzzer ON. */
 		(void)osTimerStart(My_Timer_BuzzerHandle, BUZZER_SIGNAL_SHORT_TWO_TIME);	/* Start the timer. */
 	}
-	else	/* If it is not the first time in this function */
-	{
-		(void)osTimerStart(My_Timer_BuzzerHandle, BUZZER_SIGNAL_SHORT_TWO_TIME);	/* Start the timer. */
-	}
 
 	++i;	/* Increment the iterator. */
 
 	/* If the number of beeps and pauses is greater than the value:
 	 * Set the iterator back to 0u.
 	 * Set the "done" flag to TRUE - indicate the alarm was already done. */
-	if(4u > i)
+	if(3u < i)
 	{
 		i = 0u;	/* Set the iterator to 0. */
 		currentValueSignalTypePtr->signalBuzzerDone = TRUE;	/* Indicate the signal was already done. */
+		(void)osTimerStop(My_Timer_BuzzerHandle);
+		HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);	/* Turn the buzzer OFF. */
+		BuzzerSignalInProgress = FALSE;
 	}
 }
 
