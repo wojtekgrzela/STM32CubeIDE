@@ -27,6 +27,16 @@ float RunPIDController(float error, PIDparameters_t *PIDparam)
 {
 	static float i_res = 0.0;
 	i_res += integrate(error, PIDparam);
+
+	if (PIDparam->I_low_limit > i_res)
+	{
+		i_res = PIDparam->I_low_limit;
+	}
+	if(PIDparam->I_high_limit < i_res)
+	{
+		i_res = PIDparam->I_high_limit;
+	}
+
 	float d_res = differentiate(error, PIDparam);
 
 	return ((PIDparam->P * error) + (((PIDparam->I) * i_res) / 1000) + ((PIDparam->D * d_res) * 1000));

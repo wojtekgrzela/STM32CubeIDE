@@ -17,6 +17,9 @@ typedef struct PIDparameters_t
 	float D;	// Differentiating gain
 
 	float dt;	// sampling period in milliseconds
+
+	float I_low_limit;
+	float I_high_limit;
 }PIDparameters_t;
 
 

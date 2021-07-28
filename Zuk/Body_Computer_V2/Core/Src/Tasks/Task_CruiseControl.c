@@ -25,26 +25,29 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Defines And Typedefs */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define P_REGULATOR_GAIN_SPEED_1			((float)(3.0))
-#define I_REGULATOR_GAIN_SPEED_1			((float)(0.001))
-#define D_REGULATOR_GAIN_SPEED_1			((float)(2.0))
+#define P_REGULATOR_GAIN_SPEED_1			((float)(50.0f))
+#define I_REGULATOR_GAIN_SPEED_1			((float)(5.0f))
+#define D_REGULATOR_GAIN_SPEED_1			((float)(2.0f))
 
-#define P_REGULATOR_GAIN_SPEED_2			((float)(3.0))
-#define I_REGULATOR_GAIN_SPEED_2			((float)(0.001))
-#define D_REGULATOR_GAIN_SPEED_2			((float)(2.0))
+#define P_REGULATOR_GAIN_SPEED_2			((float)(40.0f))
+#define I_REGULATOR_GAIN_SPEED_2			((float)(5.0f))
+#define D_REGULATOR_GAIN_SPEED_2			((float)(2.0f))
 
-#define P_REGULATOR_GAIN_SPEED_3			((float)(4.0))
-#define I_REGULATOR_GAIN_SPEED_3			((float)(0.001))
-#define D_REGULATOR_GAIN_SPEED_3			((float)(2.0))
+#define P_REGULATOR_GAIN_SPEED_3			((float)(24.0f))
+#define I_REGULATOR_GAIN_SPEED_3			((float)(5.0f))
+#define D_REGULATOR_GAIN_SPEED_3			((float)(2.0f))
 
-#define P_REGULATOR_GAIN_SPEED_4			((float)(4.0))
-#define I_REGULATOR_GAIN_SPEED_4			((float)(0.001))
-#define D_REGULATOR_GAIN_SPEED_4			((float)(2.0))
+#define P_REGULATOR_GAIN_SPEED_4			((float)(22.0f))
+#define I_REGULATOR_GAIN_SPEED_4			((float)(5.0f))
+#define D_REGULATOR_GAIN_SPEED_4			((float)(2.0f))
 
 #define SPEED_THRESHOLD_1			((float)(100.0))
 #define SPEED_THRESHOLD_2			((float)(85.0))
 #define SPEED_THRESHOLD_3			((float)(70.0))
 #define SPEED_THRESHOLD_4			(MIN_ALLOWED_SPEED)
+
+#define I_LOW_LIMIT					((float)(-500.0))
+#define I_HIGH_LIMIT				((float)(500.0))
 
 /* ADC defines */
 #define MAX_ADC_ACCELERATION_READOUT	((int32_t)(2900))	/* max what an ADC can read as a max gas pedal position */
@@ -80,7 +83,9 @@ static PIDparameters_t PID_param_SPEED =
 	{ 	.P = P_REGULATOR_GAIN_SPEED_1,
 		.I = I_REGULATOR_GAIN_SPEED_1,
 		.D = D_REGULATOR_GAIN_SPEED_1,
-		.dt = MY_TASK_CRUISE_CONTROL_TIME_PERIOD };
+		.dt = MY_TASK_CRUISE_CONTROL_TIME_PERIOD,
+		.I_low_limit = I_LOW_LIMIT,
+		.I_high_limit = I_HIGH_LIMIT};
 
 LCD_message Wanted_SPEEDForLCD =
 	{ 	.messageHandler = NULL,
@@ -177,7 +182,7 @@ void StartCruiseCntrlTask(void const *argument)
 			controlValue = RunPIDController((float)cruiseControlParam.error, PID_param_ptr);
 			globalCntlValue = controlValue;
 			/* Add the calculated value to the temporary variable with desired ADC value */
-			ADCtempDesiredValue += (int32_t)controlValue;
+			ADCtempDesiredValue = MIN_ADC_ACCELERATION_READOUT + (int32_t)controlValue;
 
 			/* Check if the temporary desired value is within sensible limits and correct it if necessary */
 			if (MIN_ADC_ACCELERATION_READOUT > ADCtempDesiredValue)
