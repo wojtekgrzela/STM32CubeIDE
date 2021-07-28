@@ -17,10 +17,10 @@
 #define GPS__USING_LCD
 
 #ifndef GPS_BUFFER_SIZE
-#define GPS_BUFFER_SIZE		(uint8_t)(150)
+#define GPS_BUFFER_SIZE		(uint8_t)(512)
 #endif
 
-#define NUMBER_OF_R_AND_N_SIGNS		(uint8_t)(3)
+#define NUMBER_OF_R_AND_N_SIGNS		(uint8_t)(8u)
 
 #ifdef GPS__USING_LCD
 #include "../lcd_hd44780_i2c/lcd_hd44780_i2c.h"

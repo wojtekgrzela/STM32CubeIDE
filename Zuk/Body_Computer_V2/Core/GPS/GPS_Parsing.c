@@ -20,6 +20,8 @@
 #define MAX_DISTANCE_IN_TRAFFIC_JAM		((int32_t)(50))
 #define MIN_ALTITUDE_CHANGE				((float)(20.0))
 
+#define MAX_MESSAGES_NUMBER				((uint8_t)(7u))
+
 static float calculate_Course(float latitudeStart, float longitudeStart, float latitudeEnd, float longitudeEnd);
 static float calculate_Distance(float latitudeStart, float longitudeStart, float latitudeEnd, float longitudeEnd);
 static inline float to_Radians(const float decimalDegree);
@@ -38,14 +40,13 @@ static inline float pow2(float var);
 Error_Code parse_GPS_data(GPS_data_struct* const GPS)
 {
 	uint8_t GPS_message[GPS_BUFFER_SIZE] = {0};
+	uint8_t GPS_messages_indexes[MAX_MESSAGES_NUMBER+1u] = {0};	/* +1 because index 0 always must be "0" */
 	int16_t index1 = -1;
 	int16_t index2 = -1;
 	int16_t tempIndex = -1;
-	int16_t nIndex = -1;
-	int16_t nIndex2 = -1;
 	int16_t GPGGAIndex = -1;
 	int16_t GPVTGIndex = -1;
-	int16_t GPZDAIndex = -1;
+	int16_t GPRMCIndex = -1;
 	int16_t indexDiff = 0;
 	Error_Code error = NO_ERROR;
 
@@ -57,84 +58,32 @@ Error_Code parse_GPS_data(GPS_data_struct* const GPS)
 	memset((uint8_t *)(GPS->GPS_buffer), 0, GPS_BUFFER_SIZE);
 	GPS->DataReady = RESET;
 
-	nIndex = find_nearest_symbol('\n', (const char* const)GPS_message, 0);
-	nIndex2 = find_nearest_symbol('\n', (const char* const)GPS_message, nIndex + 1);
-
-	/* Finding GPGGA */
-	if (TRUE == compare_two_strings("$GPGGA", (const char* const )GPS_message,
-					0 /*Start position of the comparison*/,
-					6 /*Number of characters to compare*/))
+	for(uint8_t i=1u; i<MAX_MESSAGES_NUMBER+1u; ++i)	/* Starting from 0 because index 0 always must be "0" */
 	{
-		GPGGAIndex = 0;
+		GPS_messages_indexes[i] = find_nearest_symbol('\n', (const char* const)GPS_message, GPS_messages_indexes[i]);
 	}
-	else
+
+	for(uint8_t i=0; i<MAX_MESSAGES_NUMBER+1u; ++i)
 	{
 		if (TRUE == compare_two_strings("$GPGGA", (const char* const )GPS_message,
-						nIndex + 1 /*Start position of the comparison*/,
+				GPS_messages_indexes[i] /*Start position of the comparison*/,
 						6 /*Number of characters to compare*/))
 		{
-			GPGGAIndex = nIndex + 1;
+			GPGGAIndex = GPS_messages_indexes[i] + ((0u == i) ? 0 : 1);
 		}
-		else
-		{
-			if (TRUE == compare_two_strings("$GPGGA", (const char* const )GPS_message,
-							nIndex2 + 1 /*Start position of the comparison*/,
-							6 /*Number of characters to compare*/))
-			{
-				GPGGAIndex = nIndex2 + 1;
-			}
-		}
-	}
 
-	/* Finding GPVTG */
-	if (TRUE == compare_two_strings("$GPVTG", (const char* const )GPS_message,
-					0 /*Start position of the comparison*/,
-					6 /*Number of characters to compare*/))
-	{
-		GPVTGIndex = 0;
-	}
-	else
-	{
 		if (TRUE == compare_two_strings("$GPVTG", (const char* const )GPS_message,
-						nIndex + 1 /*Start position of the comparison*/,
+				GPS_messages_indexes[i] /*Start position of the comparison*/,
 						6 /*Number of characters to compare*/))
 		{
-			GPVTGIndex = nIndex + 1;
+			GPVTGIndex = GPS_messages_indexes[i] + ((0u == i) ? 0 : 1);
 		}
-		else
-		{
-			if (TRUE == compare_two_strings("$GPVTG", (const char* const )GPS_message,
-							nIndex2 + 1 /*Start position of the comparison*/,
-							6 /*Number of characters to compare*/))
-			{
-				GPVTGIndex = nIndex2 + 1;
-			}
-		}
-	}
 
-	/* Finding GPZDA */
-	if (TRUE == compare_two_strings("$GPZDA", (const char* const )GPS_message,
-					0 /*Start position of the comparison*/,
-					6 /*Number of characters to compare*/))
-	{
-		GPZDAIndex = 0;
-	}
-	else
-	{
-		if (TRUE == compare_two_strings("$GPZDA", (const char* const )GPS_message,
-						nIndex + 1 /*Start position of the comparison*/,
+		if (TRUE == compare_two_strings("$GPRMC", (const char* const )GPS_message,
+				GPS_messages_indexes[i] /*Start position of the comparison*/,
 						6 /*Number of characters to compare*/))
 		{
-			GPZDAIndex = nIndex + 1;
-		}
-		else
-		{
-			if (TRUE == compare_two_strings("$GPZDA", (const char* const )GPS_message,
-							nIndex2 + 1 /*Start position of the comparison*/,
-							6 /*Number of characters to compare*/))
-			{
-				GPZDAIndex = nIndex2 + 1;
-			}
+			GPRMCIndex = GPS_messages_indexes[i] + ((0u == i) ? 0 : 1);
 		}
 	}
 
@@ -417,25 +366,31 @@ Error_Code parse_GPS_data(GPS_data_struct* const GPS)
 	}
 
 
-	/* SECOND PART OF THE MESSAGE */
-	if(-1 != GPZDAIndex)
+	/* Third PART OF THE MESSAGE */
+	if(-1 != GPRMCIndex)
 	{
-		/* IGNORING UTC time (already parsed before) START */
-		tempIndex = GPZDAIndex;
-
-		if(NO_ERROR == error)
+		/* IGNORING UTC time, position status, lat, lat dir, lon, lon dir, speed Kn, track true, START */
+		tempIndex = GPRMCIndex;
+		for(uint8_t i=0; i<8; ++i)
 		{
-			index1 = find_nearest_symbol(',', (const char* const)GPS_message, tempIndex);
-			if(-1 == index1)
+			if(NO_ERROR == error)
 			{
-				error = GPS__NO_SYMBOL_FOUND;
-			}
-			else
-			{
-				index1 = find_nearest_symbol(',', (const char* const)GPS_message, index1+1);
+				index1 = find_nearest_symbol(',', (const char* const)GPS_message, tempIndex);
 				if(-1 == index1)
 				{
 					error = GPS__NO_SYMBOL_FOUND;
+				}
+				else
+				{
+					index2 = find_nearest_symbol(',', (const char* const)GPS_message, index1+1);
+					if(-1 == index2)
+					{
+						error = GPS__NO_SYMBOL_FOUND;
+					}
+					else
+					{
+						tempIndex = index2;
+					}
 				}
 			}
 		}
@@ -455,7 +410,13 @@ Error_Code parse_GPS_data(GPS_data_struct* const GPS)
 				indexDiff = index2 - index1;
 				if(indexDiff >1)
 				{
-					error = copy_buffer_to_str((char*)GPS_message, (char*)GPS->rawData.Day, index1+1, indexDiff-1);
+					char tempStringBuff[5] = {'\0'};
+					error = copy_buffer_to_str((char*)GPS_message, (char*)GPS->rawData.Day, index1+1u, 2u);
+					error = copy_buffer_to_str((char*)GPS_message, (char*)GPS->rawData.Month, index1+1u+2u, 2u);
+					error = copy_buffer_to_str((char*)"20", (char*)(&(tempStringBuff[0])), 0u, 2u);
+					error = copy_buffer_to_str((char*)GPS_message, (char*)(&(tempStringBuff[2])), index1+1u+4u, 2u);
+
+					error = copy_buffer_to_str((char*)tempStringBuff, (char*)GPS->rawData.Year, 4u, 2u);
 				}
 			}
 		}

@@ -656,7 +656,7 @@ void MX_FREERTOS_Init(void) {
   My_LCD_TaskHandle = osThreadCreate(osThread(My_LCD_Task), NULL);
 
   /* definition and creation of My_GPS_Task */
-  osThreadDef(My_GPS_Task, StartGPSTask, osPriorityNormal, 0, 192);
+  osThreadDef(My_GPS_Task, StartGPSTask, osPriorityNormal, 0, 448);
   My_GPS_TaskHandle = osThreadCreate(osThread(My_GPS_Task), NULL);
 
   /* definition and creation of My_EEPROM_Task */
