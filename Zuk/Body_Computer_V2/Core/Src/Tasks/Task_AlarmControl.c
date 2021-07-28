@@ -45,6 +45,9 @@ extern oilTempSettings_struct CAR_oilTemp;
 extern oilPressureSettings_struct CAR_oilPressure;
 extern batterySettings_struct CAR_mainBattery;
 extern batterySettings_struct CAR_auxiliaryBattery;
+extern fuelSettings_struct CAR_fuel;
+extern boardVoltagesSettings_struct BOARD_voltage;
+extern boardTemperaturesSettings_struct BOARD_temperature;
 
 extern Diagnostic_ValueTooLowHigh_struct valueStatesLowHigh;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -69,6 +72,7 @@ valueSignal_type board5VVoltage_alarm;
 valueSignal_type boardVinVoltage_alarm;
 valueSignal_type board3V3Temp_alarm;
 valueSignal_type board5VTemp_alarm;
+valueSignal_type boardHBridgeTemp_alarm;
 
 static valueSignal_type* const valueSignalPtrTable[] =
 {
@@ -132,6 +136,7 @@ void StartAlarmControlTask(void const * argument)
 	boardVinVoltage_alarm.BuzzerSignal = BuzzerSignal_longOne;
 	board3V3Temp_alarm.BuzzerSignal = BuzzerSignal_shortTwo;
 	board5VTemp_alarm.BuzzerSignal = BuzzerSignal_shortTwo;
+	boardHBridgeTemp_alarm.BuzzerSignal = BuzzerSignal_shortTwo;
 
 
 	xLastWakeTime = xTaskGetTickCount();
@@ -188,6 +193,19 @@ void StartAlarmControlTask(void const * argument)
 		carFuelLevel_warning.signalSetting1 = CAR_fuel.lowFuelLevelWarningOn;
 		carFuelLevel_warning.signalSetting2 = CAR_fuel.lowFuelLevelWarningBuzzerOn;
 
+		board3V3Voltage_alarm.signalSetting1 = BOARD_voltage.board3V3SupplyAlarmOn;
+		board3V3Voltage_alarm.signalSetting2 = BOARD_voltage.board3V3SupplyBuzzerAlarmOn;
+		board5VVoltage_alarm.signalSetting1 = BOARD_voltage.board5VSupplyAlarmOn;
+		board5VVoltage_alarm.signalSetting2 = BOARD_voltage.board5VSupplyBuzzerAlarmON;
+		boardVinVoltage_alarm.signalSetting1 = BOARD_voltage.boardVinSupplyAlarmOn;
+		boardVinVoltage_alarm.signalSetting2 = BOARD_voltage.boardVinSupplyBuzzerAlarmOn;
+
+		board3V3Temp_alarm.signalSetting1 = BOARD_temperature.board3V3DCDCTemperatureHighAlarmOn;
+		board3V3Temp_alarm.signalSetting2 = BOARD_temperature.board3V3DCDCTemperatureHighBuzzerAlarmOn;
+		board5VTemp_alarm.signalSetting1 = BOARD_temperature.board5VDCDCTemperatureHighAlarmON;
+		board5VTemp_alarm.signalSetting2 = BOARD_temperature.board5VDCDCTemperatureHighBuzzerAlarmOn;
+		boardHBridgeTemp_alarm.signalSetting1 = BOARD_temperature.boardHBridgeTemperatureHighAlarmOn;
+		boardHBridgeTemp_alarm.signalSetting2 = BOARD_temperature.boardHBridgeTemperatureHighBuzzerAlarmOn;
 
 		/* Go through the list of possible alarms and check if there is any */
 		for(uint8_t i = 0u; i < valueSignalPtrTableSize; ++i)

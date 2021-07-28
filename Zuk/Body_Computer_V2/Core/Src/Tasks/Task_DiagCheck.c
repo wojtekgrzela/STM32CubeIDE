@@ -109,6 +109,7 @@ extern valueSignal_type board5VVoltage_alarm;
 extern valueSignal_type boardVinVoltage_alarm;
 extern valueSignal_type board3V3Temp_alarm;
 extern valueSignal_type board5VTemp_alarm;
+extern valueSignal_type boardHBridgeTemp_alarm;
 
 extern WDGCounter task_DiagCheck_WDG;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -418,15 +419,15 @@ static void Check_BoardTemp()
 		board5VTemp_alarm.signalBuzzerIndication = FALSE;		/* Set signal indication to FALSE - turn off alarm as the value is OK. */
 	}
 
-	/* 5V Check */
-	if(IsHigher((float)temperatureHBridge, (float)BOARD_temperature.board5VDCDCTemperatureHighThreshold))
+	/* H-bridge Check */
+	if(IsHigher((float)temperatureHBridge, (float)BOARD_temperature.boardHBridgeTemperatureHighThreshold))
 	{
 		valueStates.boardHBridgeTemp_ValueState = val_alarm;	/* Set value in alarm. */
 	}
 	else
 	{
 		valueStates.boardHBridgeTemp_ValueState = val_OK;	/* Set value in OK state. */
-		board5VTemp_alarm.signalBuzzerIndication = FALSE;		/* Set signal indication to FALSE - turn off alarm as the value is OK. */
+		boardHBridgeTemp_alarm.signalBuzzerIndication = FALSE;		/* Set signal indication to FALSE - turn off alarm as the value is OK. */
 	}
 }
 
@@ -611,5 +612,5 @@ void Timer_board5VTempValueCheck(void const * argument)
 void Timer_boardHBridgeTempValueCheck(void const * argument)
 {
 	/* Set the alarm indication as the timer time has elapsed. */
-//	board5VTemp_alarm.signalBuzzerIndication = TRUE;
+	boardHBridgeTemp_alarm.signalBuzzerIndication = TRUE;
 }
