@@ -599,7 +599,7 @@ void MX_FREERTOS_Init(void) {
 
   /* definition and creation of My_Timer_Buzzer */
   osTimerDef(My_Timer_Buzzer, Timer_Buzzer);
-  My_Timer_BuzzerHandle = osTimerCreate(osTimer(My_Timer_Buzzer), osTimerPeriodic, NULL);
+  My_Timer_BuzzerHandle = osTimerCreate(osTimer(My_Timer_Buzzer), osTimerOnce, NULL);
 
   /* definition and creation of My_Timer_carAuxBattVoltageValueCheck */
   osTimerDef(My_Timer_carAuxBattVoltageValueCheck, Timer_carAuxBattVoltageValueCheck);
@@ -672,7 +672,7 @@ void MX_FREERTOS_Init(void) {
   My_DumpToSDCardHandle = osThreadCreate(osThread(My_DumpToSDCard), NULL);
 
   /* definition and creation of My_Measure_Task */
-  osThreadDef(My_Measure_Task, StartMeasureTask, osPriorityNormal, 0, 256);
+  osThreadDef(My_Measure_Task, StartMeasureTask, osPriorityNormal, 0, 384);
   My_Measure_TaskHandle = osThreadCreate(osThread(My_Measure_Task), NULL);
 
   /* definition and creation of My_50ms_Task */

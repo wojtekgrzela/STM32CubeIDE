@@ -284,8 +284,9 @@ static inline void BuzzerSignal_Off(void)
 static void BuzzerSignal_shortOne(void)
 {
 	BuzzerSignalInProgress = TRUE;	/* Indicate the buzzer is occupied. */
-	HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);	/* Turn the buzzer ON. */
+	BuzzerSignal_On();	/* Turn the buzzer ON. */
 	(void)osTimerStart(My_Timer_BuzzerHandle, BUZZER_SIGNAL_SHORT_ONE_TIME);	/* Start the timer. */
+	BuzzerSignalInProgress = FALSE;	/* Indicate the buzzer is no longer in use */
 }
 
 
@@ -293,10 +294,24 @@ static void BuzzerSignal_shortOne(void)
 /* A function to turn the buzzer ON for a long while (like a whistle, ~seconds). */
 static void BuzzerSignal_longOne(void)
 {
+	static uint8_t i = 0u;
 	BuzzerSignalInProgress = TRUE;	/* Indicate the buzzer is occupied. */
-	HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);	/* Turn the buzzer ON. */
-	(void)osTimerStart(My_Timer_BuzzerHandle, BUZZER_SIGNAL_LONG_ONE_TIME);	/* Start the timer. */
-	currentValueSignalTypePtr->signalBuzzerDone = TRUE;	/* Indicate the signal was already done. */
+
+	if(0u == i)
+	{
+		BuzzerSignal_On();	/* Turn the buzzer ON. */
+		(void)osTimerStart(My_Timer_BuzzerHandle, BUZZER_SIGNAL_LONG_ONE_TIME);	/* Start the timer. */
+	}
+
+	++i;
+
+	if(4u <= i)
+	{
+		i = 0u;	/* Set the iterator to 0. */
+		BuzzerSignal_Off();	/* Turn the buzzer OFF. */
+		currentValueSignalTypePtr->signalBuzzerDone = TRUE;	/* Indicate the signal was already done. */
+		BuzzerSignalInProgress = FALSE;	/* Indicate the buzzer is no longer in use */
+	}
 }
 
 
@@ -308,9 +323,9 @@ static void BuzzerSignal_shortTwo(void)
 
 	BuzzerSignalInProgress = TRUE;	/* Indicate the buzzer is occupied. */
 
-	if(0u == i)	/* If it is the first time in this function. */
+	if((0u == i) || (4u == i))	/* If it is the first time in this function. */
 	{
-		HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);	/* Turn the buzzer ON. */
+		BuzzerSignal_On();	/* Turn the buzzer ON. */
 		(void)osTimerStart(My_Timer_BuzzerHandle, BUZZER_SIGNAL_SHORT_TWO_TIME);	/* Start the timer. */
 	}
 
@@ -319,13 +334,12 @@ static void BuzzerSignal_shortTwo(void)
 	/* If the number of beeps and pauses is greater than the value:
 	 * Set the iterator back to 0u.
 	 * Set the "done" flag to TRUE - indicate the alarm was already done. */
-	if(3u < i)
+	if(6u <= i)
 	{
 		i = 0u;	/* Set the iterator to 0. */
+		BuzzerSignal_Off();	/* Turn the buzzer OFF. */
 		currentValueSignalTypePtr->signalBuzzerDone = TRUE;	/* Indicate the signal was already done. */
-		(void)osTimerStop(My_Timer_BuzzerHandle);
-		HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);	/* Turn the buzzer OFF. */
-		BuzzerSignalInProgress = FALSE;
+		BuzzerSignalInProgress = FALSE;	/* Indicate the buzzer is no longer in use */
 	}
 }
 
@@ -338,13 +352,9 @@ static void BuzzerSignal_shortFive(void)
 
 	BuzzerSignalInProgress = TRUE;	/* Indicate the buzzer is occupied. */
 
-	if(0u == i)
+	if(0u == (i%4))
 	{
-		HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);	/* Turn the buzzer ON. */
-		(void)osTimerStart(My_Timer_BuzzerHandle, BUZZER_SIGNAL_SHORT_FIVE_TIME);	/* Start the timer. */
-	}
-	else
-	{
+		BuzzerSignal_On();	/* Turn the buzzer ON. */
 		(void)osTimerStart(My_Timer_BuzzerHandle, BUZZER_SIGNAL_SHORT_FIVE_TIME);	/* Start the timer. */
 	}
 
@@ -353,10 +363,12 @@ static void BuzzerSignal_shortFive(void)
 	/* If the number of beeps and pauses is greater than the value:
 	 * Set the iterator back to 0u.
 	 * Set the "done" flag to TRUE - indicate the alarm was already done. */
-	if(10u > i)
+	if(12u <= i)
 	{
 		i = 0u;	/* Set the iterator to 0. */
+		BuzzerSignal_Off();	/* Turn the buzzer OFF. */
 		currentValueSignalTypePtr->signalBuzzerDone = TRUE;	/* Indicate the signal was already done. */
+		BuzzerSignalInProgress = FALSE;	/* Indicate the buzzer is no longer in use */
 	}
 }
 
@@ -369,13 +381,9 @@ static void BuzzerSignal_longTree(void)
 
 	BuzzerSignalInProgress = TRUE;	/* Indicate the buzzer is occupied. */
 
-	if(0u == i)
+	if(0u == (i%8))
 	{
-		HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);	/* Turn the buzzer ON. */
-		(void)osTimerStart(My_Timer_BuzzerHandle, BUZZER_SIGNAL_LONG_THREE_TIME);	/* Start the timer. */
-	}
-	else
-	{
+		BuzzerSignal_On();	/* Turn the buzzer ON. */
 		(void)osTimerStart(My_Timer_BuzzerHandle, BUZZER_SIGNAL_LONG_THREE_TIME);	/* Start the timer. */
 	}
 
@@ -384,10 +392,12 @@ static void BuzzerSignal_longTree(void)
 	/* If the number of beeps and pauses is greater than the value:
 	 * Set the iterator back to 0u.
 	 * Set the "done" flag to TRUE - indicate the alarm was already done. */
-	if(6u > i)
+	if(32u <= i)
 	{
 		i = 0u;	/* Set the iterator to 0. */
+		BuzzerSignal_Off();	/* Turn the buzzer OFF. */
 		currentValueSignalTypePtr->signalBuzzerDone = TRUE;	/* Indicate the signal was already done. */
+		BuzzerSignalInProgress = FALSE;	/* Indicate the buzzer is no longer in use */
 	}
 }
 
@@ -400,6 +410,5 @@ void Timer_Buzzer(void const * argument)
 	 * How to use: Firstly turn on the alarm, then start the timer for
 	 * a wanted time. You can do that in a loop - will give an interrupted signal
 	 */
-	HAL_GPIO_TogglePin(BUZZER_GPIO_Port, BUZZER_Pin);	/* Turn the buzzer ON/OFF */
-	BuzzerSignalInProgress = FALSE;	/* Indicate the buzzer is no longer in use */
+	BuzzerSignal_Off();	/* Turn the buzzer OFF. */
 }
