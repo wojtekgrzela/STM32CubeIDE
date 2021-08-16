@@ -40,7 +40,7 @@ static inline float pow2(float var);
 Error_Code parse_GPS_data(GPS_data_struct* const GPS)
 {
 	uint8_t GPS_message[GPS_BUFFER_SIZE] = {0};
-	uint8_t GPS_messages_indexes[MAX_MESSAGES_NUMBER+1u] = {0};	/* +1 because index 0 always must be "0" */
+	int16_t GPS_messages_indexes[MAX_MESSAGES_NUMBER+1u] = {-1};	/* +1 because index 0 always must be "0" */
 	int16_t index1 = -1;
 	int16_t index2 = -1;
 	int16_t tempIndex = -1;
@@ -58,32 +58,32 @@ Error_Code parse_GPS_data(GPS_data_struct* const GPS)
 	memset((uint8_t *)(GPS->GPS_buffer), 0, GPS_BUFFER_SIZE);
 	GPS->DataReady = RESET;
 
-	for(uint8_t i=1u; i<MAX_MESSAGES_NUMBER+1u; ++i)	/* Starting from 0 because index 0 always must be "0" */
+	for(uint8_t i=1u; i<MAX_MESSAGES_NUMBER+1u; ++i)	/* Starting from 1 because index 0 always must be "0" */
 	{
-		GPS_messages_indexes[i] = find_nearest_symbol('\n', (const char* const)GPS_message, GPS_messages_indexes[i]);
+		GPS_messages_indexes[i] = find_nearest_symbol('\n', (const char* const)GPS_message, GPS_messages_indexes[i-1]+1);
 	}
 
 	for(uint8_t i=0; i<MAX_MESSAGES_NUMBER+1u; ++i)
 	{
 		if (TRUE == compare_two_strings("$GPGGA", (const char* const )GPS_message,
-				GPS_messages_indexes[i] /*Start position of the comparison*/,
+				GPS_messages_indexes[i]+1 /*Start position of the comparison*/,
 						6 /*Number of characters to compare*/))
 		{
-			GPGGAIndex = GPS_messages_indexes[i] + ((0u == i) ? 0 : 1);
+			GPGGAIndex = GPS_messages_indexes[i] + 1;
 		}
 
 		if (TRUE == compare_two_strings("$GPVTG", (const char* const )GPS_message,
-				GPS_messages_indexes[i] /*Start position of the comparison*/,
+				GPS_messages_indexes[i]+1 /*Start position of the comparison*/,
 						6 /*Number of characters to compare*/))
 		{
-			GPVTGIndex = GPS_messages_indexes[i] + ((0u == i) ? 0 : 1);
+			GPVTGIndex = GPS_messages_indexes[i] + 1;
 		}
 
 		if (TRUE == compare_two_strings("$GPRMC", (const char* const )GPS_message,
-				GPS_messages_indexes[i] /*Start position of the comparison*/,
+				GPS_messages_indexes[i]+1 /*Start position of the comparison*/,
 						6 /*Number of characters to compare*/))
 		{
-			GPRMCIndex = GPS_messages_indexes[i] + ((0u == i) ? 0 : 1);
+			GPRMCIndex = GPS_messages_indexes[i] + 1;
 		}
 	}
 
