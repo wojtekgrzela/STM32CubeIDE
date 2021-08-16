@@ -164,7 +164,9 @@ void Start500msTask(void const *argument)
 
 			if(TRUE == oneSecond_FLAG)
 			{
+#ifdef WOJTEK
 				HAL_GPIO_TogglePin(DIAG_LED_3_GPIO_Port, DIAG_LED_3_Pin);	/* GREEN */
+#endif
 				IterationCounter_1sec = ITERATION_1;
 			}
 			else
@@ -198,8 +200,10 @@ void Start500msTask(void const *argument)
 		}
 
 
-//		HAL_GPIO_TogglePin(DIAG_LED_1_GPIO_Port, DIAG_LED_1_Pin);	/* RED */
-//		HAL_GPIO_TogglePin(DIAG_LED_2_GPIO_Port, DIAG_LED_2_Pin);	/* YELLOW */
+//		HAL_GPIO_TogglePin(DIAG_LED_1_GPIO_Port, DIAG_LED_1_Pin);	/* RED (Andrzej - RED) */
+//		HAL_GPIO_TogglePin(DIAG_LED_2_GPIO_Port, DIAG_LED_2_Pin);	/* YELLOW (Andrzej - GREEN) */
+//		HAL_GPIO_TogglePin(DIAG_LED_3_GPIO_Port, DIAG_LED_3_Pin);	/* GREEN (Andrzej - BLUE) */
+//		HAL_GPIO_TogglePin(DIAG_LED_4_GPIO_Port, DIAG_LED_4_Pin);	/* BLUE */
 
 		if (ON == cruiseControlParam.state)
 		{
